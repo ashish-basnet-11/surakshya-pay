@@ -1,5 +1,12 @@
 # surakshya-pay
 
+## Use postgres and redis using docker
+
+```bash
+# In root path
+docker-compose up -d redis db
+```
+
 ```bash
 digital-wallet/
 │
