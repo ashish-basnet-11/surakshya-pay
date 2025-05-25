@@ -1,0 +1,78 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.eggs/
+*.pyo
+*.pyd
+*.env
+*.venv
+.Python
+*.sqlite3
+db.sqlite3
+instance/
+instance/*
+!.env.example
+
+# FastAPI
+*.log
+*.pid
+*.pyc
+*.pyo
+*.pyd
+app/__pycache__/
+app/*.pyc
+app/*.pyo
+app/*.pyd
+
+# Virtual Environment
+env/
+venv/
+ENV/
+.venv/
+.env/
+env.bak/
+
+# Docker
+docker-compose.override.yml
+docker-compose.override*.yml
+# Dockerfile
+# docker-compose.yml
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Pytest
+.pytest_cache/
+htmlcov/
+coverage.xml
+.cache/
+.tox/
+*.cover
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# SQLAlchemy Migrations (Alembic)
+migrations/versions/*.pyc
+migrations/versions/*.pyo
+
+# Logs
+*.log
+*.out
+*.err
+logs/
+
+# Temporary Files
+*.swp
+*.swo
+*.bak
+*.tmp
+*.DS_Store
+
+
+uploads/
+static/

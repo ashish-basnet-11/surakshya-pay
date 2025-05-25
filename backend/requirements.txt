@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+sqlalchemy[asyncio]
+asyncpg
+websockets
+pydantic-settings
+alembic
+sqlmodel
+python-jose
+pyjwt
+passlib
+python-multipart
+pydantic[email]
+httpx
+certifi
+fastapi-limiter 
+redis
