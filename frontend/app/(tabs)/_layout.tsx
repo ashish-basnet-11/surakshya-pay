@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ViewStyle,
-  TextStyle,
 } from "react-native";
 import {
   House,
