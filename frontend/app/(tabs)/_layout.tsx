@@ -70,7 +70,7 @@ function CustomTabBar({
 
   return (
     <View style={[styles.tabBarContainer, { paddingBottom: insets.bottom }]}>
-      {orderedRoutes.map((route, index) => {
+      {orderedRoutes.map((route) => {
         const isFocused =
           state.index === state.routes.findIndex((r) => r.key === route.key);
         const onPress = () => navigation.navigate(route.name);
@@ -78,10 +78,7 @@ function CustomTabBar({
         if (route.name === "scan") {
           return (
             <View key={route.key} style={styles.centerButtonWrapper}>
-              <TouchableOpacity
-                onPress={onPress}
-                style={styles.centerButton}
-              >
+              <TouchableOpacity onPress={onPress} style={styles.centerButton}>
                 <ScanLine size={28} color="white" />
               </TouchableOpacity>
             </View>
@@ -95,7 +92,14 @@ function CustomTabBar({
             style={styles.tabButton}
           >
             <View style={styles.iconWrapper}>
-              {getIcon(route.name, isFocused ? Colors.secondary : "#888")}
+              {isFocused ? (
+                <View style={styles.focusedIconBackground}>
+                  {getIcon(route.name, "white")}
+                </View>
+              ) : (
+                getIcon(route.name, "#888")
+              )}
+
               {isFocused && <View style={styles.underline} />}
             </View>
           </TouchableOpacity>
@@ -112,6 +116,7 @@ type Styles = {
   centerButton: ViewStyle;
   iconWrapper: ViewStyle;
   underline: ViewStyle;
+  focusedIconBackground: ViewStyle;
 };
 
 const styles = StyleSheet.create<Styles>({
@@ -134,7 +139,7 @@ const styles = StyleSheet.create<Styles>({
   },
   centerButtonWrapper: {
     position: "relative",
-    top: -30,
+    top: -5,
     width: 70,
     alignItems: "center",
   },
@@ -155,6 +160,15 @@ const styles = StyleSheet.create<Styles>({
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
+    marginTop:50,
+  },
+  focusedIconBackground: {
+    backgroundColor: Colors.secondary,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
   },
   underline: {
     width: 20,
