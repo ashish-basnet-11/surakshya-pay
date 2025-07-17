@@ -1,40 +1,121 @@
-import React from 'react';
-import { StyleSheet, Text, View, Image, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  Image,
+  ScrollView,
+  TouchableOpacity,
+  Platform,
+  SafeAreaView,
+  Alert,
+  StyleSheet,
+} from 'react-native';
 import Colors from '@/constants/Colors';
-import { MaterialIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons, Entypo } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 
 const ProfileDetails = () => {
+  const router = useRouter();
+  const [image, setImage] = useState<string | null>(null);
+
+  const goBackToSettings = () => {
+    router.push('/settings');
+  };
+
+  const onEditPress = () => {
+    Alert.alert('Edit Profile', 'Choose an option', [
+      {
+        text: 'Take Photo',
+        onPress: async () => {
+          const permission = await ImagePicker.requestCameraPermissionsAsync();
+          if (permission.granted) {
+            const result = await ImagePicker.launchCameraAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 1,
+            });
+            if (!result.canceled) {
+              setImage(result.assets[0].uri);
+            }
+          }
+        },
+      },
+      {
+        text: 'Choose from Gallery',
+        onPress: async () => {
+          const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 1,
+          });
+          if (!result.canceled) {
+            setImage(result.assets[0].uri);
+          }
+        },
+      },
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+    ]);
+  };
+
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <MaterialIcons name="person" size={26} color="#fff" />
+        <TouchableOpacity onPress={goBackToSettings} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={26} color={Colors.primary} />
+        </TouchableOpacity>
         <Text style={styles.headerText}>Profile Details</Text>
       </View>
 
-      <View style={styles.card}>
-        <Image
-          source={require('@/assets/images/profile.png')}
-          style={styles.profileImage}
-        />
-        <Text style={styles.name}>Eleanor Pinas</Text>
-        <Text style={styles.email}>eleanor@email.com</Text>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Phone</Text>
-          <Text style={styles.value}>+977 9800000000</Text>
+      <ScrollView contentContainerStyle={styles.scrollContent} style={styles.scrollView}>
+        <View style={styles.profileSection}>
+          <View>
+            <Image
+              source={image ? { uri: image } : require('@/assets/images/profile.png')}
+              style={styles.profileImage}
+            />
+            <TouchableOpacity onPress={onEditPress} style={styles.editIconWrapper}>
+              <MaterialIcons name="edit" size={24} color="#4CAF50" />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.name}>Eleanor Pinas</Text>
+          <Text style={styles.email}>eleanor@email.com</Text>
         </View>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Address</Text>
-          <Text style={styles.value}>New Baneshwor, Kathmandu</Text>
-        </View>
+        {/* Phone box */}
+        <TouchableOpacity style={[styles.item, { borderBottomWidth: 1 }]}>
+          <View style={[styles.iconWrapper, { backgroundColor: '#4CAF50' }]}>
+            <Ionicons name="call" size={24} color="#fff" />
+          </View>
+          <Text style={styles.itemText}>+977 9800000000</Text>
+        </TouchableOpacity>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Joined Date</Text>
-          <Text style={styles.value}>July 15, 2024</Text>
-        </View>
-      </View>
-    </ScrollView>
+        {/* Address box */}
+        <TouchableOpacity style={[styles.item, { borderBottomWidth: 1 }]}>
+          <View style={[styles.iconWrapper, { backgroundColor: '#FF9800' }]}>
+            <Entypo name="location-pin" size={24} color="#fff" />
+          </View>
+          <Text style={styles.itemText}>New Baneshwor, Kathmandu</Text>
+        </TouchableOpacity>
+
+        {/* Joined Date box */}
+        <TouchableOpacity style={[styles.item, { borderBottomWidth: 0 }]}>
+          <View style={[styles.iconWrapper, { backgroundColor: '#2196F3' }]}>
+            <MaterialIcons name="calendar-today" size={24} color="#fff" />
+          </View>
+          <Text style={styles.itemText}>July 15, 2024</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      <TouchableOpacity style={styles.editButton} onPress={() => alert('Edit Profile')}>
+        <Text style={styles.editButtonText}>Edit</Text>
+      </TouchableOpacity>
+    </SafeAreaView>
   );
 };
 
@@ -43,58 +124,118 @@ export default ProfileDetails;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primary,
-    paddingTop: 60,
+    backgroundColor: '#fff',
+    paddingTop: Platform.OS === 'android' ? 40 : 0,
     paddingHorizontal: 20,
     paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  backButton: {
+    marginRight: 12,
+    padding: 4,
   },
   headerText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginLeft: 10,
+    color: Colors.primary,
+    fontSize: 22,
+    fontWeight: '700',
   },
-  card: {
-    backgroundColor: '#fff',
-    margin: 20,
-    borderRadius: 16,
-    padding: 20,
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 100,
+  },
+  profileSection: {
     alignItems: 'center',
-    elevation: 5,
+    marginBottom: 30,
+    marginTop: 20,
   },
-  profileImage: {
+ profileImage: {
     width: 120,
     height: 120,
-    borderRadius: 60,
-    marginBottom: 10,
+    borderRadius: 75,
+    backgroundColor: Colors.secondary,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+  },
+  editIconWrapper: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    backgroundColor: '#e6f4ea',
+    borderRadius: 20,
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
   },
   name: {
     fontSize: 22,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: Colors.primary,
+    marginTop: 10,
+    marginBottom: 4,
   },
   email: {
     fontSize: 14,
     color: '#777',
-    marginBottom: 20,
   },
-  field: {
-    width: '100%',
-    marginBottom: 15,
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomColor: '#eee',
+    borderRadius: 12,
+    marginVertical: 8,
+    paddingHorizontal: 15,
+    backgroundColor: '#f9f9f9',
   },
-  label: {
-    color: '#888',
-    fontSize: 14,
-    marginBottom: 3,
+  iconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 1,
   },
-  value: {
+  itemText: {
+    flex: 1,
     fontSize: 16,
-    color: '#333',
-    fontWeight: '600',
+    color: Colors.primary,
+  },
+  editButton: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: '#4CAF50',
+    borderRadius: 30,
+    paddingVertical: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  editButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 18,
   },
 });

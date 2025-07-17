@@ -6,25 +6,40 @@ import {
   Switch,
   ScrollView,
   Platform,
+  TouchableOpacity,
+  SafeAreaView,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import Colors from '@/constants/Colors';
+import { useRouter } from 'expo-router';
 
 const GeneralSettings = () => {
+  const router = useRouter();
+
   const [darkMode, setDarkMode] = useState(false);
   const [autoUpdate, setAutoUpdate] = useState(true);
   const [useSystemFont, setUseSystemFont] = useState(true);
 
+  const goBackToSettings = () => {
+    router.push('/settings');
+  };
+
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Ionicons name="settings-outline" size={26} color="#fff" />
+        <TouchableOpacity onPress={goBackToSettings} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={26} color={Colors.primary} />
+        </TouchableOpacity>
         <Text style={styles.headerText}>General Settings</Text>
       </View>
 
-      <View style={styles.card}>
-        <View style={styles.settingRow}>
-          <Text style={styles.label}>Dark Mode</Text>
+      <ScrollView contentContainerStyle={styles.scrollContent} style={styles.scrollView}>
+        {/* Dark Mode */}
+        <View style={[styles.item, { borderBottomWidth: 1 }]}>
+          <View style={[styles.iconWrapper, { backgroundColor: '#6C63FF' }]}>
+            <Ionicons name="moon" size={24} color="#fff" />
+          </View>
+          <Text style={styles.itemText}>Dark Mode</Text>
           <Switch
             value={darkMode}
             onValueChange={setDarkMode}
@@ -33,8 +48,12 @@ const GeneralSettings = () => {
           />
         </View>
 
-        <View style={styles.settingRow}>
-          <Text style={styles.label}>Auto Update</Text>
+        {/* Auto Update */}
+        <View style={[styles.item, { borderBottomWidth: 1 }]}>
+          <View style={[styles.iconWrapper, { backgroundColor: '#FF9800' }]}>
+            <Feather name="refresh-ccw" size={24} color="#fff" />
+          </View>
+          <Text style={styles.itemText}>Auto Update</Text>
           <Switch
             value={autoUpdate}
             onValueChange={setAutoUpdate}
@@ -43,8 +62,12 @@ const GeneralSettings = () => {
           />
         </View>
 
-        <View style={styles.settingRow}>
-          <Text style={styles.label}>Use System Font</Text>
+        {/* Use System Font */}
+        <View style={[styles.item, { borderBottomWidth: 0 }]}>
+          <View style={[styles.iconWrapper, { backgroundColor: '#4CAF50' }]}>
+            <MaterialCommunityIcons name="format-font" size={24} color="#fff" />
+          </View>
+          <Text style={styles.itemText}>Use System Font</Text>
           <Switch
             value={useSystemFont}
             onValueChange={setUseSystemFont}
@@ -52,8 +75,8 @@ const GeneralSettings = () => {
             thumbColor={Platform.OS === 'android' ? '#fff' : undefined}
           />
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -62,37 +85,62 @@ export default GeneralSettings;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primary,
-    paddingTop: 60,
+    backgroundColor: '#fff',
+    paddingTop: Platform.OS === 'android' ? 40 : 0,
     paddingHorizontal: 20,
     paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  backButton: {
+    marginRight: 12,
+    padding: 4,
   },
   headerText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginLeft: 10,
+    color: Colors.primary,
+    fontSize: 22,
+    fontWeight: '700',
   },
-  card: {
-    backgroundColor: '#fff',
-    margin: 20,
-    borderRadius: 16,
-    padding: 20,
-    elevation: 5,
+  scrollView: {
+    flex: 1,
+    marginTop:10,
   },
-  settingRow: {
+  scrollContent: {
+    paddingBottom: 40,
+    paddingHorizontal: 20,
+  },
+  item: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginVertical: 15,
+    paddingVertical: 10,
+    borderBottomColor: '#eee',
+    borderRadius: 12,
+    marginVertical: 8,
+    paddingHorizontal: 15,
+    backgroundColor: '#f9f9f9',
   },
-  label: {
+  iconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  itemText: {
+    flex: 1,
     fontSize: 16,
-    color: '#333',
+    color: Colors.primary,
+    fontWeight: '600',
   },
 });

@@ -7,18 +7,19 @@ import {
   StatusBar,
   TouchableOpacity,
   ScrollView,
-  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/Colors";
+import { useRouter } from "expo-router";
 
 const BankingWalletUI = () => {
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
+  const router = useRouter();
 
   const toggleBalanceVisibility = () => {
     setIsBalanceVisible(!isBalanceVisible);
   };
+
   const transactions = [
     {
       id: 1,
@@ -68,7 +69,12 @@ const BankingWalletUI = () => {
             <Text style={styles.userName}>Eleanor Pinas</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.notificationButton}>
+
+        {/* Notification icon with navigation */}
+        <TouchableOpacity
+          style={styles.notificationButton}
+          onPress={() => router.push("/notification")}
+        >
           <Ionicons name="notifications-outline" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -76,12 +82,7 @@ const BankingWalletUI = () => {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Balance Card */}
         <View style={styles.balanceContainer}>
-          <View
-            // colors={[Colors.purple, Colors.secondary]}
-            style={styles.balanceCard}
-            // start={{ x: 0, y: 0 }}
-            // end={{ x: 0, y: 1 }}
-          >
+          <View style={styles.balanceCard}>
             <Text style={styles.balanceLabel}>Total Balance</Text>
             <View style={styles.balanceRow}>
               <Text style={styles.balance}>
@@ -117,7 +118,7 @@ const BankingWalletUI = () => {
         <View style={styles.transactionsContainer}>
           <View style={styles.transactionsHeader}>
             <Text style={styles.transactionsTitle}>Recent Transactions</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push("/wallet")}>
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
@@ -142,8 +143,8 @@ const BankingWalletUI = () => {
                   { color: transaction.amount > 0 ? "#4CAF50" : "#F44336" },
                 ]}
               >
-                {transaction.amount > 0 ? "+" : ""}$
-                {Math.abs(transaction.amount)}
+                {transaction.amount > 0 ? "+" : ""}
+                ${Math.abs(transaction.amount)}
               </Text>
             </View>
           ))}
@@ -164,6 +165,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 20,
+    marginTop: 30,
   },
   headerLeft: {
     flexDirection: "row",
@@ -233,7 +235,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     paddingHorizontal: 20,
-    marginBottom: 30,
+    marginBottom: 20,
   },
   actionButton: {
     alignItems: "center",

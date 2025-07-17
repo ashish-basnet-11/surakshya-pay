@@ -54,15 +54,15 @@ function CustomTabBar({
   const getIcon = (name: string, color: string) => {
     switch (name) {
       case "index":
-        return <House size={24} color={color} />;
+        return <House size={25} color={color} />;
       case "statistics":
-        return <ChartPie size={24} color={color} />;
+        return <ChartPie size={25} color={color} />;
       case "scan":
-        return <ScanLine size={24} color={color} />;
+        return <ScanLine size={25} color={color} />;
       case "wallet":
-        return <WalletMinimal size={24} color={color} />;
+        return <WalletMinimal size={25} color={color} />;
       case "settings":
-        return <Settings2 size={24} color={color} />;
+        return <Settings2 size={25} color={color} />;
       default:
         return null;
     }
@@ -124,13 +124,14 @@ const styles = StyleSheet.create<Styles>({
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    height: 70,
+    height: 100,
     backgroundColor: "white",
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
     elevation: 20,
+    paddingTop:10,
   },
   tabButton: {
     flex: 1,
@@ -139,7 +140,7 @@ const styles = StyleSheet.create<Styles>({
   },
   centerButtonWrapper: {
     position: "relative",
-    top: -5,
+    top: -30,
     width: 70,
     alignItems: "center",
   },
@@ -160,7 +161,7 @@ const styles = StyleSheet.create<Styles>({
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
-    marginTop:50,
+    marginTop:0,
   },
   focusedIconBackground: {
     backgroundColor: Colors.secondary,
