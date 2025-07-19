@@ -1,9 +1,9 @@
 import { Stack } from 'expo-router';
-import {useFonts} from 'expo-font';
+import { useFonts } from 'expo-font';
 
 export default function RootLayout() {
-  const [ fontLoaded ] = useFonts({
-    "Gilroy-Regular": require("../assets/fonts/Gilroy-Regular.ttf")
+  const [fontLoaded] = useFonts({
+    "Gilroy-Regular": require("../assets/fonts/Gilroy-Regular.ttf"),
   });
 
   if (!fontLoaded) {
@@ -11,10 +11,12 @@ export default function RootLayout() {
   }
 
   return (
-    
-    <Stack  initialRouteName="(auth)">
-      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+    <Stack
+      initialRouteName="(auth)"
+      screenOptions={{ headerShown: false }}
+    >
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(tabs)" />
     </Stack>
   );
 }

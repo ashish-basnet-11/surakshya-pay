@@ -6,9 +6,12 @@ import {
   ScrollView,
   SafeAreaView,
   Dimensions,
+  TouchableOpacity,
 } from "react-native";
 import Colors from "@/constants/Colors";
 import { BarChart } from "react-native-chart-kit";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -39,9 +42,8 @@ const transactions = [
   },
 ];
 
-
 const chartData = {
-  labels: transactions.map((t) => t.name.split(" ")[0]), 
+  labels: transactions.map((t) => t.name.split(" ")[0]),
   datasets: [
     {
       data: transactions.map((t) => Math.abs(t.amount)),
@@ -50,16 +52,24 @@ const chartData = {
 };
 
 const WalletScreen = () => {
+  const router = useRouter();
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.chartContainer}>
-        <Text style={styles.chartTitle}>Transaction Summary</Text>
+        <View style={styles.chartHeader}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.chartTitle}>Transaction Summary</Text>
+        </View>
+
         <BarChart
           data={chartData}
           width={screenWidth - 20}
           height={230}
           yAxisLabel="$"
-          yAxisSuffix="" 
+          yAxisSuffix=""
           chartConfig={{
             backgroundGradientFrom: Colors.primary,
             backgroundGradientTo: Colors.primary,
@@ -129,11 +139,18 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 8,
   },
+  chartHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  backButton: {
+    marginRight: 10,
+  },
   chartTitle: {
     fontSize: 20,
     fontWeight: "bold",
     color: "#fff",
-    marginBottom: 20,
   },
   bottomSheet: {
     flex: 1,

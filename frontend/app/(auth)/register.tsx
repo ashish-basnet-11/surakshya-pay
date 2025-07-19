@@ -27,8 +27,9 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Updated navigation here:
   const onRegisterPress = () => {
-    router.replace('/');
+    router.push('/otp');  // Navigate to OTP screen
   };
 
   const goToLogin = () => {

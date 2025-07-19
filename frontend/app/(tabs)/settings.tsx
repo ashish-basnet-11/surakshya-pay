@@ -77,11 +77,8 @@ const Settings = () => {
           cancelButtonIndex: 0,
         },
         (buttonIndex) => {
-          if (buttonIndex === 1) {
-            openCamera();
-          } else if (buttonIndex === 2) {
-            openGallery();
-          }
+          if (buttonIndex === 1) openCamera();
+          else if (buttonIndex === 2) openGallery();
         }
       );
     } else {
@@ -100,14 +97,17 @@ const Settings = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.profileSection}>
-        <Text style={styles.profileHeading}>Profile</Text>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Profile</Text>
+      </View>
 
+      <View style={styles.profileSection}>
         <TouchableOpacity activeOpacity={0.9} onPress={onEditImagePress}>
           <Image
-            source={
-              image ? { uri: image } : require('@/assets/images/profile.png')
-            }
+            source={image ? { uri: image } : require('@/assets/images/profile.png')}
             style={styles.profileImage}
           />
           <View style={styles.editIconWrapper}>
@@ -191,15 +191,25 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     paddingTop: 40,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 10,
+  },
+  backButton: {
+    marginRight: 10,
+    padding: 5,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
   profileSection: {
     alignItems: 'center',
     marginBottom: 20,
-  },
-  profileHeading: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 25,
+    marginTop:15,
   },
   profileImage: {
     width: 120,
@@ -242,7 +252,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 10,
-   
   },
   item: {
     flexDirection: 'row',

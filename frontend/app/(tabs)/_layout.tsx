@@ -1,4 +1,4 @@
-import { Tabs } from "expo-router";
+import { Tabs, useSegments } from "expo-router";
 import React from "react";
 import {
   View,
@@ -18,13 +18,23 @@ import Colors from "@/constants/Colors";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 
 export default function TabLayout() {
+  const segments = useSegments();
+  const lastSegment = segments[segments.length - 1];
+  
+  // Screens where tab bar should be hidden
+  const hideOnScreens = ["topup", "withdraw", "details"];
+  const shouldHideTabBar = hideOnScreens.includes(lastSegment);
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
         tabBarActiveTintColor: Colors.primary,
-        tabBarStyle: {
+        tabBarStyle: shouldHideTabBar ? {
+          display: "none",
+          height: 0,
+        } : {
           position: "absolute",
           height: 70,
           borderTopLeftRadius: 20,
@@ -34,16 +44,17 @@ export default function TabLayout() {
           borderTopWidth: 0,
         },
       }}
-      tabBar={(props) => <CustomTabBar {...props} />}
+      tabBar={(props) => shouldHideTabBar ? null : <CustomTabBar {...props} />}
     />
   );
 }
 
-function CustomTabBar({
+export function CustomTabBar({
   state,
   descriptors,
   navigation,
-}: BottomTabBarProps): JSX.Element {
+  style,
+}: BottomTabBarProps & { style?: ViewStyle }) {
   const insets = useSafeAreaInsets();
 
   const routeOrder = ["index", "statistics", "scan", "wallet", "settings"];
@@ -68,12 +79,29 @@ function CustomTabBar({
     }
   };
 
+  const tabBarStyle = StyleSheet.flatten([
+    styles.tabBarContainer,
+    style,
+    { paddingBottom: insets.bottom },
+  ]);
+
   return (
-    <View style={[styles.tabBarContainer, { paddingBottom: insets.bottom }]}>
+    <View style={tabBarStyle}>
       {orderedRoutes.map((route) => {
         const isFocused =
           state.index === state.routes.findIndex((r) => r.key === route.key);
-        const onPress = () => navigation.navigate(route.name);
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+
+          if (!event.defaultPrevented) {
+            navigation.navigate(route.name);
+          }
+        };
 
         if (route.name === "scan") {
           return (
@@ -109,17 +137,7 @@ function CustomTabBar({
   );
 }
 
-type Styles = {
-  tabBarContainer: ViewStyle;
-  tabButton: ViewStyle;
-  centerButtonWrapper: ViewStyle;
-  centerButton: ViewStyle;
-  iconWrapper: ViewStyle;
-  underline: ViewStyle;
-  focusedIconBackground: ViewStyle;
-};
-
-const styles = StyleSheet.create<Styles>({
+const styles = StyleSheet.create({
   tabBarContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -131,7 +149,7 @@ const styles = StyleSheet.create<Styles>({
     right: 0,
     bottom: 0,
     elevation: 20,
-    paddingTop:10,
+    paddingTop: 10,
   },
   tabButton: {
     flex: 1,
@@ -161,7 +179,7 @@ const styles = StyleSheet.create<Styles>({
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
-    marginTop:0,
+    marginTop: 0,
   },
   focusedIconBackground: {
     backgroundColor: Colors.secondary,

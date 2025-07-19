@@ -104,14 +104,36 @@ const BankingWalletUI = () => {
 
         {/* Action Buttons */}
         <View style={styles.actionsContainer}>
-          {actionButtons.map((action, index) => (
-            <TouchableOpacity key={index} style={styles.actionButton}>
-              <View style={styles.actionIcon}>
-                <Ionicons name={action.icon} size={24} color="#fff" />
-              </View>
-              <Text style={styles.actionText}>{action.name}</Text>
-            </TouchableOpacity>
-          ))}
+          {actionButtons.map((action, index) => {
+            const handlePress = () => {
+              switch (action.name) {
+                case "Top Up":
+                  router.push("/(tabs)/(index)/topup");
+                  break;
+                case "Details":
+                  router.push("/(tabs)/(index)/details");
+                  break;
+                case "Withdraw":
+                  router.push("/(tabs)/(index)/withdraw");
+                  break;
+                default:
+                  break;
+              }
+            };
+
+            return (
+              <TouchableOpacity
+                key={index}
+                style={styles.actionButton}
+                onPress={handlePress}
+              >
+                <View style={styles.actionIcon}>
+                  <Ionicons name={action.icon} size={24} color="#fff" />
+                </View>
+                <Text style={styles.actionText}>{action.name}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* Recent Transactions */}
@@ -143,8 +165,8 @@ const BankingWalletUI = () => {
                   { color: transaction.amount > 0 ? "#4CAF50" : "#F44336" },
                 ]}
               >
-                {transaction.amount > 0 ? "+" : ""}
-                ${Math.abs(transaction.amount)}
+                {transaction.amount > 0 ? "+" : ""}$
+                {Math.abs(transaction.amount)}
               </Text>
             </View>
           ))}
