@@ -51,7 +51,7 @@ const Withdraw = () => {
       if (!amount.includes('.')) setAmount((prev) => prev + key);
       return;
     }
-    if (amount.length < 12) setAmount((prev) => prev + key);
+    if (amount.length < 7) setAmount((prev) => prev + key);
   };
 
   const handleWithdraw = () => {
@@ -82,6 +82,7 @@ const Withdraw = () => {
         <ScrollView
           contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           <View style={styles.amountBox}>
             <Text style={styles.label}>Enter Withdraw Amount</Text>
@@ -95,15 +96,14 @@ const Withdraw = () => {
                 activeOpacity={0.7}
               >
                 <Ionicons
-                  name={isAmountVisible ? 'eye' : 'eye-off'}
+                  name={isAmountVisible ? 'eye-outline' : 'eye-off-outline'}
                   size={22}
-                  color="#444"
+                  color="rgba(255, 255, 255, 0.8)"
                 />
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* New white card wrapping keyboard, note input, and button */}
           <View style={styles.keyboardCard}>
             <View style={styles.keyboard}>
               {KEYS.map((row, rowIndex) => (
@@ -116,7 +116,7 @@ const Withdraw = () => {
                       activeOpacity={0.7}
                     >
                       {key === '<' ? (
-                        <Ionicons name="backspace" size={24} color="#444" />
+                        <Ionicons name="backspace-outline" size={24} color="#fff" />
                       ) : (
                         <Text style={styles.keyText}>{key}</Text>
                       )}
@@ -131,15 +131,18 @@ const Withdraw = () => {
               style={[styles.noteInput, { height: 80, textAlignVertical: 'top' }]}
               placeholder="Add a note"
               multiline
-              placeholderTextColor="#999"
+              placeholderTextColor="rgba(255, 255, 255, 0.6)"
               value={note}
               onChangeText={setNote}
+              cursorColor="#fff"
+              selectionColor="#a0b9ff"
             />
 
             <TouchableOpacity
-              style={[styles.button, !isAmountValid && { backgroundColor: '#888' }]}
+              style={[styles.button, !isAmountValid && { backgroundColor: '#555' }]}
               onPress={handleWithdraw}
               disabled={!isAmountValid}
+              activeOpacity={0.8}
             >
               <Text style={styles.buttonText}>Withdraw</Text>
             </TouchableOpacity>
@@ -177,7 +180,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   amountBox: {
-    backgroundColor: '#ffffff',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     padding: 15,
     borderRadius: 12,
     marginBottom: 20,
@@ -185,7 +188,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#444',
+    color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: 10,
   },
   amountInputWrapper: {
@@ -195,13 +198,13 @@ const styles = StyleSheet.create({
     borderColor: '#a0b9ff',
     borderRadius: 10,
     paddingHorizontal: 15,
-    backgroundColor: '#fafafa',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     height: 48,
   },
   amountText: {
     flex: 1,
     fontSize: 24,
-    color: '#333',
+    color: '#fff',
     fontWeight: '600',
   },
   eyeIcon: {
@@ -209,15 +212,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   keyboardCard: {
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 14,
     padding: 25,
     marginBottom: 100,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 5,
   },
   keyboard: {
     marginBottom: 20,
@@ -231,26 +229,26 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: 6,
     height: 60,
-    backgroundColor: '#e6e6e6',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   keyBackspace: {
-    backgroundColor: '#ccc',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
   },
   keyText: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#444',
+    color: '#fff',
   },
   noteInput: {
     borderWidth: 1,
     borderColor: '#a0b9ff',
     borderRadius: 10,
     paddingHorizontal: 15,
-    backgroundColor: '#fafafa',
-    color: '#000',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    color: '#fff',
     marginBottom: 20,
     fontSize: 16,
   },
@@ -259,6 +257,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#fff',
   },
   buttonText: {
     color: '#fff',

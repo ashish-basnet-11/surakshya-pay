@@ -10,6 +10,7 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Image,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
@@ -27,9 +28,29 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Updated navigation here:
   const onRegisterPress = () => {
-    router.push('/otp');  // Navigate to OTP screen
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password || !confirmPassword) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Weak Password', 'Password must be at least 6 characters');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Password Mismatch', 'Passwords do not match');
+      return;
+    }
+
+    router.replace('/login');
   };
 
   const goToLogin = () => {
@@ -77,7 +98,6 @@ const Register = () => {
               onChangeText={setEmail}
             />
 
-            {/* Password input with eye icon */}
             <View style={styles.passwordContainer}>
               <TextInput
                 placeholder="Password"
@@ -96,7 +116,6 @@ const Register = () => {
               </TouchableOpacity>
             </View>
 
-            {/* Confirm Password input with eye icon */}
             <View style={styles.passwordContainer}>
               <TextInput
                 placeholder="Confirm Password"
@@ -181,7 +200,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
     fontSize: 16,
-    justifyContent: 'center',
   },
   passwordContainer: {
     flexDirection: 'row',

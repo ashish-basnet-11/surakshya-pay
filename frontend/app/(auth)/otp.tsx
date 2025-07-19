@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react'; 
 import {
   View,
   Text,
@@ -32,8 +32,7 @@ const Otp = () => {
       Alert.alert('Invalid OTP', 'Please enter a 6-digit OTP code.');
       return;
     }
-    // Navigate to the tabs layout
-    router.replace('/(tabs)');
+    router.replace('/changePassword');  // <-- Navigate here on verify
   };
 
   const handleResend = () => {

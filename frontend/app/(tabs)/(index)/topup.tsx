@@ -10,9 +10,9 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useNavigation } from '@react-navigation/native'; 
+import { useNavigation } from '@react-navigation/native';
 import Colors from '@/constants/Colors';
 
 const KEYS = [
@@ -90,7 +90,7 @@ const TopUp = () => {
             color={isProofGenerating || isVerifying ? '#ccc' : '#fff'}
           />
         </TouchableOpacity>
-        <Text style={styles.headerText}>Top Up</Text>
+        <Text style={styles.headerText}>Load</Text>
       </View>
 
       <KeyboardAvoidingView
@@ -98,7 +98,7 @@ const TopUp = () => {
         style={styles.content}
       >
         <View style={styles.amountBox}>
-          <Text style={styles.label}>Enter Top-Up Amount</Text>
+          <Text style={styles.label}>Enter load Amount</Text>
           <View style={styles.amountInputWrapper}>
             <Text style={styles.amountText}>
               {isAmountVisible ? amount || '0' : amount.replace(/./g, '•')}
@@ -108,9 +108,9 @@ const TopUp = () => {
               style={styles.eyeIcon}
             >
               <Ionicons
-                name={isAmountVisible ? 'eye' : 'eye-off'}
+                name={isAmountVisible ? 'eye-outline' : 'eye-off'}
                 size={22}
-                color="#444"
+                color="#ffffff"
               />
             </TouchableOpacity>
           </View>
@@ -129,7 +129,7 @@ const TopUp = () => {
                     disabled={isProofGenerating || isVerifying}
                   >
                     {key === '<' ? (
-                      <Ionicons name="backspace" size={24} color="#444" />
+                      <Ionicons name="backspace" size={24} color="#fff" />
                     ) : (
                       <Text style={styles.keyText}>{key}</Text>
                     )}
@@ -148,29 +148,24 @@ const TopUp = () => {
             activeOpacity={0.8}
             disabled={isProofGenerating || isVerifying || amount.length === 0}
           >
-            {(isProofGenerating || isVerifying) ? (
+            {isProofGenerating || isVerifying ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <>
-                <MaterialIcons name="payment" size={24} color="#fff" />
-                <Text style={styles.buttonText}>Top Up Now</Text>
-              </>
+              <Text style={styles.buttonText}>Load</Text>
             )}
           </TouchableOpacity>
 
           {proofResult === 'success' && proofId && (
             <View style={styles.proofInfo}>
-              <Text style={styles.successText}>✅ Top-up verified successfully!</Text>
+              <Text style={styles.successText}>✅ load verified successfully!</Text>
               <Text style={styles.proofIdText}>Proof ID: {proofId}</Text>
             </View>
           )}
           {proofResult === 'failure' && (
-            <Text style={styles.errorText}>❌ Proof verification failed. Please try again.</Text>
+            <Text style={styles.errorText}>
+              ❌ Proof verification failed. Please try again.
+            </Text>
           )}
-
-          <Text style={styles.note}>
-            Your top-up will be verified securely using Zero-Knowledge Proof technology.
-          </Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -205,7 +200,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   amountBox: {
-    backgroundColor: '#ffffff',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     padding: 15,
     borderRadius: 12,
     marginBottom: 20,
@@ -213,7 +208,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#444',
+    color: '#fff',
     marginBottom: 10,
   },
   amountInputWrapper: {
@@ -223,13 +218,13 @@ const styles = StyleSheet.create({
     borderColor: '#a0b9ff',
     borderRadius: 10,
     paddingHorizontal: 15,
-    backgroundColor: '#fafafa',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     height: 48,
   },
   amountText: {
     flex: 1,
     fontSize: 24,
-    color: '#333',
+    color: '#fff',
     fontWeight: '600',
   },
   eyeIcon: {
@@ -237,15 +232,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 14,
     padding: 25,
     marginBottom: 100,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 5,
   },
   keyboard: {
     marginBottom: 20,
@@ -259,18 +249,18 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: 6,
     height: 60,
-    backgroundColor: '#e6e6e6',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   keyBackspace: {
-    backgroundColor: '#ccc',
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   keyText: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#444',
+    color: '#fff',
   },
   button: {
     flexDirection: 'row',
@@ -280,44 +270,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
+    borderWidth: 1,
+    borderColor: '#fff',
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-    marginLeft: 10,
   },
   proofInfo: {
     marginTop: 20,
     padding: 15,
-    backgroundColor: '#d4edda',
+    backgroundColor: 'rgba(0, 255, 0, 0.1)',
     borderRadius: 12,
   },
   successText: {
-    color: '#155724',
+    color: '#adffb4',
     fontWeight: '700',
     fontSize: 16,
     marginBottom: 4,
   },
   proofIdText: {
-    color: '#155724',
+    color: '#adffb4',
     fontSize: 14,
     fontStyle: 'italic',
   },
   errorText: {
     marginTop: 20,
-    color: '#721c24',
-    backgroundColor: '#f8d7da',
+    color: '#ffdddd',
+    backgroundColor: 'rgba(255, 0, 0, 0.1)',
     padding: 15,
     borderRadius: 12,
     fontWeight: '600',
     fontSize: 15,
-  },
-  note: {
-    marginTop: 15,
-    fontSize: 14,
-    color: '#666',
-    fontStyle: 'italic',
-    textAlign: 'center',
   },
 });

@@ -1,30 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  Alert, 
-  Image, 
-  Linking, 
-  Modal,
-  Dimensions 
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  Alert,
+  Image,
+  Linking,
+  ScrollView,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
 
-const { width, height } = Dimensions.get('window');
-
 export default function ScanScreen() {
+  const router = useRouter();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [cameraType, setCameraType] = useState<'back' | 'front'>('back');
-  const [showSampleQR, setShowSampleQR] = useState(false);
 
-  // Sample QR code data
   const sampleQRData = {
-    image: require('@/assets/images/sample-qr.png')
+    image: require('@/assets/images/sample-qr.png'),
   };
 
   useEffect(() => {
@@ -42,7 +39,9 @@ export default function ScanScreen() {
       <View style={styles.permissionContainer}>
         <Ionicons name="camera" size={48} color={Colors.primary} />
         <Text style={styles.permissionText}>Camera Access Required</Text>
-        <Text style={styles.permissionSubtext}>We need your permission to scan QR codes</Text>
+        <Text style={styles.permissionSubtext}>
+          We need your permission to scan QR codes
+        </Text>
         <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
           <Text style={styles.permissionButtonText}>Grant Permission</Text>
         </TouchableOpacity>
@@ -61,16 +60,24 @@ export default function ScanScreen() {
           onPress: () => setScanned(false),
           style: 'default',
         },
-        ...(data.startsWith('http') ? [{
-          text: 'Open Link',
-          onPress: () => Linking.openURL(data),
-        }] : []),
+        ...(data.startsWith('http')
+          ? [
+              {
+                text: 'Open Link',
+                onPress: () => Linking.openURL(data),
+              },
+            ]
+          : []),
       ]
     );
   };
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <Ionicons name="arrow-back" size={26} color="#fff" />
+      </TouchableOpacity>
+
       <CameraView
         style={styles.camera}
         onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
@@ -87,53 +94,32 @@ export default function ScanScreen() {
           <Text style={styles.scanText}>Align QR code within frame</Text>
         </View>
 
-        <TouchableOpacity 
-          style={styles.flipButton}
-          onPress={() => setCameraType(cameraType === 'back' ? 'front' : 'back')}
-        >
-          <Ionicons name="camera-reverse" size={32} color="white" />
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.sampleButton}
-          onPress={() => setShowSampleQR(true)}
-        >
-          <Text style={styles.sampleButtonText}>View Sample QR</Text>
-        </TouchableOpacity>
+        <View style={styles.controls}>
+          <TouchableOpacity
+            style={styles.flipButton}
+            onPress={() => setCameraType(cameraType === 'back' ? 'front' : 'back')}
+          >
+            <Ionicons name="camera-reverse" size={30} color="white" />
+          </TouchableOpacity>
+        </View>
       </CameraView>
 
       {scanned && (
-        <TouchableOpacity 
-          style={styles.rescanButton} 
-          onPress={() => setScanned(false)}
-        >
-          <Ionicons name="scan" size={24} color="white" />
+        <TouchableOpacity style={styles.rescanButton} onPress={() => setScanned(false)}>
+          <Ionicons name="scan" size={20} color="white" />
           <Text style={styles.rescanText}>Scan Again</Text>
         </TouchableOpacity>
       )}
 
-      <Modal
-        visible={showSampleQR}
-        animationType="slide"
-        transparent={false}
-      >
-        <View style={styles.modalContainer}>
-          <TouchableOpacity 
-            style={styles.closeButton}
-            onPress={() => setShowSampleQR(false)}
-          >
-            <Ionicons name="close" size={32} color={Colors.primary} />
-          </TouchableOpacity>
-          
-          <Text style={styles.modalTitle}>Sample QR Code</Text>
-          <Image 
-            source={sampleQRData.image} 
-            style={styles.modalQR} 
-            resizeMode="contain"
-          />
-          <Text style={styles.modalText}>Scan this sample QR code to test the scanner</Text>
-        </View>
-      </Modal>
+      <ScrollView style={styles.sampleContainer} showsVerticalScrollIndicator={false}>
+        <Text style={styles.sampleTitle}>Sample QR Code</Text>
+        <Image
+          source={sampleQRData.image}
+          style={styles.sampleQR}
+          resizeMode="contain"
+        />
+        <Text style={styles.sampleText}>{sampleQRData.url}</Text>
+      </ScrollView>
     </View>
   );
 }
@@ -178,6 +164,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  backButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    zIndex: 10,
+    padding: 6,
+  },
   camera: {
     flex: 1,
   },
@@ -185,7 +178,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.35)',
   },
   scanFrame: {
     width: 250,
@@ -201,6 +194,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 4,
     borderLeftWidth: 4,
     borderColor: Colors.primary,
+    borderRadius: 4,
   },
   cornerTopRight: {
     position: 'absolute',
@@ -211,6 +205,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 4,
     borderRightWidth: 4,
     borderColor: Colors.primary,
+    borderRadius: 4,
   },
   cornerBottomLeft: {
     position: 'absolute',
@@ -221,6 +216,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 4,
     borderLeftWidth: 4,
     borderColor: Colors.primary,
+    borderRadius: 4,
   },
   cornerBottomRight: {
     position: 'absolute',
@@ -231,40 +227,33 @@ const styles = StyleSheet.create({
     borderBottomWidth: 4,
     borderRightWidth: 4,
     borderColor: Colors.primary,
+    borderRadius: 4,
   },
   scanText: {
-    marginTop: 30,
+    marginTop: 32,
     color: 'white',
     fontSize: 16,
     fontWeight: '500',
+    textAlign: 'center',
   },
-  flipButton: {
+  controls: {
     position: 'absolute',
     bottom: 40,
     right: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: 15,
+  },
+  flipButton: {
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    padding: 14,
     borderRadius: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sampleButton: {
-    position: 'absolute',
-    bottom: 40,
-    left: 20,
-    backgroundColor: Colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 30,
-  },
-  sampleButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '500',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
   },
   rescanButton: {
     position: 'absolute',
-    bottom: 40,
+    bottom: 35,
     alignSelf: 'center',
     backgroundColor: Colors.primary,
     flexDirection: 'row',
@@ -272,41 +261,48 @@ const styles = StyleSheet.create({
     paddingHorizontal: 25,
     borderRadius: 30,
     alignItems: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 5,
   },
   rescanText: {
     color: 'white',
     marginLeft: 8,
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'white',
-    justifyContent: 'center',
-    alignItems: 'center',
+  sampleContainer: {
+    maxHeight: 250,
     padding: 20,
+    backgroundColor: 'white',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    marginBottom: 100,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: -2 },
+    shadowRadius: 4,
+    elevation: 8,
   },
-  closeButton: {
-    position: 'absolute',
-    top: 50,
-    right: 20,
-    zIndex: 1,
-  },
-  modalTitle: {
-    fontSize: 24,
+  sampleTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 30,
+    marginBottom: 15,
     color: Colors.primary,
+    textAlign: 'center',
   },
-  modalQR: {
-    width: width * 0.8,
-    height: width * 0.8,
-    marginBottom: 30,
+  sampleQR: {
+    width: 150,
+    height: 150,
+    marginBottom: 15,
+    alignSelf: 'center',
   },
-  modalText: {
-    fontSize: 16,
+  sampleText: {
+    fontSize: 14,
     color: '#666',
     textAlign: 'center',
-    marginHorizontal: 40,
+    marginBottom: 20,
   },
 });

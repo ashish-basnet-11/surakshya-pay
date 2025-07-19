@@ -22,13 +22,22 @@ const Login = () => {
   const router = useRouter();
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
   const toggleRememberMe = () => setRememberMe((prev) => !prev);
-  const onForgotPasswordPress = () => alert('Forgot Password pressed');
+  const onForgotPasswordPress = () => router.push('/(auth)/verify');
   const onRegisterPress = () => router.push('/register');
   const onGoogleLogin = () => alert('Login with Google');
   const onFacebookLogin = () => alert('Login with Facebook');
-  const onLoginPress = () => router.replace('/');
+
+  const onLoginPress = () => {
+    if (!username.trim() || !password.trim()) {
+      alert('Please enter both username and password');
+      return;
+    }
+    router.replace('/');
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -48,6 +57,8 @@ const Login = () => {
               placeholderTextColor="#888"
               style={styles.input}
               autoCapitalize="none"
+              value={username}
+              onChangeText={setUsername}
             />
 
             <View style={styles.passwordContainer}>
@@ -56,6 +67,8 @@ const Login = () => {
                 placeholderTextColor="#888"
                 secureTextEntry={!showPassword}
                 style={styles.passwordInput}
+                value={password}
+                onChangeText={setPassword}
               />
               <TouchableOpacity onPress={() => setShowPassword((prev) => !prev)}>
                 <Ionicons
@@ -185,7 +198,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
     marginBottom: 20,
-    height: 55, 
+    height: 55,
   },
   passwordInput: {
     flex: 1,

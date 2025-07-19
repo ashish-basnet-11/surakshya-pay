@@ -20,9 +20,8 @@ import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 export default function TabLayout() {
   const segments = useSegments();
   const lastSegment = segments[segments.length - 1];
-  
-  // Screens where tab bar should be hidden
-  const hideOnScreens = ["topup", "withdraw", "details"];
+
+  const hideOnScreens = ["topup", "withdraw", "details", "statistics", "notification"];
   const shouldHideTabBar = hideOnScreens.includes(lastSegment);
 
   return (

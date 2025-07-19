@@ -9,6 +9,7 @@ import {
   ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { useRouter } from "expo-router";
 
@@ -48,17 +49,18 @@ const BankingWalletUI = () => {
   ];
 
   const actionButtons = [
-    { name: "Top Up", icon: "add" },
-    { name: "Withdraw", icon: "download-outline" },
-    { name: "Exchange", icon: "swap-horizontal" },
-    { name: "Details", icon: "document-text-outline" },
-    { name: "More", icon: "ellipsis-horizontal" },
+    { name: "Load", icon: "bank-transfer-in" }, // MaterialCommunity Icon
+    { name: "Withdraw", icon: "download-outline" }, // Ionicons
+    { name: "Exchange", icon: "swap-horizontal" }, // Ionicons
+    { name: "Details", icon: "document-text-outline" }, // Ionicons
+    { name: "More", icon: "ellipsis-horizontal" }, // Ionicons
   ];
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
 
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.avatar}>
@@ -70,7 +72,6 @@ const BankingWalletUI = () => {
           </View>
         </View>
 
-        {/* Notification icon with navigation */}
         <TouchableOpacity
           style={styles.notificationButton}
           onPress={() => router.push("/notification")}
@@ -80,7 +81,7 @@ const BankingWalletUI = () => {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Balance Card */}
+        {/* Balance */}
         <View style={styles.balanceContainer}>
           <View style={styles.balanceCard}>
             <Text style={styles.balanceLabel}>Total Balance</Text>
@@ -107,16 +108,14 @@ const BankingWalletUI = () => {
           {actionButtons.map((action, index) => {
             const handlePress = () => {
               switch (action.name) {
-                case "Top Up":
-                  router.push("/(tabs)/(index)/topup");
-                  break;
-                case "Details":
-                  router.push("/(tabs)/(index)/details");
+                case "Load":
+                  router.push("/(tabs)/(index)/topup"); // same path as before
                   break;
                 case "Withdraw":
                   router.push("/(tabs)/(index)/withdraw");
                   break;
-                default:
+                case "Details":
+                  router.push("/(tabs)/(index)/details");
                   break;
               }
             };
@@ -128,7 +127,15 @@ const BankingWalletUI = () => {
                 onPress={handlePress}
               >
                 <View style={styles.actionIcon}>
-                  <Ionicons name={action.icon} size={24} color="#fff" />
+                  {action.name === "Load" ? (
+                    <MaterialCommunityIcons
+                      name={action.icon}
+                      size={24}
+                      color="#fff"
+                    />
+                  ) : (
+                    <Ionicons name={action.icon} size={24} color="#fff" />
+                  )}
                 </View>
                 <Text style={styles.actionText}>{action.name}</Text>
               </TouchableOpacity>
@@ -136,7 +143,7 @@ const BankingWalletUI = () => {
           })}
         </View>
 
-        {/* Recent Transactions */}
+        {/* Transactions */}
         <View style={styles.transactionsContainer}>
           <View style={styles.transactionsHeader}>
             <Text style={styles.transactionsTitle}>Recent Transactions</Text>
@@ -162,11 +169,13 @@ const BankingWalletUI = () => {
               <Text
                 style={[
                   styles.transactionAmount,
-                  { color: transaction.amount > 0 ? "#4CAF50" : "#F44336" },
+                  {
+                    color: transaction.amount > 0 ? "#4CAF50" : "#F44336",
+                  },
                 ]}
               >
-                {transaction.amount > 0 ? "+" : ""}$
-                {Math.abs(transaction.amount)}
+                {transaction.amount > 0 ? "+" : ""}
+                ${Math.abs(transaction.amount)}
               </Text>
             </View>
           ))}
@@ -177,10 +186,7 @@ const BankingWalletUI = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.primary,
-  },
+  container: { flex: 1, backgroundColor: Colors.primary },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -189,10 +195,7 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     marginTop: 30,
   },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
+  headerLeft: { flexDirection: "row", alignItems: "center" },
   avatar: {
     width: 50,
     height: 50,
@@ -202,27 +205,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 15,
   },
-  avatarText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  welcomeText: {
-    color: "#8B9DC3",
-    fontSize: 14,
-  },
-  userName: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  notificationButton: {
-    padding: 8,
-  },
-  balanceContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 30,
-  },
+  avatarText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+  welcomeText: { color: "#8B9DC3", fontSize: 14 },
+  userName: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+  notificationButton: { padding: 8 },
+  balanceContainer: { paddingHorizontal: 20, marginBottom: 30 },
   balanceCard: {
     borderRadius: 20,
     padding: 24,
@@ -241,12 +228,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  balance: {
-    color: "#fff",
-    fontSize: 28,
-    fontWeight: "700",
-    marginRight: 10,
-  },
+  balance: { color: "#fff", fontSize: 28, fontWeight: "700", marginRight: 10 },
   eyeButton: {
     padding: 6,
     borderRadius: 12,
@@ -259,9 +241,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 20,
   },
-  actionButton: {
-    alignItems: "center",
-  },
+  actionButton: { alignItems: "center" },
   actionIcon: {
     width: 50,
     height: 50,
@@ -271,11 +251,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
-  actionText: {
-    color: "#8B9DC3",
-    fontSize: 12,
-    fontWeight: "500",
-  },
+  actionText: { color: "#8B9DC3", fontSize: 12, fontWeight: "500" },
   transactionsContainer: {
     backgroundColor: "#fff",
     borderTopLeftRadius: 30,
@@ -290,16 +266,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
-  transactionsTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#1a2332",
-  },
-  viewAllText: {
-    color: Colors.secondary,
-    fontSize: 14,
-    fontWeight: "500",
-  },
+  transactionsTitle: { fontSize: 20, fontWeight: "bold", color: "#1a2332" },
+  viewAllText: { color: Colors.secondary, fontSize: 14, fontWeight: "500" },
   transactionItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -315,26 +283,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 15,
   },
-  transactionEmoji: {
-    fontSize: 20,
-  },
-  transactionDetails: {
-    flex: 1,
-  },
+  transactionEmoji: { fontSize: 20 },
+  transactionDetails: { flex: 1 },
   transactionName: {
     fontSize: 16,
     fontWeight: "600",
     color: "#1a2332",
     marginBottom: 4,
   },
-  transactionDate: {
-    fontSize: 12,
-    color: "#8B9DC3",
-  },
-  transactionAmount: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
+  transactionDate: { fontSize: 12, color: "#8B9DC3" },
+  transactionAmount: { fontSize: 16, fontWeight: "bold" },
 });
 
 export default BankingWalletUI;

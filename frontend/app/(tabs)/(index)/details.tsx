@@ -1,4 +1,4 @@
-import React, { useLayoutEffect } from 'react';
+import React, { useLayoutEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,32 +6,17 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
 import Colors from '@/constants/Colors';
 
-const Details = () => {
-  const router = useRouter();
-  const navigation = useNavigation();
-
-  useLayoutEffect(() => {
-    const parent = navigation.getParent();
-
-    if (parent) {
-      parent.setOptions({ tabBarContainerStyle: { display: 'none' } });
-    }
-
-    return () => {
-      if (parent) {
-        parent.setOptions({ tabBarContainerStyle: undefined });
-      }
-    };
-  }, [navigation]);
-
-  const transaction = {
-    id: 'TXN12345678',
+// Sample multiple transactions for weekly and monthly periods
+const weeklyTransactions = [
+  {
+    id: 'TXN1001',
     type: 'Received',
     amount: 250,
     from: 'John Doe',
@@ -39,63 +24,186 @@ const Details = () => {
     time: '10:24 AM',
     status: 'Completed',
     note: 'Thanks for your help!',
-  };
+  },
+  {
+    id: 'TXN1002',
+    type: 'Sent',
+    amount: 120,
+    from: 'Alice Brown',
+    date: 'July 17, 2025',
+    time: '2:00 PM',
+    status: 'Completed',
+    note: '',
+  },
+  {
+    id: 'TXN1003',
+    type: 'Received',
+    amount: 300,
+    from: 'Michael Lee',
+    date: 'July 16, 2025',
+    time: '11:15 AM',
+    status: 'Pending',
+    note: 'Awaiting confirmation',
+  },
+  // add more weekly transactions here...
+];
 
-  const rows = [
-    { label: 'Type', value: transaction.type, icon: 'swap-horizontal', iconColor: '#4caf50' },
-    { label: 'Amount', value: `$${transaction.amount}`, icon: 'cash', iconColor: '#2196f3' },
-    { label: 'From', value: transaction.from, icon: 'person', iconColor: '#ff9800' },
-    { label: 'Date', value: transaction.date, icon: 'calendar', iconColor: '#9c27b0' },
-    { label: 'Time', value: transaction.time, icon: 'time', iconColor: '#3f51b5' },
-    { label: 'Status', value: transaction.status, icon: 'checkmark-circle', iconColor: '#4caf50' },
-    { label: 'Note', value: transaction.note, icon: 'chatbubble-ellipses', iconColor: '#00bcd4' },
-    { label: 'Transaction ID', value: transaction.id, icon: 'finger-print', iconColor: '#607d8b' },
-  ];
+const monthlyTransactions = [
+  {
+    id: 'TXN2001',
+    type: 'Sent',
+    amount: 500,
+    from: 'Jane Smith',
+    date: 'July 12, 2025',
+    time: '3:15 PM',
+    status: 'Completed',
+    note: 'Monthly subscription payment',
+  },
+  {
+    id: 'TXN2002',
+    type: 'Received',
+    amount: 450,
+    from: 'Robert King',
+    date: 'July 10, 2025',
+    time: '10:00 AM',
+    status: 'Completed',
+    note: '',
+  },
+  {
+    id: 'TXN2003',
+    type: 'Sent',
+    amount: 100,
+    from: 'Sophia Green',
+    date: 'July 5, 2025',
+    time: '6:30 PM',
+    status: 'Completed',
+    note: 'Gift',
+  },
+  {
+    id: 'TXN2004',
+    type: 'Received',
+    amount: 350,
+    from: 'Emma Watson',
+    date: 'July 1, 2025',
+    time: '9:20 AM',
+    status: 'Pending',
+    note: '',
+  },
+  // add more monthly transactions here...
+];
+
+const Details = () => {
+  const router = useRouter();
+  const navigation = useNavigation();
+  const [selectedPeriod, setSelectedPeriod] = useState<'weekly' | 'monthly'>(
+    'weekly'
+  );
+
+  useLayoutEffect(() => {
+    const parent = navigation.getParent();
+    if (parent) {
+      parent.setOptions({ tabBarStyle: { display: 'none' } });
+    }
+    return () => {
+      if (parent) {
+        parent.setOptions({ tabBarStyle: undefined });
+      }
+    };
+  }, [navigation]);
+
+  const transactions =
+    selectedPeriod === 'weekly' ? weeklyTransactions : monthlyTransactions;
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/(tabs)')} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => router.push('/(tabs)')}
+          style={styles.backButton}
+        >
           <Ionicons name="arrow-back" size={28} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerText}>Transaction Details</Text>
       </View>
 
-      <View style={styles.card}>
-        {rows.map((row, index) => (
-          <DetailRow
-            key={index}
-            label={row.label}
-            value={row.value}
-            icon={row.icon as keyof typeof Ionicons.glyphMap}
-            iconColor={row.iconColor}
-            isLast={index === rows.length - 1}
-          />
-        ))}
+      {/* Period Filter Buttons */}
+      <View style={styles.filterContainer}>
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            selectedPeriod === 'weekly' && styles.filterButtonActive,
+          ]}
+          onPress={() => setSelectedPeriod('weekly')}
+        >
+          <Text
+            style={[
+              styles.filterText,
+              selectedPeriod === 'weekly' && styles.filterTextActive,
+            ]}
+          >
+            Weekly
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            selectedPeriod === 'monthly' && styles.filterButtonActive,
+          ]}
+          onPress={() => setSelectedPeriod('monthly')}
+        >
+          <Text
+            style={[
+              styles.filterText,
+              selectedPeriod === 'monthly' && styles.filterTextActive,
+            ]}
+          >
+            Monthly
+          </Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Scrollable list of small transaction cards */}
+      <ScrollView contentContainerStyle={styles.listContainer}>
+        {transactions.map((txn) => (
+          <TransactionCard key={txn.id} transaction={txn} />
+        ))}
+      </ScrollView>
     </SafeAreaView>
   );
 };
 
-const DetailRow = ({
-  label,
-  value,
-  icon,
-  iconColor,
-  isLast,
+const TransactionCard = ({
+  transaction,
 }: {
-  label: string;
-  value: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  iconColor: string;
-  isLast?: boolean;
+  transaction: {
+    id: string;
+    type: string;
+    amount: number;
+    from: string;
+    date: string;
+    time: string;
+    status: string;
+    note: string;
+  };
 }) => (
-  <View style={[styles.row, !isLast && styles.rowBorder]}>
-    <View style={styles.textContent}>
-      <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>{value}</Text>
+  <View style={styles.card}>
+    <View style={styles.cardHeader}>
+      <Text style={styles.amount}>₹{transaction.amount}</Text>
+      <Text
+        style={[
+          styles.status,
+          transaction.status === 'Completed' ? styles.statusCompleted : styles.statusPending,
+        ]}
+      >
+        {transaction.status}
+      </Text>
     </View>
-    <Ionicons name={icon} size={24} color={iconColor} style={styles.rightIcon} />
+    <Text style={styles.type}>{transaction.type}</Text>
+    <Text style={styles.from}>From: {transaction.from}</Text>
+    <Text style={styles.dateTime}>
+      {transaction.date} at {transaction.time}
+    </Text>
+    {transaction.note ? <Text style={styles.note}>Note: {transaction.note}</Text> : null}
   </View>
 );
 
@@ -122,45 +230,78 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
   },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    paddingHorizontal: 20,
-    paddingTop: 25,
-    paddingBottom: 10,
-    marginTop: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 5,
+  filterContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 20,
   },
-  row: {
+  filterButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 25,
+    borderRadius: 30,
+    backgroundColor: '#2A3441',
+    marginHorizontal: 8,
+  },
+  filterButtonActive: {
+    backgroundColor: '#4CAF50',
+  },
+  filterText: {
+    color: '#8B9DC3',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  filterTextActive: {
+    color: '#fff',
+  },
+  listContainer: {
+    paddingBottom: 40,
+  },
+  card: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+  },
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 14,
+    marginBottom: 6,
   },
-  rowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  textContent: {
-    flex: 1,
-    paddingRight: 10,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#444',
-  },
-  value: {
+  amount: {
     fontSize: 18,
-    fontWeight: '500',
-    color: '#111',
-    marginTop: 2,
+    fontWeight: '700',
+    color: '#fff',
   },
-  rightIcon: {
-    marginLeft: 8,
+  status: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  statusCompleted: {
+    color: '#4caf50',
+  },
+  statusPending: {
+    color: '#ff9800',
+  },
+  type: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ccc',
+    marginBottom: 2,
+  },
+  from: {
+    fontSize: 12,
+    color: '#aaa',
+    marginBottom: 2,
+  },
+  dateTime: {
+    fontSize: 12,
+    color: '#888',
+    marginBottom: 4,
+  },
+  note: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    color: '#bbb',
   },
 });
