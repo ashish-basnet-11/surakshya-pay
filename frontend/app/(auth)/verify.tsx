@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
@@ -15,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 const Verify = () => {
   const router = useRouter();
   const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const validateEmail = (email: string) => {
     const re = /\S+@\S+\.\S+/;
@@ -23,14 +25,19 @@ const Verify = () => {
 
   const onSendOtp = () => {
     if (!email) {
-      alert('Please enter your email');
+      Alert.alert('Error', 'Please enter your email');
       return;
     }
     if (!validateEmail(email)) {
-      alert('Please enter a valid email address');
+      Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
-    router.push('/otp'); 
+    
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      router.push('/otp');
+    }, 1500);
   };
 
   return (
@@ -41,27 +48,59 @@ const Verify = () => {
       <TouchableOpacity
         style={styles.backButton}
         onPress={() => router.replace('/login')}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
       >
-        <Ionicons name="arrow-back" size={28} color="#fff" />
+        <Ionicons name="arrow-back" size={24} color="#fff" />
       </TouchableOpacity>
 
-      <View style={styles.box}>
-        <Text style={styles.title}>Enter your email </Text>
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.headerText}>Verify Your Email</Text>
+          <Text style={styles.subHeaderText}>
+            We'll send a verification code to your email
+          </Text>
+        </View>
 
-        <TextInput
-          placeholder="Email"
-          placeholderTextColor="#888"
-          style={styles.input}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          value={email}
-          onChangeText={setEmail}
-        />
+        <View style={styles.formContainer}>
+          <Text style={styles.label}>Email Address</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              placeholder="Enter your email"
+              placeholderTextColor={Colors.placeholder}
+              style={styles.input}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={email}
+              onChangeText={setEmail}
+              selectionColor={Colors.primary}
+            />
+            {email ? (
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={() => setEmail('')}
+              >
+                <Ionicons name="close-circle" size={20} color="#888" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
 
-        <TouchableOpacity style={styles.button} onPress={onSendOtp}>
-          <Text style={styles.buttonText}>Send OTP</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.button,
+              (!email || isLoading) && { opacity: 0.7 },
+            ]}
+            onPress={onSendOtp}
+            disabled={!email || isLoading}
+            activeOpacity={0.8}
+          >
+            {isLoading ? (
+              <Text style={styles.buttonText}>Sending...</Text>
+            ) : (
+              <Text style={styles.buttonText}>Send Verification Code</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -73,50 +112,81 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
   },
   backButton: {
     position: 'absolute',
-    top: 50,
+    top: Platform.OS === 'ios' ? 50 : 30,
     left: 20,
     zIndex: 10,
+
+    padding: 8,
   },
-  box: {
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    marginBottom: 300,
+  },
+  header: {
+    marginBottom: 40,
+    alignItems: 'center',
+  },
+  headerText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  subHeaderText: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
+  },
+  formContainer: {
     backgroundColor: '#fff',
     borderRadius: 20,
-    padding: 30,
+    padding: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
     elevation: 8,
   },
-  title: {
-    fontSize: 20,
+  label: {
+    fontSize: 14,
     color: Colors.primary,
-    fontWeight: 'bold',
-    marginBottom: 25,
-    
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
   },
   input: {
+    flex: 1,
     height: 50,
     borderColor: '#ddd',
     borderWidth: 1,
     borderRadius: 12,
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
     fontSize: 16,
-    marginBottom: 20,
     color: '#000',
+    backgroundColor: '#fff',
+  },
+  clearButton: {
+    position: 'absolute',
+    right: 16,
   },
   button: {
     backgroundColor: Colors.primary,
-    paddingVertical: 15,
+    paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonText: {
-    color: '#ffffff',
+    color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
   },

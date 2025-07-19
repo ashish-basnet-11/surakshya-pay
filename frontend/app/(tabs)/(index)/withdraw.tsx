@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useState } from 'react';
+import React, { useLayoutEffect, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Alert,
   ScrollView,
+  BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -26,6 +27,19 @@ const KEYS = [
 const Withdraw = () => {
   const router = useRouter();
   const navigation = useNavigation();
+
+  // Handle hardware back button
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => {
+        router.replace('/(tabs)');
+        return true;
+      }
+    );
+
+    return () => backHandler.remove();
+  }, [router]);
 
   useLayoutEffect(() => {
     const parent = navigation.getParent();
@@ -62,13 +76,13 @@ const Withdraw = () => {
     Alert.alert('Success', `You have withdrawn ₹${amount}${note ? ` with note: ${note}` : ''}`);
     setAmount('');
     setNote('');
-    router.push('/(tabs)');
+    router.replace('/(tabs)');
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/(tabs)')} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={styles.backButton}>
           <Ionicons name="arrow-back" size={28} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerText}>Withdraw</Text>
@@ -152,8 +166,6 @@ const Withdraw = () => {
     </SafeAreaView>
   );
 };
-
-export default Withdraw;
 
 const styles = StyleSheet.create({
   container: {
@@ -266,3 +278,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
+export default Withdraw;

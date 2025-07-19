@@ -78,31 +78,33 @@ export default function ScanScreen() {
         <Ionicons name="arrow-back" size={26} color="#fff" />
       </TouchableOpacity>
 
-      <CameraView
-        style={styles.camera}
-        onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-        barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
-        facing={cameraType}
-      >
-        <View style={styles.overlay}>
-          <View style={styles.scanFrame}>
-            <View style={styles.cornerTopLeft} />
-            <View style={styles.cornerTopRight} />
-            <View style={styles.cornerBottomLeft} />
-            <View style={styles.cornerBottomRight} />
+      <View style={styles.cameraContainer}>
+        <CameraView
+          style={styles.camera}
+          onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+          barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+          facing={cameraType}
+        >
+          <View style={styles.overlay}>
+            <View style={styles.scanFrame}>
+              <View style={styles.cornerTopLeft} />
+              <View style={styles.cornerTopRight} />
+              <View style={styles.cornerBottomLeft} />
+              <View style={styles.cornerBottomRight} />
+            </View>
+            <Text style={styles.scanText}>Align QR code within frame</Text>
           </View>
-          <Text style={styles.scanText}>Align QR code within frame</Text>
-        </View>
 
-        <View style={styles.controls}>
-          <TouchableOpacity
-            style={styles.flipButton}
-            onPress={() => setCameraType(cameraType === 'back' ? 'front' : 'back')}
-          >
-            <Ionicons name="camera-reverse" size={30} color="white" />
-          </TouchableOpacity>
-        </View>
-      </CameraView>
+          <View style={styles.controls}>
+            <TouchableOpacity
+              style={styles.flipButton}
+              onPress={() => setCameraType(cameraType === 'back' ? 'front' : 'back')}
+            >
+              <Ionicons name="camera-reverse" size={30} color="white" />
+            </TouchableOpacity>
+          </View>
+        </CameraView>
+      </View>
 
       {scanned && (
         <TouchableOpacity style={styles.rescanButton} onPress={() => setScanned(false)}>
@@ -111,15 +113,22 @@ export default function ScanScreen() {
         </TouchableOpacity>
       )}
 
-      <ScrollView style={styles.sampleContainer} showsVerticalScrollIndicator={false}>
-        <Text style={styles.sampleTitle}>Sample QR Code</Text>
-        <Image
-          source={sampleQRData.image}
-          style={styles.sampleQR}
-          resizeMode="contain"
-        />
-        <Text style={styles.sampleText}>{sampleQRData.url}</Text>
-      </ScrollView>
+      <View style={styles.sampleOuterContainer}>
+        <View style={styles.sampleContainer}>
+          <ScrollView 
+            contentContainerStyle={styles.sampleContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <Text style={styles.sampleTitle}>Sample QR Code</Text>
+            <Image
+              source={sampleQRData.image}
+              style={styles.sampleQR}
+              resizeMode="contain"
+            />
+            <Text style={styles.sampleText}>{sampleQRData.url}</Text>
+          </ScrollView>
+        </View>
+      </View>
     </View>
   );
 }
@@ -127,7 +136,7 @@ export default function ScanScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'black',
+    backgroundColor: 'white',
   },
   loadingContainer: {
     flex: 1,
@@ -170,6 +179,11 @@ const styles = StyleSheet.create({
     left: 20,
     zIndex: 10,
     padding: 6,
+  },
+  cameraContainer: {
+    flex: 1,
+    backgroundColor: 'black',
+    marginBottom: -20, 
   },
   camera: {
     flex: 1,
@@ -246,14 +260,10 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 50,
     elevation: 5,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
   },
   rescanButton: {
     position: 'absolute',
-    bottom: 35,
+    bottom: 250, 
     alignSelf: 'center',
     backgroundColor: Colors.primary,
     flexDirection: 'row',
@@ -262,10 +272,6 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     alignItems: 'center',
     elevation: 6,
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 5,
   },
   rescanText: {
     color: 'white',
@@ -273,18 +279,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  sampleContainer: {
-    maxHeight: 250,
-    padding: 20,
+  sampleOuterContainer: {
     backgroundColor: 'white',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    marginBottom: 100,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: -2 },
-    shadowRadius: 4,
-    elevation: 8,
+    overflow: 'hidden',
+    paddingTop: 20, 
+  },
+  sampleContainer: {
+    height: 280,
+    paddingHorizontal: 20,
+    backgroundColor: 'white',
+  },
+  sampleContent: {
+    alignItems: 'center',
+    paddingBottom: 20,
   },
   sampleTitle: {
     fontSize: 18,
@@ -297,12 +306,10 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     marginBottom: 15,
-    alignSelf: 'center',
   },
   sampleText: {
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
-    marginBottom: 20,
   },
 });

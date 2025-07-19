@@ -113,7 +113,6 @@ const Statistics = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Pie Chart + Transactions List inside Spending Overview */}
         <View style={styles.chartBox}>
           <Text style={styles.sectionTitle}>Spending Overview</Text>
           <PieChart
@@ -236,12 +235,12 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     color: "#fff",
     fontWeight: "bold",
     flex: 1,
     textAlign: "center",
-    marginRight: 80,
+    marginRight:90,
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -351,8 +350,8 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   categoryItem: {
-    flexDirection:"column",   // changed from row to column
-    alignItems: "flex-start", // align to left
+    flexDirection:"column",  
+    alignItems: "flex-start", 
     marginBottom: 12,
   },
   categoryName: {

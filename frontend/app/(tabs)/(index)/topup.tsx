@@ -98,7 +98,7 @@ const TopUp = () => {
         style={styles.content}
       >
         <View style={styles.amountBox}>
-          <Text style={styles.label}>Enter load Amount</Text>
+          <Text style={styles.label}>Enter Amount</Text>
           <View style={styles.amountInputWrapper}>
             <Text style={styles.amountText}>
               {isAmountVisible ? amount || '0' : amount.replace(/./g, '•')}

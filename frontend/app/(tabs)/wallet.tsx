@@ -56,74 +56,70 @@ const WalletScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.chartContainer}>
-        <View style={styles.chartHeader}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
-          </TouchableOpacity>
-          <Text style={styles.chartTitle}>Transaction Summary</Text>
-        </View>
+      <View style={styles.headerRow}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={28} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.title}>All Transactions</Text>
+      </View>
 
+      <View style={styles.transactionsContainer}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+          {transactions.map((transaction) => (
+            <View key={transaction.id} style={styles.transactionItem}>
+              <View style={[styles.transactionIcon, { backgroundColor: transaction.color + "33" }]}>
+                <Text style={[styles.transactionEmoji, { color: transaction.color }]}>{transaction.icon}</Text>
+              </View>
+              <View style={styles.transactionDetails}>
+                <Text style={styles.transactionName}>{transaction.name}</Text>
+                <Text style={styles.transactionDate}>{transaction.date}</Text>
+              </View>
+              <Text
+                style={[
+                  styles.transactionAmount,
+                  { color: transaction.amount > 0 ? "#4CAF50" : "#F44336" },
+                ]}
+              >
+                {transaction.amount > 0 ? "+" : "-"}${Math.abs(transaction.amount).toFixed(2)}
+              </Text>
+            </View>
+          ))}
+        </ScrollView>
+      </View>
+
+      <View style={styles.chartWrapper}>
+        <Text style={styles.chartTitle}>Transaction Summary</Text>
         <BarChart
           data={chartData}
-          width={screenWidth - 20}
+          width={screenWidth - 48}
           height={230}
           yAxisLabel="$"
-          yAxisSuffix=""
+          fromZero
+          withInnerLines={false}
+          showBarTops={false}
           chartConfig={{
-            backgroundGradientFrom: Colors.primary,
-            backgroundGradientTo: Colors.primary,
+            backgroundGradientFrom: "#2A3441",
+            backgroundGradientTo: "#2A3441",
             decimalPlaces: 0,
             color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-            labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-            style: {
-              borderRadius: 16,
-            },
-            propsForDots: {
-              r: "6",
-              strokeWidth: "2",
-              stroke: Colors.secondary,
+            labelColor: () => "#fff",
+            fillShadowGradient: "#fff",
+            fillShadowGradientOpacity: 1,
+            propsForBackgroundLines: {
+              stroke: "rgba(255,255,255,0.2)",
             },
           }}
           style={{
             borderRadius: 16,
-            marginRight: 20,
+            marginTop: 8,
+            elevation: 0,
+            shadowColor: "transparent",
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0,
+            shadowRadius: 0,
           }}
           verticalLabelRotation={0}
-          fromZero
         />
-      </View>
-
-      <View style={styles.bottomSheet}>
-        <View style={styles.boxWrapper}>
-          <Text style={styles.title}>All Transactions</Text>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {transactions.map((transaction) => (
-              <View key={transaction.id} style={styles.transactionItem}>
-                <View
-                  style={[
-                    styles.transactionIcon,
-                    { backgroundColor: transaction.color },
-                  ]}
-                >
-                  <Text style={styles.transactionEmoji}>{transaction.icon}</Text>
-                </View>
-                <View style={styles.transactionDetails}>
-                  <Text style={styles.transactionName}>{transaction.name}</Text>
-                  <Text style={styles.transactionDate}>{transaction.date}</Text>
-                </View>
-                <Text
-                  style={[
-                    styles.transactionAmount,
-                    { color: transaction.amount > 0 ? "#4CAF50" : "#F44336" },
-                  ]}
-                >
-                  {transaction.amount > 0 ? "+" : ""}${Math.abs(transaction.amount)}
-                </Text>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
       </View>
     </SafeAreaView>
   );
@@ -134,50 +130,31 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.primary,
   },
-  chartContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 50,
-    paddingBottom: 8,
-  },
-  chartHeader: {
+  headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 20,
+    paddingHorizontal: 16,
+    paddingTop: 45,
+    paddingBottom: 16,
   },
   backButton: {
-    marginRight: 10,
-  },
-  chartTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#fff",
-  },
-  bottomSheet: {
-    flex: 1,
-    justifyContent: "flex-end",
-    marginBottom: 70,
-  },
-  boxWrapper: {
-    backgroundColor: "#ffffff",
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    paddingHorizontal: 16,
-    paddingTop: 30,
-    paddingBottom: 40,
-    minHeight: 400,
+    marginRight: 12,
   },
   title: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#000",
-    marginBottom: 16,
+    color: "#fff",
+  },
+  transactionsContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
   },
   transactionItem: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: "#444",
   },
   transactionIcon: {
     width: 50,
@@ -196,16 +173,34 @@ const styles = StyleSheet.create({
   transactionName: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#000",
+    color: "#fff",
     marginBottom: 4,
   },
   transactionDate: {
     fontSize: 12,
-    color: "#555",
+    color: "#ccc",
   },
   transactionAmount: {
     fontSize: 16,
     fontWeight: "bold",
+  },
+  chartWrapper: {
+    marginHorizontal: 16,
+    marginBottom: 140,
+    padding: 16,
+    backgroundColor: "#2A3441",
+    borderRadius: 20,
+    elevation: 0,
+    shadowColor: "transparent",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+  },
+  chartTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 12,
   },
 });
 

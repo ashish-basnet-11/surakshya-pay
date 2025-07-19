@@ -49,11 +49,9 @@ const BankingWalletUI = () => {
   ];
 
   const actionButtons = [
-    { name: "Load", icon: "bank-transfer-in" }, // MaterialCommunity Icon
-    { name: "Withdraw", icon: "download-outline" }, // Ionicons
-    { name: "Exchange", icon: "swap-horizontal" }, // Ionicons
-    { name: "Details", icon: "document-text-outline" }, // Ionicons
-    { name: "More", icon: "ellipsis-horizontal" }, // Ionicons
+    { name: "Load", icon: "bank-transfer-in" }, 
+    { name: "Withdraw", icon: "download-outline" }, 
+    { name: "Details", icon: "document-text-outline" }, 
   ];
 
   return (
@@ -109,7 +107,7 @@ const BankingWalletUI = () => {
             const handlePress = () => {
               switch (action.name) {
                 case "Load":
-                  router.push("/(tabs)/(index)/topup"); // same path as before
+                  router.push("/(tabs)/(index)/topup");
                   break;
                 case "Withdraw":
                   router.push("/(tabs)/(index)/withdraw");
@@ -147,7 +145,7 @@ const BankingWalletUI = () => {
         <View style={styles.transactionsContainer}>
           <View style={styles.transactionsHeader}>
             <Text style={styles.transactionsTitle}>Recent Transactions</Text>
-            <TouchableOpacity onPress={() => router.push("/wallet")}>
+            <TouchableOpacity onPress={() => router.push("/")}>
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
