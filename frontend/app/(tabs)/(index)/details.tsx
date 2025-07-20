@@ -7,97 +7,122 @@ import {
   SafeAreaView,
   Platform,
   ScrollView,
+  StatusBar,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
 import Colors from '@/constants/Colors';
 
-// Sample multiple transactions for weekly and monthly periods
+// Enhanced transaction data with more details
 const weeklyTransactions = [
   {
     id: 'TXN1001',
-    type: 'Received',
+    type: 'received',
     amount: 250,
     from: 'John Doe',
     date: 'July 18, 2025',
     time: '10:24 AM',
-    status: 'Completed',
+    status: 'completed',
     note: 'Thanks for your help!',
+    category: 'Personal',
+    avatar: 'J',
   },
   {
     id: 'TXN1002',
-    type: 'Sent',
+    type: 'sent',
     amount: 120,
-    from: 'Alice Brown',
+    to: 'Alice Brown',
     date: 'July 17, 2025',
     time: '2:00 PM',
-    status: 'Completed',
-    note: '',
+    status: 'completed',
+    note: 'Coffee payment',
+    category: 'Food & Dining',
+    avatar: 'A',
   },
   {
     id: 'TXN1003',
-    type: 'Received',
+    type: 'received',
     amount: 300,
     from: 'Michael Lee',
     date: 'July 16, 2025',
     time: '11:15 AM',
-    status: 'Pending',
-    note: 'Awaiting confirmation',
+    status: 'pending',
+    note: 'Freelance project payment',
+    category: 'Work',
+    avatar: 'M',
   },
-  // add more weekly transactions here...
+  {
+    id: 'TXN1004',
+    type: 'sent',
+    amount: 85,
+    to: 'Uber Technologies',
+    date: 'July 15, 2025',
+    time: '9:30 PM',
+    status: 'completed',
+    note: '',
+    category: 'Transportation',
+    avatar: 'U',
+  },
 ];
 
 const monthlyTransactions = [
   {
     id: 'TXN2001',
-    type: 'Sent',
+    type: 'sent',
     amount: 500,
-    from: 'Jane Smith',
+    to: 'Netflix Inc.',
     date: 'July 12, 2025',
     time: '3:15 PM',
-    status: 'Completed',
+    status: 'completed',
     note: 'Monthly subscription payment',
+    category: 'Entertainment',
+    avatar: 'N',
   },
   {
     id: 'TXN2002',
-    type: 'Received',
-    amount: 450,
-    from: 'Robert King',
+    type: 'received',
+    amount: 1450,
+    from: 'Acme Corp',
     date: 'July 10, 2025',
     time: '10:00 AM',
-    status: 'Completed',
-    note: '',
+    status: 'completed',
+    note: 'Salary payment',
+    category: 'Income',
+    avatar: 'A',
   },
   {
     id: 'TXN2003',
-    type: 'Sent',
+    type: 'sent',
     amount: 100,
-    from: 'Sophia Green',
+    to: 'Sophia Green',
     date: 'July 5, 2025',
     time: '6:30 PM',
-    status: 'Completed',
-    note: 'Gift',
+    status: 'completed',
+    note: 'Birthday gift',
+    category: 'Personal',
+    avatar: 'S',
   },
   {
     id: 'TXN2004',
-    type: 'Received',
+    type: 'received',
     amount: 350,
     from: 'Emma Watson',
     date: 'July 1, 2025',
     time: '9:20 AM',
-    status: 'Pending',
-    note: '',
+    status: 'pending',
+    note: 'Shared expense refund',
+    category: 'Personal',
+    avatar: 'E',
   },
-  // add more monthly transactions here...
 ];
 
 const Details = () => {
   const router = useRouter();
   const navigation = useNavigation();
-  const [selectedPeriod, setSelectedPeriod] = useState<'weekly' | 'monthly'>(
-    'weekly'
-  );
+  const [selectedPeriod, setSelectedPeriod] = useState<'weekly' | 'monthly'>('weekly');
+  const [refreshing, setRefreshing] = useState(false);
 
   useLayoutEffect(() => {
     const parent = navigation.getParent();
@@ -111,101 +136,201 @@ const Details = () => {
     };
   }, [navigation]);
 
-  const transactions =
-    selectedPeriod === 'weekly' ? weeklyTransactions : monthlyTransactions;
+  const transactions = selectedPeriod === 'weekly' ? weeklyTransactions : monthlyTransactions;
+
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 2000);
+  }, []);
+
+
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.push('/(tabs)')}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={28} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerText}>Transaction Details</Text>
-      </View>
-
-      {/* Period Filter Buttons */}
-      <View style={styles.filterContainer}>
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            selectedPeriod === 'weekly' && styles.filterButtonActive,
-          ]}
-          onPress={() => setSelectedPeriod('weekly')}
-        >
-          <Text
-            style={[
-              styles.filterText,
-              selectedPeriod === 'weekly' && styles.filterTextActive,
-            ]}
+    <>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
+      <SafeAreaView style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)')}
+            style={styles.backButton}
+            activeOpacity={0.7}
           >
-            Weekly
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            selectedPeriod === 'monthly' && styles.filterButtonActive,
-          ]}
-          onPress={() => setSelectedPeriod('monthly')}
-        >
-          <Text
-            style={[
-              styles.filterText,
-              selectedPeriod === 'monthly' && styles.filterTextActive,
-            ]}
-          >
-            Monthly
-          </Text>
-        </TouchableOpacity>
-      </View>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <Text style={styles.headerText}>Transaction History</Text>
+            <Text style={styles.headerSubtext}>
+              {transactions.length} transactions
+            </Text>
+          </View>
+        </View>
 
-      {/* Scrollable list of small transaction cards */}
-      <ScrollView contentContainerStyle={styles.listContainer}>
-        {transactions.map((txn) => (
-          <TransactionCard key={txn.id} transaction={txn} />
-        ))}
-      </ScrollView>
-    </SafeAreaView>
+
+
+        {/* Period Filter */}
+        <View style={styles.filterContainer}>
+          <View style={styles.filterWrapper}>
+            <TouchableOpacity
+              style={[
+                styles.filterButton,
+                selectedPeriod === 'weekly' && styles.filterButtonActive,
+              ]}
+              onPress={() => setSelectedPeriod('weekly')}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.filterText,
+                  selectedPeriod === 'weekly' && styles.filterTextActive,
+                ]}
+              >
+                This Week
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.filterButton,
+                selectedPeriod === 'monthly' && styles.filterButtonActive,
+              ]}
+              onPress={() => setSelectedPeriod('monthly')}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.filterText,
+                  selectedPeriod === 'monthly' && styles.filterTextActive,
+                ]}
+              >
+                This Month
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Transaction List */}
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#ffffff"
+              colors={[Colors.primary]}
+            />
+          }
+        >
+          <View style={styles.transactionList}>
+            {transactions.map((txn, index) => (
+              <TransactionCard 
+                key={txn.id} 
+                transaction={txn} 
+                isLast={index === transactions.length - 1}
+              />
+            ))}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </>
   );
 };
 
 const TransactionCard = ({
   transaction,
+  isLast,
 }: {
-  transaction: {
-    id: string;
-    type: string;
-    amount: number;
-    from: string;
-    date: string;
-    time: string;
-    status: string;
-    note: string;
+  transaction: any;
+  isLast: boolean;
+}) => {
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return '#4CAF50';
+      case 'pending':
+        return '#FF9800';
+      case 'failed':
+        return '#FF5722';
+      default:
+        return '#9E9E9E';
+    }
   };
-}) => (
-  <View style={styles.card}>
-    <View style={styles.cardHeader}>
-      <Text style={styles.amount}>₹{transaction.amount}</Text>
-      <Text
-        style={[
-          styles.status,
-          transaction.status === 'Completed' ? styles.statusCompleted : styles.statusPending,
-        ]}
-      >
-        {transaction.status}
-      </Text>
-    </View>
-    <Text style={styles.type}>{transaction.type}</Text>
-    <Text style={styles.from}>From: {transaction.from}</Text>
-    <Text style={styles.dateTime}>
-      {transaction.date} at {transaction.time}
-    </Text>
-    {transaction.note ? <Text style={styles.note}>Note: {transaction.note}</Text> : null}
-  </View>
-);
+
+  const getTransactionIcon = (type: string) => {
+    return type === 'received' ? 'arrow-down-circle' : 'arrow-up-circle';
+  };
+
+  const getTransactionColor = (type: string) => {
+    return type === 'received' ? '#4CAF50' : '#FF5722';
+  };
+
+  return (
+    <TouchableOpacity style={[styles.card, isLast && styles.cardLast]} activeOpacity={0.7}>
+      <View style={styles.cardContent}>
+        {/* Avatar and Icon */}
+        <View style={styles.avatarContainer}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{transaction.avatar}</Text>
+          </View>
+          <View style={[
+            styles.transactionIcon,
+            { backgroundColor: getTransactionColor(transaction.type) }
+          ]}>
+            <Ionicons 
+              name={getTransactionIcon(transaction.type)} 
+              size={12} 
+              color="#ffffff" 
+            />
+          </View>
+        </View>
+
+        {/* Transaction Details */}
+        <View style={styles.transactionDetails}>
+          <View style={styles.transactionHeader}>
+            <Text style={styles.transactionName} numberOfLines={1}>
+              {transaction.from || transaction.to}
+            </Text>
+            <Text style={[
+              styles.amount,
+              { color: getTransactionColor(transaction.type) }
+            ]}>
+              {transaction.type === 'received' ? '+' : '-'}₹{transaction.amount.toLocaleString()}
+            </Text>
+          </View>
+          
+          <View style={styles.transactionMeta}>
+            <Text style={styles.category}>{transaction.category}</Text>
+            <View style={styles.statusContainer}>
+              <View style={[
+                styles.statusDot,
+                { backgroundColor: getStatusColor(transaction.status) }
+              ]} />
+              <Text style={[
+                styles.status,
+                { color: getStatusColor(transaction.status) }
+              ]}>
+                {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+              </Text>
+            </View>
+          </View>
+
+          <Text style={styles.dateTime}>
+            {transaction.date} • {transaction.time}
+          </Text>
+
+          {transaction.note ? (
+            <Text style={styles.note} numberOfLines={2}>
+              {transaction.note}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 export default Details;
 
@@ -213,95 +338,185 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.primary,
-    paddingHorizontal: 20,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: Platform.OS === 'android' ? 40 : 10,
+    paddingHorizontal: 20,
+    paddingTop: 60,
     paddingBottom: 20,
   },
   backButton: {
+    padding: 8,
+    borderRadius: 8,
     marginRight: 12,
-    padding: 4,
+  },
+  headerContent: {
+    flex: 1,
   },
   headerText: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
     color: '#fff',
+    letterSpacing: 0.5,
   },
+  headerSubtext: {
+    fontSize: 14,
+    color: '#B3C5D7',
+    marginTop: 2,
+  },
+
   filterContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    paddingHorizontal: 20,
     marginBottom: 20,
   },
+  filterWrapper: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 4,
+  },
   filterButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 25,
-    borderRadius: 30,
-    backgroundColor: '#2A3441',
-    marginHorizontal: 8,
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
   },
   filterButtonActive: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   filterText: {
-    color: '#8B9DC3',
+    fontSize: 15,
     fontWeight: '600',
-    fontSize: 16,
+    color: '#B3C5D7',
   },
   filterTextActive: {
-    color: '#fff',
+    color: Colors.primary,
+  },
+  scrollView: {
+    flex: 1,
   },
   listContainer: {
     paddingBottom: 40,
   },
-  card: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
+  transactionList: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 20,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  cardHeader: {
+  card: {
+    backgroundColor: '#ffffff',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F0F0F0',
+  },
+  cardLast: {
+    borderBottomWidth: 0,
+  },
+  cardContent: {
+    flexDirection: 'row',
+    padding: 16,
+    alignItems: 'center',
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: 16,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F5F5F5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  transactionIcon: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  transactionDetails: {
+    flex: 1,
+  },
+  transactionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  transactionName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1C1C1E',
+    flex: 1,
+    marginRight: 12,
   },
   amount: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
-    color: '#fff',
+  },
+  transactionMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  category: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 6,
   },
   status: {
     fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  statusCompleted: {
-    color: '#4caf50',
-  },
-  statusPending: {
-    color: '#ff9800',
-  },
-  type: {
-    fontSize: 14,
     fontWeight: '600',
-    color: '#ccc',
-    marginBottom: 2,
-  },
-  from: {
-    fontSize: 12,
-    color: '#aaa',
-    marginBottom: 2,
+    textTransform: 'capitalize',
   },
   dateTime: {
-    fontSize: 12,
-    color: '#888',
+    fontSize: 13,
+    color: '#8E8E93',
     marginBottom: 4,
   },
   note: {
-    fontSize: 12,
+    fontSize: 13,
+    color: '#8E8E93',
     fontStyle: 'italic',
-    color: '#bbb',
+    lineHeight: 18,
   },
 });

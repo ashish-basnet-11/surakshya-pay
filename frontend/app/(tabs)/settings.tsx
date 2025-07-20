@@ -1,302 +1,243 @@
-import React, { useState } from 'react';
 import {
   View,
   Text,
-  Image,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
-  Alert,
-  Platform,
-  ActionSheetIOS,
+  ScrollView,
+  StatusBar,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import Colors from '@/constants/Colors';
-import { MaterialIcons, Ionicons, Feather } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import ConfirmModal from './ConfirmModal';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+import Colors from '@/constants/Colors';
 
 const Settings = () => {
   const router = useRouter();
-  const [image, setImage] = useState<string | null>(null);
-  const [confirmVisible, setConfirmVisible] = useState(false);
 
-  const handleLogout = () => setConfirmVisible(true);
-  const confirmLogout = () => {
-    setConfirmVisible(false);
-    router.replace('/(auth)/login');
-  };
-
-  const requestCameraPermission = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    return status === 'granted';
-  };
-
-  const requestMediaLibraryPermission = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    return status === 'granted';
-  };
-
-  const openCamera = async () => {
-    const hasPermission = await requestCameraPermission();
-    if (!hasPermission) {
-      Alert.alert('Permission required', 'Camera permission is required to take photos.');
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
-    });
-    if (!result.canceled && result.assets.length > 0) {
-      setImage(result.assets[0].uri);
-    }
-  };
-
-  const openGallery = async () => {
-    const hasPermission = await requestMediaLibraryPermission();
-    if (!hasPermission) {
-      Alert.alert('Permission required', 'Media library permission is required to select photos.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
-    });
-    if (!result.canceled && result.assets.length > 0) {
-      setImage(result.assets[0].uri);
-    }
-  };
-
-  const onEditImagePress = () => {
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
+  const settingsData = [
+    {
+      title: 'Profile',
+      items: [
         {
-          options: ['Cancel', 'Take Photo', 'Choose from Gallery'],
-          cancelButtonIndex: 0,
+          label: 'Personal Information',
+          description: 'Manage your personal details and preferences',
+          icon: 'person-outline',
+          route: '/(tabs)/(settings)/profile-details',
         },
-        (buttonIndex) => {
-          if (buttonIndex === 1) openCamera();
-          else if (buttonIndex === 2) openGallery();
-        }
-      );
-    } else {
-      Alert.alert(
-        'Select Photo',
-        'Choose an option',
-        [
-          { text: 'Take Photo', onPress: openCamera },
-          { text: 'Choose from Gallery', onPress: openGallery },
-          { text: 'Cancel', style: 'cancel' },
-        ],
-        { cancelable: true }
-      );
-    }
-  };
+      ],
+    },
+    {
+      title: 'Security & Privacy',
+      items: [
+        {
+          label: 'Security Settings',
+          description: 'Password, biometrics, and account security',
+          icon: 'shield-checkmark-outline',
+          route: '/(tabs)/(settings)/security-settings',
+        },
+      ],
+    },
+    {
+      title: 'Transactions',
+      items: [
+        {
+          label: 'Transaction Settings',
+          description: 'Manage payment methods and transaction limits',
+          icon: 'card-outline',
+          route: '/(tabs)/(settings)/transaction-settings',
+        },
+      ],
+    },
+    {
+      title: 'General',
+      items: [
+        {
+          label: 'App Preferences',
+          description: 'Notifications, language, and display settings',
+          icon: 'settings-outline',
+          route: '/(tabs)/(settings)/general-settings',
+        },
+      ],
+    },
+    {
+      title: 'Support',
+      items: [
+        {
+          label: 'About SurakshyaPay',
+          description: 'App version, terms, and privacy policy',
+          icon: 'information-circle-outline',
+          route: '/(tabs)/(settings)/about-settings',
+        },
+      ],
+    },
+  ];
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
+  const renderSettingItem = (item) => (
+    <TouchableOpacity
+      key={item.label}
+      style={styles.settingItem}
+      onPress={() => router.push(item.route)}
+      activeOpacity={0.7}
+    >
+      <View style={styles.settingContent}>
+        <View style={styles.iconContainer}>
+          <Ionicons name={item.icon} size={22} color={Colors.primary} />
+        </View>
+        <View style={styles.textContainer}>
+          <Text style={styles.settingLabel}>{item.label}</Text>
+          <Text style={styles.settingDescription}>{item.description}</Text>
+        </View>
       </View>
+      <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
+    </TouchableOpacity>
+  );
 
-      <View style={styles.profileSection}>
-        <TouchableOpacity activeOpacity={0.9} onPress={onEditImagePress}>
-          <Image
-            source={image ? { uri: image } : require('@/assets/images/profile.png')}
-            style={styles.profileImage}
-          />
-          <View style={styles.editIconWrapper}>
-            <MaterialIcons name="edit" size={24} color="#4CAF50" />
+  const renderSection = (section, index) => (
+    <View key={section.title} style={styles.section}>
+      <Text style={styles.sectionTitle}>{section.title}</Text>
+      <View style={styles.sectionContent}>
+        {section.items.map((item, itemIndex) => (
+          <View key={item.label}>
+            {renderSettingItem(item)}
+            {itemIndex < section.items.length - 1 && <View style={styles.itemSeparator} />}
           </View>
-        </TouchableOpacity>
-        <Text style={styles.name}>Eleanor Pinas</Text>
-        <Text style={styles.email}>eleanor.pinas@example.com</Text>
+        ))}
       </View>
-
-      <View style={styles.box}>
-        <TouchableOpacity
-          style={[styles.item, { borderBottomWidth: 1 }]}
-          onPress={() => router.push('/(tabs)/(settings)/profile-details')}
-        >
-          <View style={[styles.iconWrapper, { backgroundColor: '#e6f4ea' }]}>
-            <MaterialIcons name="person" size={24} color="#4CAF50" />
-          </View>
-          <Text style={styles.itemText}>Profile Details</Text>
-          <Ionicons name="chevron-forward" size={24} color={Colors.primary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.item, { borderBottomWidth: 1 }]}
-          onPress={() => router.push('/(tabs)/(settings)/transaction-settings')}
-        >
-          <View style={[styles.iconWrapper, { backgroundColor: '#fff3e0' }]}>
-            <Ionicons name="swap-horizontal" size={24} color="#FF9800" />
-          </View>
-          <Text style={styles.itemText}>Transaction Settings</Text>
-          <Ionicons name="chevron-forward" size={24} color={Colors.primary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.item, { borderBottomWidth: 1 }]}
-          onPress={() => router.push('/(tabs)/(settings)/security-settings')}
-        >
-          <View style={[styles.iconWrapper, { backgroundColor: '#e3f2fd' }]}>
-            <Feather name="lock" size={24} color="#2196F3" />
-          </View>
-          <Text style={styles.itemText}>Security Settings</Text>
-          <Ionicons name="chevron-forward" size={24} color={Colors.primary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.item, { borderBottomWidth: 0 }]}
-          onPress={() => router.push('/(tabs)/(settings)/general-settings')}
-        >
-          <View style={[styles.iconWrapper, { backgroundColor: '#f3e5f5' }]}>
-            <Ionicons name="settings-outline" size={24} color="#9C27B0" />
-          </View>
-          <Text style={styles.itemText}>General Settings</Text>
-          <Ionicons name="chevron-forward" size={24} color={Colors.primary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.logoutItem} onPress={handleLogout}>
-          <View style={styles.logoutButton}>
-            <MaterialIcons name="logout" size={24} color="#fff" />
-            <Text style={styles.logoutText}>Logout</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
-
-      <ConfirmModal
-        visible={confirmVisible}
-        title="Logout"
-        message="Do you want to logout?"
-        onConfirm={confirmLogout}
-        onCancel={() => setConfirmVisible(false)}
-      />
     </View>
   );
-};
 
-export default Settings;
+  return (
+    <>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            onPress={() => router.back()} 
+            style={styles.backButton}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Settings</Text>
+        </View>
+
+        {/* Content */}
+        <ScrollView 
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {settingsData.map((section, index) => renderSection(section, index))}
+          
+          {/* Bottom spacing */}
+          <View style={styles.bottomSpacing} />
+        </ScrollView>
+      </View>
+    </>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.primary,
-    justifyContent: 'flex-start',
-    paddingTop: 40,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    marginBottom: 10,
+    paddingTop: 60,
+    paddingBottom: 20,
+    backgroundColor: Colors.primary,
   },
   backButton: {
-    marginRight: 10,
-    padding: 5,
+    marginRight: 16,
+    padding: 8,
+    borderRadius: 8,
   },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#ffffff',
+    letterSpacing: 0.5,
   },
-  profileSection: {
-    alignItems: 'center',
-    marginBottom: 20,
-    marginTop:15,
+  scrollView: {
+    flex: 1,
   },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 75,
-    backgroundColor: Colors.secondary,
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-  },
-  editIconWrapper: {
-    position: 'absolute',
-    bottom: 10,
-    right: 10,
-    backgroundColor: '#e6f4ea',
-    borderRadius: 20,
-    padding: 4,
-  },
-  name: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginTop: 10,
-  },
-  email: {
-    fontSize: 14,
-    color: '#d0d6db',
-    marginTop: 4,
-  },
-  box: {
-    width: '100%',
-    height: SCREEN_HEIGHT * 0.6,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
+  scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 10,
+    paddingTop: 8,
   },
-  item: {
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+    marginBottom: 12,
+    marginLeft: 4,
+    opacity: 0.9,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  sectionContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomColor: '#eee',
-    borderRadius: 12,
-    marginVertical: 8,
-    paddingHorizontal: 15,
-    backgroundColor: '#f9f9f9',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#ffffff',
   },
-  iconWrapper: {
+  settingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  iconContainer: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  itemText: {
-    flex: 1,
-    fontSize: 16,
-    color: Colors.primary,
-  },
-  logoutItem: {
-    marginTop: 10,
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    backgroundColor: Colors.primary,
-    paddingVertical: 15,
     borderRadius: 12,
+    backgroundColor: '#F8F9FA',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
+    marginRight: 16,
   },
-  logoutText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 10,
+  textContainer: {
+    flex: 1,
+  },
+  settingLabel: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#1C1C1E',
+    marginBottom: 2,
+  },
+  settingDescription: {
+    fontSize: 14,
+    color: '#8E8E93',
+    lineHeight: 18,
+  },
+  itemSeparator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: '#E5E5EA',
+    marginLeft: 76,
+  },
+  bottomSpacing: {
+    height: 40,
   },
 });
+
+export default Settings;

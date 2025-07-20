@@ -21,7 +21,9 @@ export default function TabLayout() {
   const segments = useSegments();
   const lastSegment = segments[segments.length - 1];
 
-  const hideOnScreens = ["topup", "withdraw", "details", "statistics", "notification", "scan"]
+  const hideOnScreens = ["topup", "withdraw", "details", "notification", "scan", "settings", "profile-details", "security-settings", "about-settings"
+    , "transaction-settings", "general-settings"
+  ]
   const shouldHideTabBar = hideOnScreens.includes(lastSegment);
 
   return (

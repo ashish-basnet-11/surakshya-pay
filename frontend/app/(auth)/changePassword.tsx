@@ -10,7 +10,7 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import Colors from "@/constants/Colors"; // Adjust path if needed
+import Colors from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
@@ -37,10 +37,8 @@ const ChangePassword = () => {
       return;
     }
 
-    // TODO: Add your password update API call here
-
     Alert.alert("Success", "Password changed successfully!", [
-      { text: "OK", onPress: () => router.replace("/login") }, // Navigate to login
+      { text: "OK", onPress: () => router.replace("/login") },
     ]);
   };
 
@@ -61,13 +59,14 @@ const ChangePassword = () => {
             style={styles.backButton}
             activeOpacity={0.7}
           >
-            <Ionicons name="arrow-back" size={28} color={Colors.primary} />
+            <Ionicons name="arrow-back" size={28} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.title}>Change Password</Text>
         </View>
 
-        {/* Card Container wrapping content */}
+        {/* White Card Container */}
         <View style={styles.card}>
+          <Text style={styles.title}>Change Password</Text>
+
           {/* Current Password */}
           <View style={styles.passwordContainer}>
             <TextInput
@@ -104,7 +103,7 @@ const ChangePassword = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Confirm New Password */}
+          {/* Confirm Password */}
           <View style={styles.passwordContainer}>
             <TextInput
               placeholder="Confirm New Password"
@@ -139,9 +138,8 @@ export default ChangePassword;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.primary,
     paddingHorizontal: 20,
-    justifyContent: "center",
   },
   scroll: {
     paddingVertical: 40,
@@ -149,24 +147,26 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 30,
+    marginBottom: 20,
   },
   backButton: {
     marginRight: 15,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: Colors.primary,
-    flex: 1,
-    textAlign: "center",
-    marginRight: 80,
   },
   card: {
     backgroundColor: "#fff",
     borderRadius: 16,
     padding: 20,
-    
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: Colors.primary,
+    textAlign: "center",
+    marginBottom: 30,
   },
   passwordContainer: {
     flexDirection: "row",

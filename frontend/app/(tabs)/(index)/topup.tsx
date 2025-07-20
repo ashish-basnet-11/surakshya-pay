@@ -9,6 +9,8 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  StatusBar,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -21,6 +23,8 @@ const KEYS = [
   ['7', '8', '9'],
   ['.', '0', '<'],
 ];
+
+const QUICK_AMOUNTS = [10, 50, 100, 200];
 
 const TopUp = () => {
   const router = useRouter();
@@ -40,6 +44,7 @@ const TopUp = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [proofResult, setProofResult] = useState<'success' | 'failure' | null>(null);
   const [proofId, setProofId] = useState<string | null>(null);
+  const [fadeAnim] = useState(new Animated.Value(1));
 
   const handleTopUp = async () => {
     const numAmount = Number(amount);
@@ -47,19 +52,51 @@ const TopUp = () => {
       Alert.alert('Invalid Amount', 'Please enter a valid top-up amount.');
       return;
     }
+
+    if (numAmount < 1) {
+      Alert.alert('Minimum Amount', 'Minimum top-up amount is $1.');
+      return;
+    }
+
+    if (numAmount > 5000) {
+      Alert.alert('Maximum Amount', 'Maximum top-up amount is $5,000.');
+      return;
+    }
+
     try {
       setProofResult(null);
       setIsProofGenerating(true);
+      
+      // Animate the UI during processing
+      Animated.timing(fadeAnim, {
+        toValue: 0.6,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+
       await new Promise((res) => setTimeout(res, 2000));
       setIsProofGenerating(false);
       setIsVerifying(true);
       await new Promise((res) => setTimeout(res, 2000));
       setIsVerifying(false);
+      
+      // Restore UI opacity
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+
       setProofResult('success');
-      setProofId('ZKP123456789');
+      setProofId(`ZKP${Date.now()}`);
       setAmount('');
     } catch {
       setProofResult('failure');
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
       Alert.alert('Error', 'Proof verification failed. Please try again.');
     }
   };
@@ -70,105 +107,187 @@ const TopUp = () => {
       return;
     }
     if (key === '.') {
-      if (!amount.includes('.')) setAmount((prev) => prev + key);
+      if (!amount.includes('.') && amount.length > 0) {
+        setAmount((prev) => prev + key);
+      }
       return;
     }
-    if (amount.length < 7) setAmount((prev) => prev + key);
+    if (amount.length < 8) {
+      setAmount((prev) => prev + key);
+    }
+  };
+
+  const setQuickAmount = (quickAmount: number) => {
+    setAmount(quickAmount.toString());
+  };
+
+  const formatAmount = (value: string) => {
+    if (!value) return '0';
+    const num = parseFloat(value);
+    return isNaN(num) ? value : num.toLocaleString('en-US');
+  };
+
+  const getProcessingText = () => {
+    if (isProofGenerating) return 'Generating Proof...';
+    if (isVerifying) return 'Verifying Transaction...';
+    return 'Add Money';
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.push('/')}
-          disabled={isProofGenerating || isVerifying}
-          style={styles.backButton}
-        >
-          <Ionicons
-            name="arrow-back"
-            size={28}
-            color={isProofGenerating || isVerifying ? '#ccc' : '#fff'}
-          />
-        </TouchableOpacity>
-        <Text style={styles.headerText}>Load</Text>
-      </View>
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.content}
-      >
-        <View style={styles.amountBox}>
-          <Text style={styles.label}>Enter Amount</Text>
-          <View style={styles.amountInputWrapper}>
-            <Text style={styles.amountText}>
-              {isAmountVisible ? amount || '0' : amount.replace(/./g, '•')}
-            </Text>
-            <TouchableOpacity
-              onPress={() => setIsAmountVisible((prev) => !prev)}
-              style={styles.eyeIcon}
-            >
-              <Ionicons
-                name={isAmountVisible ? 'eye-outline' : 'eye-off'}
-                size={22}
-                color="#ffffff"
-              />
-            </TouchableOpacity>
+    <>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
+      <SafeAreaView style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.push('/')}
+            disabled={isProofGenerating || isVerifying}
+            style={styles.backButton}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color={isProofGenerating || isVerifying ? '#B3C5D7' : '#ffffff'}
+            />
+          </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <Text style={styles.headerText}>Add Money</Text>
+            <Text style={styles.headerSubtext}>Load money to your wallet</Text>
           </View>
         </View>
 
-        <View style={styles.card}>
-          <View style={styles.keyboard}>
-            {KEYS.map((row, rowIndex) => (
-              <View key={rowIndex} style={styles.keyboardRow}>
-                {row.map((key) => (
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.content}
+        >
+          <Animated.View style={[styles.animatedContainer, { opacity: fadeAnim }]}>
+            {/* Amount Display */}
+            <View style={styles.amountSection}>
+              <Text style={styles.currencySymbol}>$</Text>
+              <View style={styles.amountDisplayContainer}>
+                <Text style={styles.amountDisplay}>
+                  {isAmountVisible ? formatAmount(amount) : amount.replace(/./g, '•')}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setIsAmountVisible((prev) => !prev)}
+                  style={styles.visibilityButton}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={isAmountVisible ? 'eye-outline' : 'eye-off-outline'}
+                    size={20}
+                    color="#B3C5D7"
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Quick Amount Buttons */}
+            <View style={styles.quickAmountSection}>
+              <Text style={styles.quickAmountLabel}>Quick Add</Text>
+              <View style={styles.quickAmountContainer}>
+                {QUICK_AMOUNTS.map((quickAmount) => (
                   <TouchableOpacity
-                    key={key}
-                    style={[styles.key, key === '<' ? styles.keyBackspace : null]}
-                    onPress={() => onKeyPress(key)}
+                    key={quickAmount}
+                    style={[
+                      styles.quickAmountButton,
+                      amount === quickAmount.toString() && styles.quickAmountButtonActive,
+                    ]}
+                    onPress={() => setQuickAmount(quickAmount)}
                     activeOpacity={0.7}
                     disabled={isProofGenerating || isVerifying}
                   >
-                    {key === '<' ? (
-                      <Ionicons name="backspace" size={24} color="#fff" />
-                    ) : (
-                      <Text style={styles.keyText}>{key}</Text>
-                    )}
+                    <Text
+                      style={[
+                        styles.quickAmountText,
+                        amount === quickAmount.toString() && styles.quickAmountTextActive,
+                      ]}
+                    >
+                      ${quickAmount.toLocaleString('en-US')}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
-            ))}
-          </View>
-
-          <TouchableOpacity
-            style={[
-              styles.button,
-              (isProofGenerating || isVerifying) && { backgroundColor: '#a0c4ff' },
-            ]}
-            onPress={handleTopUp}
-            activeOpacity={0.8}
-            disabled={isProofGenerating || isVerifying || amount.length === 0}
-          >
-            {isProofGenerating || isVerifying ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Load</Text>
-            )}
-          </TouchableOpacity>
-
-          {proofResult === 'success' && proofId && (
-            <View style={styles.proofInfo}>
-              <Text style={styles.successText}>✅ load verified successfully!</Text>
-              <Text style={styles.proofIdText}>Proof ID: {proofId}</Text>
             </View>
-          )}
-          {proofResult === 'failure' && (
-            <Text style={styles.errorText}>
-              ❌ Proof verification failed. Please try again.
-            </Text>
-          )}
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+          </Animated.View>
+
+          {/* Custom Keyboard */}
+          <View style={styles.keyboardSection}>
+            <View style={styles.keyboard}>
+              {KEYS.map((row, rowIndex) => (
+                <View key={rowIndex} style={styles.keyboardRow}>
+                  {row.map((key) => (
+                    <TouchableOpacity
+                      key={key}
+                      style={[
+                        styles.key,
+                        key === '<' ? styles.keySpecial : styles.keyNormal,
+                      ]}
+                      onPress={() => onKeyPress(key)}
+                      activeOpacity={0.7}
+                      disabled={isProofGenerating || isVerifying}
+                    >
+                      {key === '<' ? (
+                        <Ionicons name="backspace-outline" size={22} color="#ffffff" />
+                      ) : (
+                        <Text style={styles.keyText}>{key}</Text>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ))}
+            </View>
+
+            {/* Action Button */}
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                (isProofGenerating || isVerifying || !amount) && styles.actionButtonDisabled,
+              ]}
+              onPress={handleTopUp}
+              activeOpacity={0.8}
+              disabled={isProofGenerating || isVerifying || !amount}
+            >
+              {isProofGenerating || isVerifying ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color="#ffffff" />
+                  <Text style={styles.loadingText}>{getProcessingText()}</Text>
+                </View>
+              ) : (
+                <View style={styles.buttonContent}>
+                  <Ionicons name="add-circle-outline" size={20} color="#ffffff" />
+                  <Text style={styles.actionButtonText}>Add Money</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            {/* Success/Error Messages */}
+            {proofResult === 'success' && proofId && (
+              <View style={styles.successContainer}>
+                <View style={styles.successHeader}>
+                  <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+                  <Text style={styles.successTitle}>Transaction Successful!</Text>
+                </View>
+                <Text style={styles.proofIdText}>Transaction ID: {proofId}</Text>
+              </View>
+            )}
+
+            {proofResult === 'failure' && (
+              <View style={styles.errorContainer}>
+                <View style={styles.errorHeader}>
+                  <Ionicons name="close-circle" size={24} color="#FF5722" />
+                  <Text style={styles.errorTitle}>Transaction Failed</Text>
+                </View>
+                <Text style={styles.errorDescription}>
+                  Please check your connection and try again.
+                </Text>
+              </View>
+            )}
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </>
   );
 };
 
@@ -178,67 +297,115 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.primary,
-    paddingHorizontal: 20,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: Platform.OS === 'android' ? 40 : 10,
+    paddingHorizontal: 20,
+    paddingTop: 60,
     paddingBottom: 20,
   },
   backButton: {
+    padding: 8,
+    borderRadius: 8,
     marginRight: 12,
-    padding: 4,
+  },
+  headerContent: {
+    flex: 1,
   },
   headerText: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
-    color: '#fff',
+    color: '#ffffff',
+    letterSpacing: 0.5,
+  },
+  headerSubtext: {
+    fontSize: 14,
+    color: '#B3C5D7',
+    marginTop: 2,
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    paddingHorizontal: 20,
   },
-  amountBox: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 20,
+  animatedContainer: {
+    flex: 1,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-    marginBottom: 10,
-  },
-  amountInputWrapper: {
+  amountSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#a0b9ff',
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    height: 48,
-  },
-  amountText: {
-    flex: 1,
-    fontSize: 24,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  eyeIcon: {
-    paddingLeft: 10,
     justifyContent: 'center',
+    paddingVertical: 40,
+    marginBottom: 20,
   },
-  card: {
+  currencySymbol: {
+    fontSize: 32,
+    fontWeight: '600',
+    color: '#B3C5D7',
+    marginRight: 8,
+  },
+  amountDisplayContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  amountDisplay: {
+    fontSize: 48,
+    fontWeight: '700',
+    color: '#ffffff',
+    flex: 1,
+    textAlign: 'left',
+  },
+  visibilityButton: {
+    padding: 8,
+    marginLeft: 12,
+  },
+  quickAmountSection: {
+    marginBottom: 30,
+  },
+  quickAmountLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#B3C5D7',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  quickAmountContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  quickAmountButton: {
+    flex: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 14,
-    padding: 25,
-    marginBottom: 100,
+    borderRadius: 12,
+    paddingVertical: 12,
+    marginHorizontal: 4,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  quickAmountButtonActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#ffffff',
+  },
+  quickAmountText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#B3C5D7',
+  },
+  quickAmountTextActive: {
+    color: '#ffffff',
+  },
+  keyboardSection: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 24,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
   },
   keyboard: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   keyboardRow: {
     flexDirection: 'row',
@@ -247,61 +414,108 @@ const styles = StyleSheet.create({
   },
   key: {
     flex: 1,
+    height: 56,
     marginHorizontal: 6,
-    height: 60,
-    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  keyBackspace: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  keyNormal: {
+    backgroundColor: '#F8F9FA',
+  },
+  keySpecial: {
+    backgroundColor: '#E3F2FD',
   },
   keyText: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: '600',
+    color: Colors.primary,
   },
-  button: {
-    flexDirection: 'row',
+  actionButton: {
     backgroundColor: Colors.primary,
-    paddingVertical: 15,
-    borderRadius: 12,
+    borderRadius: 16,
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
-    borderWidth: 1,
-    borderColor: '#fff',
+    shadowColor: Colors.primary,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+  actionButtonDisabled: {
+    backgroundColor: '#B0BEC5',
+    shadowOpacity: 0,
+    elevation: 0,
   },
-  proofInfo: {
-    marginTop: 20,
-    padding: 15,
-    backgroundColor: 'rgba(0, 255, 0, 0.1)',
-    borderRadius: 12,
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  successText: {
-    color: '#adffb4',
+  actionButtonText: {
+    color: '#ffffff',
+    fontSize: 18,
     fontWeight: '700',
+    marginLeft: 8,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#ffffff',
     fontSize: 16,
-    marginBottom: 4,
+    fontWeight: '600',
+    marginLeft: 12,
+  },
+  successContainer: {
+    backgroundColor: '#E8F5E8',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  successHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  successTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2E7D32',
+    marginLeft: 8,
   },
   proofIdText: {
-    color: '#adffb4',
     fontSize: 14,
-    fontStyle: 'italic',
+    color: '#388E3C',
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
-  errorText: {
-    marginTop: 20,
-    color: '#ffdddd',
-    backgroundColor: 'rgba(255, 0, 0, 0.1)',
-    padding: 15,
+  errorContainer: {
+    backgroundColor: '#FFEBEE',
     borderRadius: 12,
-    fontWeight: '600',
-    fontSize: 15,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#FF5722',
+  },
+  errorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  errorTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#C62828',
+    marginLeft: 8,
+  },
+  errorDescription: {
+    fontSize: 14,
+    color: '#D32F2F',
   },
 });

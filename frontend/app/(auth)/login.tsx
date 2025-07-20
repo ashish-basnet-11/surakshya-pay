@@ -223,18 +223,18 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 16,
-    color: Colors.secondary,
+    color: Colors.primary,
     textDecorationLine: 'underline',
   },
   button: {
-    backgroundColor: Colors.secondary,
+    backgroundColor: Colors.primary,
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 10,
   },
   buttonText: {
-    color: Colors.primary,
+    color: "#ffffff",
     fontWeight: 'bold',
     fontSize: 16,
   },
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   },
   registerLink: {
     fontSize: 16,
-    color: Colors.secondary,
+    color: Colors.primary,
     fontWeight: 'bold',
     textDecorationLine: 'underline',
   },

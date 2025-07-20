@@ -219,14 +219,14 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   button: {
-    backgroundColor: Colors.secondary,
+    backgroundColor: Colors.primary,
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 10,
   },
   buttonText: {
-    color: Colors.primary,
+    color: "#ffffff",
     fontWeight: 'bold',
     fontSize: 16,
   },
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
   },
   loginLink: {
     fontSize: 16,
-    color: Colors.secondary,
+    color: Colors.primary,
     fontWeight: 'bold',
     textDecorationLine: 'underline',
   },
