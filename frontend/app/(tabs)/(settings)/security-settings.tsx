@@ -19,54 +19,128 @@ const SecuritySettings = () => {
   const [isTwoFactorEnabled, setIsTwoFactorEnabled] = useState(false);
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true);
 
+  const securityOptions = [
+    {
+      id: 'biometric',
+      title: 'Biometric Authentication',
+      description: 'Use Face ID or fingerprint to secure your account',
+      icon: 'finger-print',
+      iconSet: 'Ionicons',
+      color: '#007AFF',
+      value: isFaceIDEnabled,
+      onToggle: setIsFaceIDEnabled,
+    },
+    {
+      id: 'twoFactor',
+      title: 'Two-Factor Authentication',
+      description: 'Add an extra layer of security with 2FA',
+      icon: 'security',
+      iconSet: 'MaterialIcons',
+      color: '#34C759',
+      value: isTwoFactorEnabled,
+      onToggle: setIsTwoFactorEnabled,
+    },
+    {
+      id: 'alerts',
+      title: 'Security Alerts',
+      description: 'Get notified of suspicious account activity',
+      icon: 'bell',
+      iconSet: 'Feather',
+      color: '#FF9500',
+      value: isNotificationsEnabled,
+      onToggle: setIsNotificationsEnabled,
+    },
+  ];
+
+  const renderIcon = (iconSet, iconName, size, color) => {
+    switch (iconSet) {
+      case 'Ionicons':
+        return <Ionicons name={iconName} size={size} color={color} />;
+      case 'MaterialIcons':
+        return <MaterialIcons name={iconName} size={size} color={color} />;
+      case 'Feather':
+        return <Feather name={iconName} size={size} color={color} />;
+      default:
+        return <Ionicons name={iconName} size={size} color={color} />;
+    }
+  };
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
+    <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/settings')} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={26} color={Colors.primary} />
+        <TouchableOpacity 
+          onPress={() => router.push('/settings')} 
+          style={styles.backButton}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={28} color="#1C1C1E" />
         </TouchableOpacity>
-        <Text style={styles.headerText}>Security Settings</Text>
+        <Text style={styles.headerTitle}>Security</Text>
       </View>
 
-      <View style={[styles.item, { borderBottomWidth: 1 }]}>
-        <View style={[styles.iconWrapper, { backgroundColor: '#4CAF50' }]}>
-          <Ionicons name="finger-print" size={24} color="#fff" />
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Section Header */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Account Security</Text>
+          <Text style={styles.sectionSubtitle}>
+            Manage your security preferences and authentication methods
+          </Text>
         </View>
-        <Text style={styles.itemText}>Enable Face ID / Fingerprint</Text>
-        <Switch
-          value={isFaceIDEnabled}
-          onValueChange={setIsFaceIDEnabled}
-          trackColor={{ false: '#ccc', true: Colors.primary }}
-          thumbColor={Platform.OS === 'android' ? '#fff' : undefined}
-        />
-      </View>
 
-      <View style={[styles.item, { borderBottomWidth: 1 }]}>
-        <View style={[styles.iconWrapper, { backgroundColor: '#2196F3' }]}>
-          <MaterialIcons name="security" size={24} color="#fff" />
+        {/* Security Options */}
+        <View style={styles.optionsContainer}>
+          {securityOptions.map((option, index) => (
+            <View 
+              key={option.id} 
+              style={[
+                styles.optionItem,
+                index === securityOptions.length - 1 && styles.lastItem
+              ]}
+            >
+              <View style={styles.optionLeft}>
+                <View style={[styles.iconContainer, { backgroundColor: option.color }]}>
+                  {renderIcon(option.iconSet, option.icon, 22, '#FFFFFF')}
+                </View>
+                <View style={styles.textContainer}>
+                  <Text style={styles.optionTitle}>{option.title}</Text>
+                  <Text style={styles.optionDescription}>{option.description}</Text>
+                </View>
+              </View>
+              <Switch
+                value={option.value}
+                onValueChange={option.onToggle}
+                trackColor={{ 
+                  false: '#E5E5EA', 
+                  true: option.color + '40' 
+                }}
+                thumbColor={option.value ? option.color : '#FFFFFF'}
+                ios_backgroundColor="#E5E5EA"
+                style={styles.switch}
+              />
+            </View>
+          ))}
         </View>
-        <Text style={styles.itemText}>Two-Factor Authentication</Text>
-        <Switch
-          value={isTwoFactorEnabled}
-          onValueChange={setIsTwoFactorEnabled}
-          trackColor={{ false: '#ccc', true: Colors.primary }}
-          thumbColor={Platform.OS === 'android' ? '#fff' : undefined}
-        />
-      </View>
 
-      <View style={[styles.item, { borderBottomWidth: 0 }]}>
-        <View style={[styles.iconWrapper, { backgroundColor: '#FF9800' }]}>
-          <Feather name="bell" size={24} color="#fff" />
+        {/* Additional Security Info */}
+        <View style={styles.infoSection}>
+          <View style={styles.infoCard}>
+            <View style={styles.infoHeader}>
+              <Ionicons name="shield-checkmark" size={20} color="#34C759" />
+              <Text style={styles.infoTitle}>Security Status</Text>
+            </View>
+            <Text style={styles.infoText}>
+              Your account is protected with industry-standard security measures. 
+              Enable additional features above for enhanced protection.
+            </Text>
+          </View>
         </View>
-        <Text style={styles.itemText}>Security Alerts</Text>
-        <Switch
-          value={isNotificationsEnabled}
-          onValueChange={setIsNotificationsEnabled}
-          trackColor={{ false: '#ccc', true: Colors.primary }}
-          thumbColor={Platform.OS === 'android' ? '#fff' : undefined}
-        />
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
@@ -75,61 +149,139 @@ export default SecuritySettings;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff', 
+    backgroundColor: '#F8F9FA',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff', 
-    paddingTop: Platform.OS === 'android' ? 40 : 0,
+    backgroundColor: '#FFFFFF',
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+    paddingBottom: 16,
     paddingHorizontal: 20,
-    paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    marginBottom: 10,
+    borderBottomColor: '#E5E5EA',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   backButton: {
-    marginRight: 12,
+    marginRight: 16,
     padding: 4,
   },
-  headerText: {
-    color: Colors.primary,
-    fontSize: 22,
+  headerTitle: {
+    fontSize: 28,
     fontWeight: '700',
+    color: '#1C1C1E',
+    letterSpacing: -0.5,
   },
-  item: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomColor: '#eee',
-    borderRadius: 12,
-    marginVertical: 8,
-    paddingHorizontal: 15,
-    backgroundColor: '#f9f9f9',
-    justifyContent: 'space-between',  
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  sectionHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 32,
+    paddingBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#1C1C1E',
+    marginBottom: 8,
+    letterSpacing: -0.3,
+  },
+  sectionSubtitle: {
+    fontSize: 16,
+    color: '#8E8E93',
+    lineHeight: 22,
+  },
+  optionsContainer: {
     marginHorizontal: 20,
-    shadowColor: '#000',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  iconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     elevation: 3,
   },
-  itemText: {
+  optionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F2F2F7',
+  },
+  lastItem: {
+    borderBottomWidth: 0,
+  },
+  optionLeft: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  textContainer: {
+    flex: 1,
+  },
+  optionTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#1C1C1E',
+    marginBottom: 4,
+    letterSpacing: -0.2,
+  },
+  optionDescription: {
+    fontSize: 15,
+    color: '#8E8E93',
+    lineHeight: 20,
+  },
+  switch: {
+    transform: Platform.OS === 'ios' ? [] : [{ scaleX: 1.1 }, { scaleY: 1.1 }],
+  },
+  infoSection: {
+    paddingHorizontal: 20,
+    paddingTop: 32,
+  },
+  infoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#34C759',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  infoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  infoTitle: {
     fontSize: 16,
-    color: Colors.primary,
+    fontWeight: '600',
+    color: '#1C1C1E',
+    marginLeft: 8,
+  },
+  infoText: {
+    fontSize: 15,
+    color: '#6D6D70',
+    lineHeight: 22,
   },
 });

@@ -17,22 +17,20 @@ import Colors from "@/constants/Colors";
 const screenWidth = Dimensions.get("window").width;
 
 const weeklyTransactions = [
-  { id: 1, name: "Dribble Premium", amount: -80, type: "Subscription" },
-  { id: 2, name: "Snapchat Ads", amount: 150, type: "Income" },
-  { id: 3, name: "Skype Premium", amount: -70, type: "Subscription" },
+  { id: 1, name: "Dribble Premium", amount: -80, type: "Subscription", category: "Software" },
+  { id: 2, name: "Snapchat Ads", amount: 150, type: "Income", category: "Marketing" },
+  { id: 3, name: "Skype Premium", amount: -70, type: "Subscription", category: "Communication" },
 ];
 
 const monthlyTransactions = [
-  { id: 1, name: "Dribble Premium", amount: -280, type: "Subscription" },
-  { id: 2, name: "Snapchat Ads", amount: 220, type: "Income" },
-  { id: 3, name: "Skype Premium", amount: -190, type: "Subscription" },
+  { id: 1, name: "Dribble Premium", amount: -280, type: "Subscription", category: "Software" },
+  { id: 2, name: "Snapchat Ads", amount: 220, type: "Income", category: "Marketing" },
+  { id: 3, name: "Skype Premium", amount: -190, type: "Subscription", category: "Communication" },
 ];
 
 const Statistics = () => {
   const router = useRouter();
-  const [selectedPeriod, setSelectedPeriod] = useState<"weekly" | "monthly">(
-    "weekly"
-  );
+  const [selectedPeriod, setSelectedPeriod] = useState("weekly");
 
   const transactions =
     selectedPeriod === "weekly" ? weeklyTransactions : monthlyTransactions;
@@ -45,175 +43,231 @@ const Statistics = () => {
     .filter((t) => t.amount < 0)
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
+  const netBalance = income - expense;
+
   const chartData = [
     {
       name: "Income",
       amount: income,
-      color: "#4CAF50",
+      color: "#34C759",
       legendFontColor: "#fff",
       legendFontSize: 14,
     },
     {
-      name: "Expense",
+      name: "Expenses",
       amount: expense,
-      color: "#F44336",
+      color: "#FF3B30",
       legendFontColor: "#fff",
       legendFontSize: 14,
     },
   ];
 
+  const getTransactionIcon = (type) => {
+    return type === "Income" ? "trending-up" : "trending-down";
+  };
+
+  const getTransactionColor = (amount) => {
+    return amount > 0 ? "#34C759" : "#FF3B30";
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
+      
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.push("/")}
           style={styles.backButton}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={28} color="#fff" />
+          <Ionicons name="arrow-back" size={28} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.title}>Financial Statistics</Text>
+        <Text style={styles.headerTitle}>Statistics</Text>
+        <View style={styles.headerRight} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Filter Buttons */}
-        <View style={styles.filterContainer}>
-          <TouchableOpacity
-            style={[
-              styles.filterButton,
-              selectedPeriod === "weekly" && styles.filterButtonActive,
-            ]}
-            onPress={() => setSelectedPeriod("weekly")}
-          >
-            <Text
-              style={[
-                styles.filterText,
-                selectedPeriod === "weekly" && styles.filterTextActive,
-              ]}
-            >
-              Weekly
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Overview Cards */}
+        <View style={styles.overviewSection}>
+          <View style={styles.balanceCard}>
+            <View style={styles.balanceHeader}>
+              <Text style={styles.balanceLabel}>Net Balance</Text>
+              <View style={[
+                styles.balanceIndicator, 
+                { backgroundColor: netBalance >= 0 ? '#34C759' : '#FF3B30' }
+              ]}>
+                <Ionicons 
+                  name={netBalance >= 0 ? "trending-up" : "trending-down"} 
+                  size={16} 
+                  color="#FFFFFF" 
+                />
+              </View>
+            </View>
+            <Text style={[
+              styles.balanceAmount,
+              { color: netBalance >= 0 ? '#34C759' : '#FF3B30' }
+            ]}>
+              ${Math.abs(netBalance).toFixed(2)}
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.filterButton,
-              selectedPeriod === "monthly" && styles.filterButtonActive,
-            ]}
-            onPress={() => setSelectedPeriod("monthly")}
-          >
-            <Text
-              style={[
-                styles.filterText,
-                selectedPeriod === "monthly" && styles.filterTextActive,
-              ]}
-            >
-              Monthly
+            <Text style={styles.balanceSubtext}>
+              {netBalance >= 0 ? 'Profit this period' : 'Loss this period'}
             </Text>
-          </TouchableOpacity>
+          </View>
+
+          <View style={styles.statsRow}>
+            <View style={styles.statCard}>
+              <View style={styles.statHeader}>
+                <View style={[styles.statIcon, { backgroundColor: '#34C759' }]}>
+                  <Ionicons name="arrow-up" size={18} color="#FFFFFF" />
+                </View>
+                <Text style={styles.statLabel}>Income</Text>
+              </View>
+              <Text style={styles.statAmount}>${income.toFixed(2)}</Text>
+            </View>
+
+            <View style={styles.statCard}>
+              <View style={styles.statHeader}>
+                <View style={[styles.statIcon, { backgroundColor: '#FF3B30' }]}>
+                  <Ionicons name="arrow-down" size={18} color="#FFFFFF" />
+                </View>
+                <Text style={styles.statLabel}>Expenses</Text>
+              </View>
+              <Text style={styles.statAmount}>${expense.toFixed(2)}</Text>
+            </View>
+          </View>
         </View>
 
-        <View style={styles.chartBox}>
-          <Text style={styles.sectionTitle}>Spending Overview</Text>
-          <PieChart
-            data={chartData}
-            width={screenWidth - 40}
-            height={220}
-            chartConfig={{
-              color: () => "#000",
-            }}
-            accessor="amount"
-            backgroundColor="transparent"
-            paddingLeft="15"
-            absolute
-          />
+        {/* Period Filter */}
+        <View style={styles.filterSection}>
+          <Text style={styles.sectionTitle}>Time Period</Text>
+          <View style={styles.filterContainer}>
+            {['weekly', 'monthly'].map((period) => (
+              <TouchableOpacity
+                key={period}
+                style={[
+                  styles.filterButton,
+                  selectedPeriod === period && styles.filterButtonActive,
+                ]}
+                onPress={() => setSelectedPeriod(period)}
+                activeOpacity={0.8}
+              >
+                <Text style={[
+                  styles.filterText,
+                  selectedPeriod === period && styles.filterTextActive,
+                ]}>
+                  {period.charAt(0).toUpperCase() + period.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
-          <View style={{ marginTop: 25 }}>
-            <Text style={[styles.sectionTitle, { textAlign: "left" }]}>
-              Transactions ({selectedPeriod})
-            </Text>
-            {transactions.map((item) => (
-              <View key={item.id} style={styles.transactionItem}>
-                <Text style={styles.transactionName}>{item.name}</Text>
-                <Text
-                  style={[
-                    styles.transactionAmount,
-                    { color: item.amount > 0 ? "#4CAF50" : "#F44336" },
-                  ]}
-                >
-                  {item.amount > 0 ? "+" : "-"}${Math.abs(item.amount).toFixed(2)}
+        {/* Chart Section */}
+        <View style={styles.chartSection}>
+          <Text style={styles.sectionTitle}>Spending Overview</Text>
+          <View style={styles.chartContainer}>
+            <PieChart
+              data={chartData}
+              width={screenWidth - 80}
+              height={200}
+              chartConfig={{
+                color: () => "#1C1C1E",
+                backgroundColor: "transparent",
+              }}
+              accessor="amount"
+              backgroundColor="transparent"
+              paddingLeft="15"
+              absolute
+              hasLegend={true}
+            />
+          </View>
+        </View>
+
+        {/* Transactions */}
+        <View style={styles.transactionsSection}>
+          <Text style={styles.sectionTitle}>Recent Transactions</Text>
+          <View style={styles.transactionsContainer}>
+            {transactions.map((transaction, index) => (
+              <View 
+                key={transaction.id} 
+                style={[
+                  styles.transactionItem,
+                  index === transactions.length - 1 && styles.lastTransaction
+                ]}
+              >
+                <View style={styles.transactionLeft}>
+                  <View style={[
+                    styles.transactionIcon,
+                    { backgroundColor: getTransactionColor(transaction.amount) + '20' }
+                  ]}>
+                    <Ionicons 
+                      name={getTransactionIcon(transaction.type)} 
+                      size={20} 
+                      color={getTransactionColor(transaction.amount)} 
+                    />
+                  </View>
+                  <View style={styles.transactionDetails}>
+                    <Text style={styles.transactionName}>{transaction.name}</Text>
+                    <Text style={styles.transactionCategory}>{transaction.category}</Text>
+                  </View>
+                </View>
+                <Text style={[
+                  styles.transactionAmount,
+                  { color: getTransactionColor(transaction.amount) }
+                ]}>
+                  {transaction.amount > 0 ? '+' : '-'}${Math.abs(transaction.amount).toFixed(2)}
                 </Text>
               </View>
             ))}
           </View>
         </View>
 
-        {/* Summary Box */}
-        <View style={styles.summaryBox}>
-          <Text style={styles.summaryTitle}>Summary</Text>
-          <View style={styles.summaryItem}>
-            <Text style={styles.label}>Total Income:</Text>
-            <Text style={[styles.value, { color: "#fff" }]}>
-              ${income.toFixed(2)}
-            </Text>
-          </View>
-          <View style={styles.summaryItem}>
-            <Text style={styles.label}>Total Expense:</Text>
-            <Text style={[styles.value, { color: "#fff" }]}>
-              ${expense.toFixed(2)}
-            </Text>
-          </View>
-          <View style={styles.summaryItem}>
-            <Text style={styles.label}>Net Balance:</Text>
-            <Text
-              style={[
-                styles.value,
-                {
-                  color: income - expense >= 0 ? "#81C784" : "#E57373",
-                },
-              ]}
-            >
-              ${(income - expense).toFixed(2)}
-            </Text>
-          </View>
-        </View>
-
         {/* Category Breakdown */}
-        <View style={styles.categoryBox}>
+        <View style={styles.categorySection}>
           <Text style={styles.sectionTitle}>Category Breakdown</Text>
-          {["Income", "Subscription"].map((category) => {
-            const categorySum = transactions
-              .filter((t) => t.type === category)
-              .reduce((sum, t) => sum + Math.abs(t.amount), 0);
-            return (
-              <View key={category} style={styles.categoryItem}>
-                <Text style={styles.categoryName}>{category}</Text>
-                <Text style={styles.categoryAmount}>
-                  ${categorySum.toFixed(2)}
-                </Text>
-                <View style={styles.categoryBarBackground}>
-                  <View
-                    style={[
-                      styles.categoryBarFill,
-                      {
-                        width: `${
-                          Math.min(
-                            ((categorySum / (income + expense)) * 100) || 0,
-                            100
-                          )
-                        }%`,
-                        backgroundColor:
-                          category === "Income" ? "#4CAF50" : "#F44336",
-                      },
-                    ]}
-                  />
+          <View style={styles.categoryContainer}>
+            {['Income', 'Subscription'].map((category) => {
+              const categorySum = transactions
+                .filter((t) => t.type === category)
+                .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+              
+              const percentage = Math.min(
+                ((categorySum / (income + expense)) * 100) || 0,
+                100
+              );
+
+              return (
+                <View key={category} style={styles.categoryItem}>
+                  <View style={styles.categoryHeader}>
+                    <Text style={styles.categoryName}>{category}</Text>
+                    <Text style={styles.categoryAmount}>${categorySum.toFixed(2)}</Text>
+                  </View>
+                  <View style={styles.categoryBarContainer}>
+                    <View style={styles.categoryBarBackground}>
+                      <View
+                        style={[
+                          styles.categoryBarFill,
+                          {
+                            width: `${percentage}%`,
+                            backgroundColor: category === "Income" ? "#34C759" : "#FF3B30",
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.categoryPercentage}>{percentage.toFixed(1)}%</Text>
+                  </View>
                 </View>
-              </View>
-            );
-          })}
+              );
+            })}
+          </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -225,155 +279,279 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.primary,
+    paddingTop: 60,
+    paddingBottom: 16,
     paddingHorizontal: 20,
-    paddingTop: 40,
-    paddingBottom: 10,
   },
   backButton: {
-    marginRight: 8,
+    padding: 4,
   },
-  title: {
-    fontSize: 22,
-    color: "#fff",
-    fontWeight: "bold",
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+  },
+  headerRight: {
+    width: 150,
+  },
+  scrollContainer: {
     flex: 1,
-    textAlign: "center",
-    marginRight:90,
   },
   scrollContent: {
-    paddingHorizontal: 20,
     paddingBottom: 40,
-    marginTop: 10,
   },
-  filterContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginBottom: 25,
+  overviewSection: {
+    paddingHorizontal: 20,
+    paddingTop: 32,
   },
-  filterButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 25,
-    borderRadius: 30,
-    backgroundColor: "#2A3441",
-    marginHorizontal: 8,
-  },
-  filterButtonActive: {
-    backgroundColor: "#4CAF50",
-  },
-  filterText: {
-    color: "#8B9DC3",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  filterTextActive: {
-    color: "#fff",
-  },
-  chartBox: {
-    backgroundColor: "#2A3441",
+  balanceCard: {
+    backgroundColor: '#2A3441',
     borderRadius: 20,
+    padding: 24,
+    marginBottom: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  balanceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  balanceLabel: {
+    fontSize: 16,
+    color: '#ccc',
+    fontWeight: '500',
+  },
+  balanceIndicator: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  balanceAmount: {
+    fontSize: 36,
+    fontWeight: '700',
+    marginBottom: 4,
+    letterSpacing: -1,
+  },
+  balanceSubtext: {
+    fontSize: 14,
+    color: '#ccc',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#2A3441',
+    borderRadius: 16,
     padding: 20,
-    marginBottom: 30,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  statHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  statIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#ccc',
+    fontWeight: '500',
+  },
+  statAmount: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
+  },
+  filterSection: {
+    paddingHorizontal: 20,
+    paddingTop: 32,
   },
   sectionTitle: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  summaryBox: {
-    backgroundColor: "#2A3441",
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-    marginBottom: 30,
-  },
-  summaryTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#fff",
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#FFFFFF',
     marginBottom: 16,
-    textAlign: "center",
+    letterSpacing: -0.3,
   },
-  summaryItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-start",
-    marginBottom: 12,
+  filterContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#2A3441',
+    borderRadius: 12,
+    padding: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  label: {
-    color: "#ccc",
-    fontSize: 16,
+  filterButton: {
     flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
   },
-  value: {
+  filterButtonActive: {
+    backgroundColor: '#4CAF50',
+  },
+  filterText: {
     fontSize: 16,
-    fontWeight: "bold",
-    marginLeft: 12,
+    fontWeight: '600',
+    color: '#8B9DC3',
   },
-
-  transactionsBox: {
-    backgroundColor: "#2A3441",
+  filterTextActive: {
+    color: '#FFFFFF',
+  },
+  chartSection: {
+    paddingHorizontal: 20,
+    paddingTop: 32,
+  },
+  chartContainer: {
+    backgroundColor: '#2A3441',
     borderRadius: 20,
     padding: 20,
-    marginBottom: 30,
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  transactionsSection: {
+    paddingHorizontal: 20,
+    paddingTop: 32,
+  },
+  transactionsContainer: {
+    backgroundColor: '#2A3441',
+    borderRadius: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
   },
   transactionItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#444",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#444',
+  },
+  lastTransaction: {
+    borderBottomWidth: 0,
+  },
+  transactionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  transactionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  transactionDetails: {
+    flex: 1,
   },
   transactionName: {
-    color: "#fff",
     fontSize: 16,
-    flex: 1,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  transactionCategory: {
+    fontSize: 14,
+    color: '#ccc',
   },
   transactionAmount: {
     fontSize: 16,
-    fontWeight: "bold",
-    width: 100,
-    textAlign: "right",
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
-
-  categoryBox: {
-    backgroundColor: "#2A3441",
-    borderRadius: 20,
+  categorySection: {
+    paddingHorizontal: 20,
+    paddingTop: 32,
+  },
+  categoryContainer: {
+    backgroundColor: '#2A3441',
+    borderRadius: 16,
     padding: 20,
-    marginBottom: 30,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
   },
   categoryItem: {
-    flexDirection:"column",  
-    alignItems: "flex-start", 
-    marginBottom: 12,
+    marginBottom: 20,
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   categoryName: {
-    color: "#fff",
     fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   categoryAmount: {
-    color: "#fff",
-    fontWeight: "bold",
     fontSize: 16,
-    marginVertical: 6,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  categoryBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   categoryBarBackground: {
-    height: 12,
-    backgroundColor: "#444",
-    borderRadius: 6,
-    marginHorizontal: 0,
-    overflow: "hidden",
-    width: "100%",
+    flex: 1,
+    height: 8,
+    backgroundColor: '#444',
+    borderRadius: 4,
+    overflow: 'hidden',
   },
   categoryBarFill: {
-    height: "100%",
-    borderRadius: 6,
+    height: '100%',
+    borderRadius: 4,
+  },
+  categoryPercentage: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ccc',
+    minWidth: 40,
+    textAlign: 'right',
   },
 });

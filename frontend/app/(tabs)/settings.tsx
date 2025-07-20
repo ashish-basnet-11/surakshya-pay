@@ -21,6 +21,8 @@ const Settings = () => {
           label: 'Personal Information',
           description: 'Manage your personal details and preferences',
           icon: 'person-outline',
+          iconColor: '#007AFF',
+          iconBg: '#007AFF20',
           route: '/(tabs)/(settings)/profile-details',
         },
       ],
@@ -32,6 +34,8 @@ const Settings = () => {
           label: 'Security Settings',
           description: 'Password, biometrics, and account security',
           icon: 'shield-checkmark-outline',
+          iconColor: '#34C759',
+          iconBg: '#34C75920',
           route: '/(tabs)/(settings)/security-settings',
         },
       ],
@@ -43,6 +47,8 @@ const Settings = () => {
           label: 'Transaction Settings',
           description: 'Manage payment methods and transaction limits',
           icon: 'card-outline',
+          iconColor: '#FF9500',
+          iconBg: '#FF950020',
           route: '/(tabs)/(settings)/transaction-settings',
         },
       ],
@@ -54,6 +60,8 @@ const Settings = () => {
           label: 'App Preferences',
           description: 'Notifications, language, and display settings',
           icon: 'settings-outline',
+          iconColor: '#5856D6',
+          iconBg: '#5856D620',
           route: '/(tabs)/(settings)/general-settings',
         },
       ],
@@ -65,11 +73,18 @@ const Settings = () => {
           label: 'About SurakshyaPay',
           description: 'App version, terms, and privacy policy',
           icon: 'information-circle-outline',
+          iconColor: '#FF3B30',
+          iconBg: '#FF3B3020',
           route: '/(tabs)/(settings)/about-settings',
         },
       ],
     },
   ];
+
+  const handleLogout = () => {
+    // You can add any logout logic here (clearing tokens, etc.)
+    router.push('/login'); // Adjust the route path as needed
+  };
 
   const renderSettingItem = (item) => (
     <TouchableOpacity
@@ -79,15 +94,15 @@ const Settings = () => {
       activeOpacity={0.7}
     >
       <View style={styles.settingContent}>
-        <View style={styles.iconContainer}>
-          <Ionicons name={item.icon} size={22} color={Colors.primary} />
+        <View style={[styles.iconContainer, { backgroundColor: item.iconBg }]}>
+          <Ionicons name={item.icon} size={22} color={item.iconColor} />
         </View>
         <View style={styles.textContainer}>
           <Text style={styles.settingLabel}>{item.label}</Text>
           <Text style={styles.settingDescription}>{item.description}</Text>
         </View>
       </View>
-      <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
+      <Ionicons name="chevron-forward" size={20} color="#6B7280" />
     </TouchableOpacity>
   );
 
@@ -128,6 +143,22 @@ const Settings = () => {
           contentContainerStyle={styles.scrollContent}
         >
           {settingsData.map((section, index) => renderSection(section, index))}
+          
+          {/* Logout Button */}
+          <View style={styles.logoutSection}>
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={handleLogout}
+              activeOpacity={0.7}
+            >
+              <View style={styles.logoutContent}>
+                <View style={styles.logoutIconContainer}>
+                  <Ionicons name="log-out-outline" size={22} color="#FF3B30" />
+                </View>
+                <Text style={styles.logoutText}>Logout</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
           
           {/* Bottom spacing */}
           <View style={styles.bottomSpacing} />
@@ -182,7 +213,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   sectionContent: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#F3F4F6', 
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -200,7 +231,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#F3F4F6', 
   },
   settingContent: {
     flexDirection: 'row',
@@ -211,7 +242,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#F8F9FA',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
@@ -227,13 +257,49 @@ const styles = StyleSheet.create({
   },
   settingDescription: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: '#6B7280', 
     lineHeight: 18,
   },
   itemSeparator: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: '#E5E5EA',
+    backgroundColor: '#D1D5DB',
     marginLeft: 76,
+  },
+  logoutSection: {
+    marginBottom: 24,
+  },
+  logoutButton: {
+    backgroundColor: '#F3F4F6', 
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  logoutContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  logoutIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+    backgroundColor: '#FF3B3020', 
+  },
+  logoutText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#FF3B30', 
   },
   bottomSpacing: {
     height: 40,

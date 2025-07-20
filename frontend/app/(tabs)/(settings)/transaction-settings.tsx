@@ -19,58 +19,154 @@ const TransactionSettings = () => {
   const [autoCategorize, setAutoCategorize] = useState(false);
   const [transactionNotifications, setTransactionNotifications] = useState(true);
 
+  const transactionOptions = [
+    {
+      id: 'notifications',
+      title: 'Transaction Notifications',
+      description: 'Get instant alerts for all account transactions',
+      icon: 'notifications',
+      iconSet: 'Ionicons',
+      color: '#007AFF',
+      value: transactionNotifications,
+      onToggle: setTransactionNotifications,
+    },
+    {
+      id: 'spending',
+      title: 'Spending Limit Alerts',
+      description: 'Receive warnings when approaching spending limits',
+      icon: 'trending-up',
+      iconSet: 'Ionicons',
+      color: '#FF3B30',
+      value: limitAlerts,
+      onToggle: setLimitAlerts,
+    },
+    {
+      id: 'categorize',
+      title: 'Auto Categorize Transactions',
+      description: 'Automatically organize transactions into categories',
+      icon: 'tag',
+      iconSet: 'Feather',
+      color: '#34C759',
+      value: autoCategorize,
+      onToggle: setAutoCategorize,
+    },
+  ];
+
+  const renderIcon = (iconSet, iconName, size, color) => {
+    switch (iconSet) {
+      case 'Ionicons':
+        return <Ionicons name={iconName} size={size} color={color} />;
+      case 'MaterialIcons':
+        return <MaterialIcons name={iconName} size={size} color={color} />;
+      case 'Feather':
+        return <Feather name={iconName} size={size} color={color} />;
+      default:
+        return <Ionicons name={iconName} size={size} color={color} />;
+    }
+  };
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
+    <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.push('/settings')}
+        <TouchableOpacity 
+          onPress={() => router.push('/settings')} 
           style={styles.backButton}
+          activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={26} color={Colors.primary} />
+          <Ionicons name="arrow-back" size={28} color="#1C1C1E" />
         </TouchableOpacity>
-
-        <Text style={styles.headerText}>Transaction Settings</Text>
+        <Text style={styles.headerTitle}>Transactions</Text>
       </View>
 
-      <View style={[styles.item, { borderBottomWidth: 1 }]}>
-        <View style={[styles.iconWrapper, { backgroundColor: '#2196F3' }]}>
-          <Ionicons name="notifications" size={24} color="#fff" />
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Section Header */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Transaction Preferences</Text>
+          <Text style={styles.sectionSubtitle}>
+            Customize how you track and monitor your financial activity
+          </Text>
         </View>
-        <Text style={styles.itemText}>Transaction Notifications</Text>
-        <Switch
-          value={transactionNotifications}
-          onValueChange={setTransactionNotifications}
-          trackColor={{ false: '#ccc', true: Colors.primary }}
-          thumbColor={Platform.OS === 'android' ? '#fff' : undefined}
-        />
-      </View>
 
-      <View style={[styles.item, { borderBottomWidth: 1 }]}>
-        <View style={[styles.iconWrapper, { backgroundColor: '#F44336' }]}>
-          <MaterialIcons name="notifications-active" size={24} color="#fff" />
+        {/* Transaction Options */}
+        <View style={styles.optionsContainer}>
+          {transactionOptions.map((option, index) => (
+            <View 
+              key={option.id} 
+              style={[
+                styles.optionItem,
+                index === transactionOptions.length - 1 && styles.lastItem
+              ]}
+            >
+              <View style={styles.optionLeft}>
+                <View style={[styles.iconContainer, { backgroundColor: option.color }]}>
+                  {renderIcon(option.iconSet, option.icon, 22, '#FFFFFF')}
+                </View>
+                <View style={styles.textContainer}>
+                  <Text style={styles.optionTitle}>{option.title}</Text>
+                  <Text style={styles.optionDescription}>{option.description}</Text>
+                </View>
+              </View>
+              <Switch
+                value={option.value}
+                onValueChange={option.onToggle}
+                trackColor={{ 
+                  false: '#E5E5EA', 
+                  true: option.color + '40' 
+                }}
+                thumbColor={option.value ? option.color : '#FFFFFF'}
+                ios_backgroundColor="#E5E5EA"
+                style={styles.switch}
+              />
+            </View>
+          ))}
         </View>
-        <Text style={styles.itemText}>Spending Limit Alerts</Text>
-        <Switch
-          value={limitAlerts}
-          onValueChange={setLimitAlerts}
-          trackColor={{ false: '#ccc', true: Colors.primary }}
-          thumbColor={Platform.OS === 'android' ? '#fff' : undefined}
-        />
-      </View>
 
-      <View style={[styles.item, { borderBottomWidth: 0 }]}>
-        <View style={[styles.iconWrapper, { backgroundColor: '#4CAF50' }]}>
-          <Feather name="tag" size={24} color="#fff" />
+        {/* Quick Actions Section */}
+        <View style={styles.quickActionsSection}>
+          <Text style={styles.quickActionsTitle}>Quick Actions</Text>
+          
+          <View style={styles.quickActionsContainer}>
+            <TouchableOpacity style={styles.quickActionItem} activeOpacity={0.7}>
+              <View style={[styles.quickActionIcon, { backgroundColor: '#5856D6' }]}>
+                <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
+              </View>
+              <Text style={styles.quickActionText}>Spending Limits</Text>
+              <Ionicons name="chevron-forward" size={16} color="#C7C7CC" />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.quickActionItem, styles.lastQuickAction]} 
+              activeOpacity={0.7}
+            >
+              <View style={[styles.quickActionIcon, { backgroundColor: '#AF52DE' }]}>
+                <Ionicons name="analytics-outline" size={20} color="#FFFFFF" />
+              </View>
+              <Text style={styles.quickActionText}>Transaction History</Text>
+              <Ionicons name="chevron-forward" size={16} color="#C7C7CC" />
+            </TouchableOpacity>
+          </View>
         </View>
-        <Text style={styles.itemText}>Auto Categorize Transactions</Text>
-        <Switch
-          value={autoCategorize}
-          onValueChange={setAutoCategorize}
-          trackColor={{ false: '#ccc', true: Colors.primary }}
-          thumbColor={Platform.OS === 'android' ? '#fff' : undefined}
-        />
-      </View>
-    </ScrollView>
+
+        {/* Info Section */}
+        <View style={styles.infoSection}>
+          <View style={styles.infoCard}>
+            <View style={styles.infoHeader}>
+              <Ionicons name="information-circle" size={20} color="#007AFF" />
+              <Text style={styles.infoTitle}>Smart Categorization</Text>
+            </View>
+            <Text style={styles.infoText}>
+              When enabled, transactions are automatically sorted into categories like 
+              dining, shopping, and utilities using machine learning for better expense tracking.
+            </Text>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
@@ -79,61 +175,185 @@ export default TransactionSettings;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',  
+    backgroundColor: '#F8F9FA',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',  
-    paddingTop: Platform.OS === 'android' ? 40 : 0,
+    backgroundColor: '#FFFFFF',
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+    paddingBottom: 16,
     paddingHorizontal: 20,
-    paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    marginBottom: 15,  
-  },
-  backButton: {
-    marginRight: 12,
-    padding: 4,
-  },
-  headerText: {
-    color: Colors.primary,
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  item: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomColor: '#eee',
-    borderRadius: 12,
-    marginVertical: 8,
-    paddingHorizontal: 15,
-    backgroundColor: '#f9f9f9',
-    justifyContent: 'space-between',  
-    marginHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
+    borderBottomColor: '#E5E5EA',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
     elevation: 2,
   },
-  iconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 15,
-    shadowColor: '#000',
+  backButton: {
+    marginRight: 16,
+    padding: 4,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1C1C1E',
+    letterSpacing: -0.5,
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  sectionHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 32,
+    paddingBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#1C1C1E',
+    marginBottom: 8,
+    letterSpacing: -0.3,
+  },
+  sectionSubtitle: {
+    fontSize: 16,
+    color: '#8E8E93',
+    lineHeight: 22,
+  },
+  optionsContainer: {
+    marginHorizontal: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     elevation: 3,
   },
-  itemText: {
+  optionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F2F2F7',
+  },
+  lastItem: {
+    borderBottomWidth: 0,
+  },
+  optionLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  textContainer: {
+    flex: 1,
+  },
+  optionTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#1C1C1E',
+    marginBottom: 4,
+    letterSpacing: -0.2,
+  },
+  optionDescription: {
+    fontSize: 15,
+    color: '#8E8E93',
+    lineHeight: 20,
+  },
+  switch: {
+    transform: Platform.OS === 'ios' ? [] : [{ scaleX: 1.1 }, { scaleY: 1.1 }],
+  },
+  quickActionsSection: {
+    paddingHorizontal: 20,
+    paddingTop: 32,
+  },
+  quickActionsTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1C1C1E',
+    marginBottom: 16,
+    letterSpacing: -0.3,
+  },
+  quickActionsContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  quickActionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F2F2F7',
+  },
+  lastQuickAction: {
+    borderBottomWidth: 0,
+  },
+  quickActionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  quickActionText: {
     flex: 1,
     fontSize: 16,
-    color: Colors.primary,
+    fontWeight: '500',
+    color: '#1C1C1E',
+    letterSpacing: -0.1,
+  },
+  infoSection: {
+    paddingHorizontal: 20,
+    paddingTop: 32,
+  },
+  infoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#007AFF',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  infoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1C1C1E',
+    marginLeft: 8,
+  },
+  infoText: {
+    fontSize: 15,
+    color: '#6D6D70',
+    lineHeight: 22,
   },
 });
