@@ -227,26 +227,7 @@ const VerifyKyc = () => {
               </View>
             )}
           </View>
-           {showSuccess && (
-            <View style={styles.successCard}>
-              <Ionicons
-                name="checkmark-circle"
-                size={64}
-                color={Colors.success}
-              />
-              <Text style={styles.successTitle}>Verification Submitted</Text>
-              <Text style={styles.successText}>
-                Your KYC documents have been successfully uploaded. We will
-                notify you once verified.
-              </Text>
-              <TouchableOpacity
-                style={styles.doneButton}
-                onPress={() => setShowSuccess(false)}
-              >
-                <Text style={styles.doneButtonText}>Done</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          
 
           <TouchableOpacity
             style={styles.verifyButton}
