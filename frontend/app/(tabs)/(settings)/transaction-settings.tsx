@@ -11,6 +11,7 @@ import {
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons'; 
 import Colors from '@/constants/Colors';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from "expo-linear-gradient";
 
 const TransactionSettings = () => {
   const router = useRouter();
@@ -68,13 +69,23 @@ const TransactionSettings = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
+      <LinearGradient
+          colors={[
+            Colors.primary,
+            Colors.primaryLight,
+            Colors.backgroundSecondary,
+          ]}
+          style={styles.backgroundGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
       <View style={styles.header}>
         <TouchableOpacity 
           onPress={() => router.push('/settings')} 
           style={styles.backButton}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={28} color="#1C1C1E" />
+          <Ionicons name="arrow-back" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Transactions</Text>
       </View>
@@ -177,15 +188,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8F9FA',
   },
+   backgroundGradient: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.primary,
     paddingTop: Platform.OS === 'ios' ? 60 : 50,
     paddingBottom: 16,
     paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -195,12 +211,15 @@ const styles = StyleSheet.create({
   backButton: {
     marginRight: 16,
     padding: 4,
+    borderRadius: 25,
+    backgroundColor:"rgba(255, 255, 255, 0.1)",
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
-    color: '#1C1C1E',
-    letterSpacing: -0.5,
+    color: '#ffffff',
+    letterSpacing: -0.3,
+    paddingLeft: 10,
   },
   scrollContainer: {
     flex: 1,
@@ -216,7 +235,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 22,
     fontWeight: '600',
-    color: '#1C1C1E',
+    color: "#ffffff",
     marginBottom: 8,
     letterSpacing: -0.3,
   },
@@ -285,7 +304,7 @@ const styles = StyleSheet.create({
   quickActionsTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#1C1C1E',
+    color: '#ffffff',
     marginBottom: 16,
     letterSpacing: -0.3,
   },

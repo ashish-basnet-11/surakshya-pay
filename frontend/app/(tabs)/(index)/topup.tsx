@@ -67,7 +67,6 @@ const TopUp = () => {
       setProofResult(null);
       setIsProofGenerating(true);
       
-      // Animate the UI during processing
       Animated.timing(fadeAnim, {
         toValue: 0.6,
         duration: 300,
@@ -80,7 +79,6 @@ const TopUp = () => {
       await new Promise((res) => setTimeout(res, 2000));
       setIsVerifying(false);
       
-      // Restore UI opacity
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 300,
@@ -302,27 +300,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    marginTop: Platform.OS === 'ios' ? 50 : 40, 
+    marginBottom: 16,
   },
   backButton: {
     padding: 8,
-    borderRadius: 8,
-    marginRight: 12,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginRight: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerContent: {
     flex: 1,
+    paddingLeft:10,
   },
   headerText: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: '#ffffff',
-    letterSpacing: 0.5,
+    letterSpacing: -0.3,
   },
   headerSubtext: {
     fontSize: 14,
     color: '#B3C5D7',
-    marginTop: 2,
+    marginTop: 4,
   },
   content: {
     flex: 1,
@@ -403,6 +405,7 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingHorizontal: 20,
     paddingBottom: 40,
+    marginHorizontal: -20,
   },
   keyboard: {
     marginBottom: 24,

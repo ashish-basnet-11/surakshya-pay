@@ -194,17 +194,17 @@ export default function StatisticsScreen() {
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
+          <Ionicons name="arrow-back" size={24} color="#ffffff" />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Statistics</Text>
 
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={handleExport} style={styles.headerButton}>
-            <Ionicons name="download" size={20} color={Colors.primary} />
+            <Ionicons name="download" size={20} color="#ffffff"/>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
-            <Ionicons name="share" size={20} color={Colors.primary} />
+            <Ionicons name="share" size={20} color="#ffffff" />
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -457,6 +457,7 @@ export default function StatisticsScreen() {
               </View>
             ))}
           </View>
+          <View style={styles.bottomSpacing} />
         </Animated.View>
       </ScrollView>
     </View>
@@ -475,25 +476,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 20,
-    backgroundColor: "white",
+    backgroundColor: Colors.primary,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 12,
+    elevation: 6,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     justifyContent: "center",
     alignItems: "center",
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#333",
+    color: "#ffffff",
   },
   headerActions: {
     flexDirection: "row",
@@ -503,7 +504,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: `${Colors.primary}15`,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -522,10 +523,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 12,
+    elevation: 6,
   },
   searchInput: {
     flex: 1,
@@ -539,10 +540,10 @@ const styles = StyleSheet.create({
     padding: 24,
     marginBottom: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 12,
+    elevation: 6,
   },
   balanceHeader: {
     flexDirection: "row",
@@ -604,10 +605,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 4,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 12,
+    elevation: 6,
   },
   filterButton: {
     flex: 1,
@@ -644,10 +645,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 4,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 12,
+    elevation: 6,
   },
   chartButton: {
     flex: 1,
@@ -677,10 +678,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 12,
+    elevation: 6,
   },
   chartTitle: {
     fontSize: 16,
@@ -715,10 +716,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 12,
+    elevation: 6,
   },
   pieCenterText: {
     fontSize: 12,
@@ -828,10 +829,10 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 12,
+    elevation: 6,
   },
   insightsHeader: {
     flexDirection: "row",
@@ -890,10 +891,10 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: 12,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 12,
+    elevation: 6,
   },
   transactionItem: {
     flexDirection: "row",
@@ -936,5 +937,8 @@ const styles = StyleSheet.create({
   transactionDate: {
     fontSize: 12,
     color: "#666",
+  },
+  bottomSpacing: {
+    height: 120,
   },
 })

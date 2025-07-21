@@ -266,7 +266,7 @@ const Notification = () => {
             </Text>
           </View>
           <TouchableOpacity style={styles.filterButton} activeOpacity={0.7}>
-            <Ionicons name="options-outline" size={20} color="#ffffff" />
+            <Ionicons name="funnel-outline" size={24} color="#ffffff" />
           </TouchableOpacity>
         </View>
 
@@ -325,22 +325,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 50,
     paddingBottom: 20,
   },
   backButton: {
-    padding: 8,
-    borderRadius: 8,
-    marginRight: 12,
-  },
+  padding: 8,
+  borderRadius: 25,
+  backgroundColor: 'rgba(255,255,255,0.1)', 
+  marginRight: 12,
+},
   headerContent: {
     flex: 1,
+    alignItems: "center"
   },
   headerText: {
     fontSize: 24,
     fontWeight: '700',
     color: '#ffffff',
-    letterSpacing: 0.5,
+    letterSpacing: -0.3,
   },
   headerSubtext: {
     fontSize: 14,
@@ -348,9 +350,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   filterButton: {
-    padding: 8,
-    borderRadius: 8,
-  },
+  padding: 8,
+  borderRadius: 25,
+  backgroundColor: 'rgba(255,255,255,0.1)',
+},
   headerSection: {
     marginBottom: 20,
   },
@@ -361,7 +364,7 @@ const styles = StyleSheet.create({
   markAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,

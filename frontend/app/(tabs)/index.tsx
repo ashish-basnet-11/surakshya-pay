@@ -248,13 +248,7 @@ const BankingWalletUI = () => {
               <View style={styles.balanceContent}>
                 <Text style={styles.balance}>{isBalanceVisible ? "$124,580.50" : "$•••,•••.••"}</Text>
                 <View style={styles.balanceChange}>
-                  <View style={styles.trendingIcon}>
-                    <Ionicons name="trending-up" size={14} color={Colors.success} />
-                  </View>
-                  <Text style={styles.balanceChangeText}>+8.2% this month</Text>
-                  <View style={styles.changeIndicator}>
-                    <Text style={styles.changeAmount}>+$9,420</Text>
-                  </View>
+                  <Text style={styles.balanceChangeText}>Your Transactions, Zero Exposure</Text>
                 </View>
               </View>
 
@@ -628,15 +622,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
-  },
-  trendingIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.success + "20",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 8,
   },
   balanceChangeText: {
     color: Colors.success,

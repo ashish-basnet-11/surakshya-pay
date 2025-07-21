@@ -457,6 +457,7 @@ export default function ScanScreen() {
               <Ionicons name="chevron-forward" size={20} color="#666" />
             </TouchableOpacity>
           </View>
+          <View style={styles.bottomSpacing}/>
         </ScrollView>
       </Animated.View>
     </View>
@@ -877,4 +878,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
   },
+  bottomSpacing: {
+    height:70,
+  }
 })

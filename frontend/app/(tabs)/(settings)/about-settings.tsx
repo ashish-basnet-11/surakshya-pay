@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
+import { LinearGradient } from "expo-linear-gradient";
 
 const AboutSettings = () => {
   const router = useRouter();
@@ -201,6 +202,16 @@ const AboutSettings = () => {
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
       <SafeAreaView style={styles.container}>
         {/* Header */}
+         <LinearGradient
+          colors={[
+            Colors.primary,
+            Colors.primaryLight,
+            Colors.backgroundSecondary,
+          ]}
+          style={styles.backgroundGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => router.back()}
@@ -258,6 +269,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.primary,
   },
+   backgroundGradient: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -267,11 +285,13 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 8,
-    borderRadius: 8,
+    borderRadius: 25,
     marginRight: 12,
+    backgroundColor:"rgba(255, 255, 255, 0.1)"
   },
   headerContent: {
     flex: 1,
+    paddingLeft: 10,
   },
   headerText: {
     fontSize: 24,
@@ -410,13 +430,13 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: '#B3C5D7',
+    color: Colors.primary,
     marginBottom: 8,
     textAlign: 'center',
   },
   copyrightText: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: Colors.primary,
     textAlign: 'center',
   },
 });

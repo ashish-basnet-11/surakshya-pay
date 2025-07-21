@@ -15,6 +15,7 @@ import Colors from '@/constants/Colors';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from "expo-linear-gradient";
 
 const ProfileDetails = () => {
   const router = useRouter();
@@ -185,6 +186,17 @@ const ProfileDetails = () => {
     <>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
       <SafeAreaView style={styles.container}>
+         <LinearGradient
+          colors={[
+            Colors.primary,
+            Colors.primaryLight,
+            Colors.backgroundSecondary,
+          ]}
+          style={styles.backgroundGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
@@ -198,9 +210,6 @@ const ProfileDetails = () => {
             <Text style={styles.headerText}>Profile Details</Text>
             <Text style={styles.headerSubtext}>Manage your account information</Text>
           </View>
-          <TouchableOpacity style={styles.settingsButton} activeOpacity={0.7}>
-            <Ionicons name="settings-outline" size={20} color="#ffffff" />
-          </TouchableOpacity>
         </View>
 
         <ScrollView 
@@ -252,6 +261,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.primary,
   },
+  backgroundGradient: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -261,26 +277,24 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 8,
-    borderRadius: 8,
+    borderRadius: 25,
     marginRight: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
   },
   headerContent: {
     flex: 1,
+    paddingLeft: 10,
   },
   headerText: {
     fontSize: 24,
     fontWeight: '700',
     color: '#ffffff',
-    letterSpacing: 0.5,
+   letterSpacing: -0.3,
   },
   headerSubtext: {
     fontSize: 14,
     color: '#B3C5D7',
     marginTop: 2,
-  },
-  settingsButton: {
-    padding: 8,
-    borderRadius: 8,
   },
   scrollView: {
     flex: 1,
@@ -290,19 +304,10 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   profileCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
     padding: 24,
     alignItems: 'center',
     marginBottom: 24,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
   },
   profileImageContainer: {
     marginBottom: 16,
@@ -337,12 +342,12 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#1C1C1E',
+    color: "#ffffff",
     marginBottom: 4,
   },
   profileEmail: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: "#ffffff",
     marginBottom: 12,
   },
   membershipBadge: {
