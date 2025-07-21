@@ -1,590 +1,1093 @@
-import React, { useState } from "react";
+"use client"
+
+import { useState, useRef, useEffect } from "react"
 import {
+  StyleSheet,
   View,
   Text,
-  StyleSheet,
   ScrollView,
-  SafeAreaView,
-  Dimensions,
   TouchableOpacity,
-} from "react-native";
-import Colors from "@/constants/Colors";
-import { BarChart } from "react-native-chart-kit";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+  Dimensions,
+  Alert,
+  Animated,
+  TextInput,
+} from "react-native"
+import { Ionicons } from "@expo/vector-icons"
+import { useRouter } from "expo-router"
+import Colors from "@/constants/Colors"
 
-const screenWidth = Dimensions.get("window").width;
+const { width: SCREEN_WIDTH } = Dimensions.get("window")
 
-const transactions = [
+// Mock data
+const mockTransactions = [
   {
-    id: 1,
-    name: "Dribble Premium",
-    date: "20 Dec 2024",
-    time: "10:00 AM",
-    amount: -280,
-    category: "Design Tools",
-    type: "subscription",
-    icon: "brush",
-    color: "#FF6B6B",
+    id: "1",
+    name: "Coffee Shop",
+    amount: -4.5,
+    category: "Food",
+    date: "2024-01-15",
+    time: "09:30 AM",
+    type: "expense",
+    status: "completed",
+    description: "Morning coffee and pastry",
   },
   {
-    id: 2,
-    name: "Snapchat Ads Revenue",
-    date: "18 Dec 2024",
+    id: "2",
+    name: "Monthly Salary",
+    amount: 3500.0,
+    category: "Income",
+    date: "2024-01-15",
     time: "12:00 PM",
-    amount: +220,
-    category: "Advertising",
     type: "income",
-    icon: "trending-up",
-    color: "#4ECDC4",
+    status: "completed",
+    description: "January salary payment",
   },
   {
-    id: 3,
-    name: "Skype Premium",
-    date: "15 Dec 2024",
-    time: "08:00 AM",
-    amount: -190,
-    category: "Communication",
-    type: "subscription",
-    icon: "call",
-    color: "#45B7D1",
+    id: "3",
+    name: "Grocery Store",
+    amount: -85.2,
+    category: "Food",
+    date: "2024-01-14",
+    time: "06:45 PM",
+    type: "expense",
+    status: "completed",
+    description: "Weekly grocery shopping",
   },
   {
-    id: 4,
-    name: "Freelance Project",
-    date: "12 Dec 2024",
-    time: "03:30 PM",
-    amount: +850,
-    category: "Work",
-    type: "income",
-    icon: "briefcase",
-    color: "#96CEB4",
+    id: "4",
+    name: "Gas Station",
+    amount: -45.0,
+    category: "Transport",
+    date: "2024-01-14",
+    time: "08:15 AM",
+    type: "expense",
+    status: "pending",
+    description: "Fuel for car",
   },
   {
-    id: 5,
+    id: "5",
     name: "Netflix Subscription",
-    date: "10 Dec 2024",
-    time: "11:45 AM",
     amount: -15.99,
     category: "Entertainment",
-    type: "subscription",
-    icon: "play-circle",
-    color: "#FFEAA7",
+    date: "2024-01-13",
+    time: "11:30 PM",
+    type: "expense",
+    status: "completed",
+    description: "Monthly streaming subscription",
   },
-];
+  {
+    id: "6",
+    name: "Freelance Project",
+    amount: 750.0,
+    category: "Income",
+    date: "2024-01-12",
+    time: "03:20 PM",
+    type: "income",
+    status: "completed",
+    description: "Web development project",
+  },
+  {
+    id: "7",
+    name: "Restaurant Dinner",
+    amount: -32.5,
+    category: "Food",
+    date: "2024-01-12",
+    time: "07:45 PM",
+    type: "expense",
+    status: "failed",
+    description: "Dinner with friends",
+  },
+  {
+    id: "8",
+    name: "Uber Ride",
+    amount: -18.75,
+    category: "Transport",
+    date: "2024-01-11",
+    time: "05:30 PM",
+    type: "expense",
+    status: "completed",
+    description: "Ride to downtown",
+  },
+]
 
-const chartData = {
-  labels: transactions.slice(0, 3).map((t) => t.name.split(" ")[0]),
-  datasets: [
-    {
-      data: transactions.slice(0, 3).map((t) => Math.abs(t.amount)),
-    },
-  ],
-};
+export default function WalletScreen() {
+  const router = useRouter()
+  const [selectedFilter, setSelectedFilter] = useState<"all" | "income" | "expense">("all")
+  const [sortBy, setSortBy] = useState<"date" | "amount" | "name" | "category">("date")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [showBalance, setShowBalance] = useState(true)
+  const [chartType, setChartType] = useState<"line" | "category">("line")
 
-const WalletScreen = () => {
-  const router = useRouter();
-  const [selectedFilter, setSelectedFilter] = useState("all");
+  const fadeAnim = useRef(new Animated.Value(0)).current
+  const slideAnim = useRef(new Animated.Value(50)).current
+  const balanceAnim = useRef(new Animated.Value(0)).current
 
-  const totalIncome = transactions
-    .filter(t => t.amount > 0)
-    .reduce((sum, t) => sum + t.amount, 0);
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(balanceAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start()
+  }, [])
 
-  const totalExpenses = transactions
-    .filter(t => t.amount < 0)
-    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  const filteredTransactions = mockTransactions.filter((transaction) => {
+    const matchesFilter = selectedFilter === "all" || transaction.type === selectedFilter
+    const matchesSearch =
+      transaction.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      transaction.category.toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesFilter && matchesSearch
+  })
 
-  const filteredTransactions = transactions.filter(transaction => {
-    if (selectedFilter === "all") return true;
-    if (selectedFilter === "income") return transaction.amount > 0;
-    if (selectedFilter === "expense") return transaction.amount < 0;
-    return true;
-  });
+  const sortedTransactions = [...filteredTransactions].sort((a, b) => {
+    switch (sortBy) {
+      case "date":
+        return new Date(b.date).getTime() - new Date(a.date).getTime()
+      case "amount":
+        return Math.abs(b.amount) - Math.abs(a.amount)
+      case "name":
+        return a.name.localeCompare(b.name)
+      case "category":
+        return a.category.localeCompare(b.category)
+      default:
+        return 0
+    }
+  })
 
-  const getTransactionIcon = (iconName) => {
-    return <Ionicons name={iconName} size={24} color="#FFFFFF" />;
-  };
+  const totalBalance = mockTransactions.reduce((sum, t) => sum + t.amount, 0)
+  const totalIncome = mockTransactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0)
+  const totalExpenses = mockTransactions
+    .filter((t) => t.type === "expense")
+    .reduce((sum, t) => sum + Math.abs(t.amount), 0)
+  const pendingTransactions = mockTransactions.filter((t) => t.status === "pending").length
 
-  const filters = [
-    { id: "all", label: "All", count: transactions.length },
-    { id: "income", label: "Income", count: transactions.filter(t => t.amount > 0).length },
-    { id: "expense", label: "Expenses", count: transactions.filter(t => t.amount < 0).length },
-  ];
+  const handleExport = () => {
+    Alert.alert("Export Transactions", "Choose export format:", [
+      { text: "Cancel", style: "cancel" },
+      { text: "PDF Report", onPress: () => Alert.alert("Success", "PDF report exported successfully!") },
+      { text: "CSV Data", onPress: () => Alert.alert("Success", "CSV data exported successfully!") },
+    ])
+  }
+
+  const handleRefresh = () => {
+    Alert.alert("Success", "Wallet data refreshed!")
+  }
+
+  const clearSearch = () => {
+    setSearchQuery("")
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "#4CAF50"
+      case "pending":
+        return "#FF9800"
+      case "failed":
+        return "#F44336"
+      default:
+        return "#666"
+    }
+  }
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "checkmark-circle"
+      case "pending":
+        return "time"
+      case "failed":
+        return "close-circle"
+      default:
+        return "help-circle"
+    }
+  }
+
+  const renderLineChart = () => (
+    <View style={styles.chartContainer}>
+      <Text style={styles.chartTitle}>Spending Trend (Last 7 Days)</Text>
+      <View style={styles.lineChart}>
+        {[120, 85, 150, 95, 180, 110, 140].map((value, index) => (
+          <View key={index} style={styles.lineChartBar}>
+            <View style={[styles.lineChartBarFill, { height: `${(value / 200) * 100}%` }]} />
+            <Text style={styles.lineChartLabel}>{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][index]}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  )
+
+  const renderCategoryChart = () => {
+    const categories = [
+      { name: "Food", amount: 122.2, color: "#FF6B6B" },
+      { name: "Transport", amount: 63.75, color: "#4ECDC4" },
+      { name: "Entertainment", amount: 47.99, color: "#45B7D1" },
+      { name: "Shopping", amount: 89.5, color: "#96CEB4" },
+    ]
+
+    return (
+      <View style={styles.chartContainer}>
+        <Text style={styles.chartTitle}>Category Breakdown</Text>
+        <View style={styles.categoryChart}>
+          {categories.map((category) => (
+            <View key={category.name} style={styles.categoryItem}>
+              <View style={styles.categoryInfo}>
+                <View style={[styles.categoryColor, { backgroundColor: category.color }]} />
+                <Text style={styles.categoryName}>{category.name}</Text>
+              </View>
+              <Text style={styles.categoryAmount}>${category.amount}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    )
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => router.back()} 
-          style={styles.backButton}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="arrow-back" size={28} color="#FFFFFF" />
+      <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Transactions</Text>
-      </View>
 
-      <ScrollView 
-        style={styles.scrollContainer}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Overview Cards */}
-        <View style={styles.overviewSection}>
-          <View style={styles.overviewRow}>
-            <View style={styles.overviewCard}>
-              <View style={styles.overviewIcon}>
-                <Ionicons name="arrow-up" size={20} color="#4CAF50" />
+        <Text style={styles.headerTitle}>Wallet</Text>
+
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={handleRefresh} style={styles.headerButton}>
+            <Ionicons name="refresh" size={20} color={Colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleExport} style={styles.headerButton}>
+            <Ionicons name="download" size={20} color={Colors.primary} />
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Balance Card */}
+        <Animated.View
+          style={[
+            styles.balanceCard,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }, { scale: balanceAnim }],
+            },
+          ]}
+        >
+          <View style={styles.balanceHeader}>
+            <View>
+              <Text style={styles.balanceLabel}>Total Balance</Text>
+              <View style={styles.balanceRow}>
+                <Text style={styles.balanceAmount}>
+                  {showBalance ? `$${totalBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "••••••"}
+                </Text>
+                <TouchableOpacity onPress={() => setShowBalance(!showBalance)} style={styles.eyeButton}>
+                  <Ionicons name={showBalance ? "eye" : "eye-off"} size={20} color="#666" />
+                </TouchableOpacity>
               </View>
-              <Text style={styles.overviewLabel}>Total Income</Text>
-              <Text style={styles.overviewAmount}>+${totalIncome.toFixed(2)}</Text>
             </View>
-            
-            <View style={styles.overviewCard}>
-              <View style={styles.overviewIcon}>
-                <Ionicons name="arrow-down" size={20} color="#F44336" />
+
+            <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
+              <Ionicons name="refresh" size={20} color={Colors.primary} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.balanceStats}>
+            <View style={styles.balanceStat}>
+              <View style={styles.balanceStatHeader}>
+                <Ionicons name="trending-up" size={16} color="#4CAF50" />
+                <Text style={styles.balanceStatLabel}>Income</Text>
               </View>
-              <Text style={styles.overviewLabel}>Total Expenses</Text>
-              <Text style={styles.overviewAmount}>-${totalExpenses.toFixed(2)}</Text>
+              <Text style={[styles.balanceStatAmount, { color: "#4CAF50" }]}>+${totalIncome.toLocaleString()}</Text>
+            </View>
+
+            <View style={styles.balanceStatDivider} />
+
+            <View style={styles.balanceStat}>
+              <View style={styles.balanceStatHeader}>
+                <Ionicons name="trending-down" size={16} color="#F44336" />
+                <Text style={styles.balanceStatLabel}>Expenses</Text>
+              </View>
+              <Text style={[styles.balanceStatAmount, { color: "#F44336" }]}>-${totalExpenses.toLocaleString()}</Text>
+            </View>
+
+            <View style={styles.balanceStatDivider} />
+
+            <View style={styles.balanceStat}>
+              <View style={styles.balanceStatHeader}>
+                <Ionicons name="time" size={16} color="#FF9800" />
+                <Text style={styles.balanceStatLabel}>Pending</Text>
+              </View>
+              <Text style={[styles.balanceStatAmount, { color: "#FF9800" }]}>{pendingTransactions}</Text>
             </View>
           </View>
-        </View>
+        </Animated.View>
+
+        {/* Search Bar */}
+        <Animated.View
+          style={[
+            styles.searchContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          <View style={styles.searchBar}>
+            <Ionicons name="search" size={20} color="#666" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search by name or category..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#666"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={clearSearch}>
+                <Ionicons name="close-circle" size={20} color="#666" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </Animated.View>
 
         {/* Filters */}
-        <View style={styles.filtersSection}>
-          <Text style={styles.sectionTitle}>Filter Transactions</Text>
-          <View style={styles.filtersContainer}>
-            {filters.map((filter) => (
-              <TouchableOpacity
-                key={filter.id}
-                style={[
-                  styles.filterButton,
-                  selectedFilter === filter.id && styles.filterButtonActive,
-                ]}
-                onPress={() => setSelectedFilter(filter.id)}
-                activeOpacity={0.8}
-              >
-                <Text style={[
-                  styles.filterText,
-                  selectedFilter === filter.id && styles.filterTextActive,
-                ]}>
-                  {filter.label}
-                </Text>
-                <View style={[
-                  styles.filterBadge,
-                  selectedFilter === filter.id && styles.filterBadgeActive,
-                ]}>
-                  <Text style={[
-                    styles.filterBadgeText,
-                    selectedFilter === filter.id && styles.filterBadgeTextActive,
-                  ]}>
-                    {filter.count}
+        <Animated.View
+          style={[
+            styles.filtersContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersScroll}>
+            <View style={styles.filterGroup}>
+              <Text style={styles.filterGroupLabel}>Filter:</Text>
+              {[
+                { key: "all", label: "All", icon: "list" },
+                { key: "income", label: "Income", icon: "trending-up" },
+                { key: "expense", label: "Expense", icon: "trending-down" },
+              ].map((filter) => (
+                <TouchableOpacity
+                  key={filter.key}
+                  style={[styles.filterButton, selectedFilter === filter.key && styles.filterButtonActive]}
+                  onPress={() => setSelectedFilter(filter.key as any)}
+                >
+                  <Ionicons
+                    name={filter.icon as any}
+                    size={14}
+                    color={selectedFilter === filter.key ? "white" : Colors.primary}
+                  />
+                  <Text
+                    style={[styles.filterButtonText, selectedFilter === filter.key && styles.filterButtonTextActive]}
+                  >
+                    {filter.label}
                   </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+                </TouchableOpacity>
+              ))}
+            </View>
 
-        {/* Transactions List */}
-        <View style={styles.transactionsSection}>
-          <View style={styles.transactionHeader}>
-            <Text style={styles.sectionTitle}>Recent Activity</Text>
-            <TouchableOpacity activeOpacity={0.7}>
+            <View style={styles.filterGroup}>
+              <Text style={styles.filterGroupLabel}>Sort:</Text>
+              {[
+                { key: "date", label: "Date", icon: "calendar" },
+                { key: "amount", label: "Amount", icon: "cash" },
+                { key: "name", label: "Name", icon: "text" },
+                { key: "category", label: "Category", icon: "folder" },
+              ].map((sort) => (
+                <TouchableOpacity
+                  key={sort.key}
+                  style={[styles.filterButton, sortBy === sort.key && styles.filterButtonActive]}
+                  onPress={() => setSortBy(sort.key as any)}
+                >
+                  <Ionicons name={sort.icon as any} size={14} color={sortBy === sort.key ? "white" : Colors.primary} />
+                  <Text style={[styles.filterButtonText, sortBy === sort.key && styles.filterButtonTextActive]}>
+                    {sort.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+        </Animated.View>
+
+        {/* Chart Toggle */}
+        <Animated.View
+          style={[
+            styles.chartToggle,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={[styles.chartToggleButton, chartType === "line" && styles.chartToggleButtonActive]}
+            onPress={() => setChartType("line")}
+          >
+            <Ionicons name="trending-up" size={16} color={chartType === "line" ? "white" : Colors.primary} />
+            <Text style={[styles.chartToggleText, chartType === "line" && styles.chartToggleTextActive]}>Trend</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.chartToggleButton, chartType === "category" && styles.chartToggleButtonActive]}
+            onPress={() => setChartType("category")}
+          >
+            <Ionicons name="pie-chart" size={16} color={chartType === "category" ? "white" : Colors.primary} />
+            <Text style={[styles.chartToggleText, chartType === "category" && styles.chartToggleTextActive]}>
+              Categories
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Chart */}
+        <Animated.View
+          style={[
+            styles.chartSection,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          {chartType === "line" ? renderLineChart() : renderCategoryChart()}
+        </Animated.View>
+
+        {/* Quick Actions */}
+        <Animated.View
+          style={[
+            styles.quickActionsContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.quickActions}>
+            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/send")}>
+              <View style={[styles.quickActionIcon, { backgroundColor: "#4CAF5015" }]}>
+                <Ionicons name="send" size={24} color="#4CAF50" />
+              </View>
+              <Text style={styles.quickActionTitle}>Send Money</Text>
+              <Text style={styles.quickActionSubtitle}>Transfer to contacts</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/topup")}>
+              <View style={[styles.quickActionIcon, { backgroundColor: "#2196F315" }]}>
+                <Ionicons name="add-circle" size={24} color="#2196F3" />
+              </View>
+              <Text style={styles.quickActionTitle}>Top Up</Text>
+              <Text style={styles.quickActionSubtitle}>Add funds to wallet</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/scan")}>
+              <View style={[styles.quickActionIcon, { backgroundColor: "#FF980015" }]}>
+                <Ionicons name="qr-code" size={24} color="#FF9800" />
+              </View>
+              <Text style={styles.quickActionTitle}>Scan & Pay</Text>
+              <Text style={styles.quickActionSubtitle}>QR code payments</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/transactions")}>
+              <View style={[styles.quickActionIcon, { backgroundColor: "#9C27B015" }]}>
+                <Ionicons name="receipt" size={24} color="#9C27B0" />
+              </View>
+              <Text style={styles.quickActionTitle}>All Transactions</Text>
+              <Text style={styles.quickActionSubtitle}>View complete history</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+
+        {/* Monthly Summary */}
+        <Animated.View
+          style={[
+            styles.summaryCard,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          <View style={styles.summaryHeader}>
+            <Ionicons name="analytics" size={24} color={Colors.primary} />
+            <Text style={styles.summaryTitle}>January Summary</Text>
+          </View>
+
+          <View style={styles.summaryStats}>
+            <View style={styles.summaryStatItem}>
+              <Text style={styles.summaryStatValue}>{mockTransactions.length}</Text>
+              <Text style={styles.summaryStatLabel}>Total Transactions</Text>
+            </View>
+            <View style={styles.summaryStatItem}>
+              <Text style={styles.summaryStatValue}>
+                ${(totalExpenses / mockTransactions.filter((t) => t.type === "expense").length).toFixed(0)}
+              </Text>
+              <Text style={styles.summaryStatLabel}>Avg. Transaction</Text>
+            </View>
+            <View style={styles.summaryStatItem}>
+              <Text style={styles.summaryStatValue}>
+                {Math.round(
+                  (mockTransactions.filter((t) => t.status === "completed").length / mockTransactions.length) * 100,
+                )}
+                %
+              </Text>
+              <Text style={styles.summaryStatLabel}>Success Rate</Text>
+            </View>
+          </View>
+
+          <Text style={styles.summaryInsight}>
+            💡 You've saved 15% more compared to last month. Keep up the great work!
+          </Text>
+        </Animated.View>
+
+        {/* Recent Transactions */}
+        <Animated.View
+          style={[
+            styles.transactionsSection,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Activity ({sortedTransactions.length})</Text>
+            <TouchableOpacity onPress={() => router.push("/transactions")}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
-          
-          <View style={styles.transactionsContainer}>
-            {filteredTransactions.map((transaction, index) => (
-              <TouchableOpacity 
-                key={transaction.id} 
-                style={[
-                  styles.transactionItem,
-                  index === filteredTransactions.length - 1 && styles.lastTransaction
-                ]}
-                activeOpacity={0.8}
+
+          <View style={styles.transactionsList}>
+            {sortedTransactions.slice(0, 6).map((transaction) => (
+              <TouchableOpacity
+                key={transaction.id}
+                style={styles.transactionItem}
+                onPress={() => router.push(`/transactions/${transaction.id}`)}
               >
                 <View style={styles.transactionLeft}>
-                  <View style={[
-                    styles.transactionIcon, 
-                    { backgroundColor: transaction.color }
-                  ]}>
-                    {getTransactionIcon(transaction.icon)}
+                  <View
+                    style={[
+                      styles.transactionIcon,
+                      { backgroundColor: transaction.type === "income" ? "#4CAF5015" : "#F4433615" },
+                    ]}
+                  >
+                    <Ionicons
+                      name={transaction.type === "income" ? "arrow-down" : "arrow-up"}
+                      size={16}
+                      color={transaction.type === "income" ? "#4CAF50" : "#F44336"}
+                    />
                   </View>
+
                   <View style={styles.transactionDetails}>
-                    <Text style={styles.transactionName}>{transaction.name}</Text>
-                    <View style={styles.transactionMeta}>
-                      <Text style={styles.transactionCategory}>{transaction.category}</Text>
-                      <Text style={styles.transactionTime}> • {transaction.time}</Text>
+                    <View style={styles.transactionNameRow}>
+                      <Text style={styles.transactionName}>{transaction.name}</Text>
+                      <View style={styles.transactionStatus}>
+                        <Ionicons
+                          name={getStatusIcon(transaction.status) as any}
+                          size={12}
+                          color={getStatusColor(transaction.status)}
+                        />
+                      </View>
                     </View>
-                    <Text style={styles.transactionDate}>{transaction.date}</Text>
-                  </View>
-                </View>
-                <View style={styles.transactionRight}>
-                  <Text style={[
-                    styles.transactionAmount,
-                    { color: transaction.amount > 0 ? "#4CAF50" : "#F44336" }
-                  ]}>
-                    {transaction.amount > 0 ? "+" : ""}${Math.abs(transaction.amount).toFixed(2)}
-                  </Text>
-                  <View style={[
-                    styles.transactionType,
-                    { backgroundColor: transaction.amount > 0 ? "#4CAF5020" : "#F4433620" }
-                  ]}>
-                    <Text style={[
-                      styles.transactionTypeText,
-                      { color: transaction.amount > 0 ? "#4CAF50" : "#F44336" }
-                    ]}>
-                      {transaction.type}
+                    <Text style={styles.transactionDescription}>{transaction.description}</Text>
+                    <Text style={styles.transactionDateTime}>
+                      {transaction.date} • {transaction.time}
                     </Text>
                   </View>
+                </View>
+
+                <View style={styles.transactionRight}>
+                  <Text
+                    style={[styles.transactionAmount, { color: transaction.type === "income" ? "#4CAF50" : "#F44336" }]}
+                  >
+                    {transaction.type === "income" ? "+" : "-"}${Math.abs(transaction.amount).toFixed(2)}
+                  </Text>
+                  <Text style={styles.transactionCategory}>{transaction.category}</Text>
                 </View>
               </TouchableOpacity>
             ))}
           </View>
-        </View>
-
-        {/* Chart Section */}
-        <View style={styles.chartSection}>
-          <Text style={styles.sectionTitle}>Spending Analysis</Text>
-          <View style={styles.chartContainer}>
-            <Text style={styles.chartSubtitle}>Top Categories This Month</Text>
-            <BarChart
-              data={chartData}
-              width={screenWidth - 80}
-              height={200}
-              yAxisLabel="$"
-              fromZero
-              withInnerLines={false}
-              showBarTops={false}
-              chartConfig={{
-                backgroundGradientFrom: "#2A3441",
-                backgroundGradientTo: "#2A3441",
-                decimalPlaces: 0,
-                color: (opacity = 1) => `rgba(76, 175, 80, ${opacity})`,
-                labelColor: () => "#FFFFFF",
-                fillShadowGradient: "#4CAF50",
-                fillShadowGradientOpacity: 0.8,
-                propsForBackgroundLines: {
-                  stroke: "rgba(255,255,255,0.1)",
-                },
-              }}
-              style={styles.chart}
-              verticalLabelRotation={0}
-            />
-          </View>
-        </View>
-
-        {/* Quick Actions */}
-        <View style={styles.quickActionsSection}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.quickActionsContainer}>
-            <TouchableOpacity style={styles.quickActionItem} activeOpacity={0.7}>
-              <View style={[styles.quickActionIcon, { backgroundColor: "#4CAF50" }]}>
-                <Ionicons name="add" size={20} color="#FFFFFF" />
-              </View>
-              <Text style={styles.quickActionText}>Add Income</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.quickActionItem} activeOpacity={0.7}>
-              <View style={[styles.quickActionIcon, { backgroundColor: "#F44336" }]}>
-                <Ionicons name="remove" size={20} color="#FFFFFF" />
-              </View>
-              <Text style={styles.quickActionText}>Add Expense</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.quickActionItem} activeOpacity={0.7}>
-              <View style={[styles.quickActionIcon, { backgroundColor: "#2196F3" }]}>
-                <Ionicons name="download" size={20} color="#FFFFFF" />
-              </View>
-              <Text style={styles.quickActionText}>Export Data</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        </Animated.View>
       </ScrollView>
-    </SafeAreaView>
-  );
-};
+    </View>
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.primary,
+    backgroundColor: "#f8f9fa",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 45,
-    paddingBottom: 16,
+    paddingTop: 50,
+    paddingBottom: 20,
+    backgroundColor: "white",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   backButton: {
-    padding: 4,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f5f5f5",
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    letterSpacing: -0.5,
-    marginRight:   130,
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
   },
-  scrollContainer: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  overviewSection: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  overviewRow: {
+  headerActions: {
     flexDirection: "row",
     gap: 12,
   },
-  overviewCard: {
-    flex: 1,
-    backgroundColor: "#2A3441",
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  overviewIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    alignItems: "center",
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: `${Colors.primary}15`,
     justifyContent: "center",
-    marginBottom: 12,
+    alignItems: "center",
   },
-  overviewLabel: {
-    fontSize: 14,
-    color: "#ccc",
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  balanceCard: {
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 24,
+    marginVertical: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  balanceHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 20,
+  },
+  balanceLabel: {
+    fontSize: 16,
+    color: "#666",
     fontWeight: "500",
     marginBottom: 8,
   },
-  overviewAmount: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    letterSpacing: -0.3,
+  balanceRow: {
+    flexDirection: "row",
+    alignItems: "center",
   },
-  filtersSection: {
-    paddingHorizontal: 20,
-    paddingTop: 32,
+  balanceAmount: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#333",
+    marginRight: 12,
   },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    marginBottom: 16,
-    letterSpacing: -0.3,
+  eyeButton: {
+    padding: 4,
+  },
+  refreshButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: `${Colors.primary}15`,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  balanceStats: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  balanceStat: {
+    flex: 1,
+    alignItems: "center",
+  },
+  balanceStatHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  balanceStatLabel: {
+    fontSize: 12,
+    color: "#666",
+    marginLeft: 4,
+    fontWeight: "500",
+  },
+  balanceStatAmount: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  balanceStatDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: "#e0e0e0",
+    marginHorizontal: 16,
+  },
+  searchContainer: {
+    marginBottom: 20,
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "white",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 12,
+    fontSize: 16,
+    color: "#333",
   },
   filtersContainer: {
+    marginBottom: 20,
+  },
+  filtersScroll: {
+    flexGrow: 0,
+  },
+  filterGroup: {
     flexDirection: "row",
-    gap: 8,
+    alignItems: "center",
+    marginRight: 20,
+  },
+  filterGroupLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+    marginRight: 12,
   },
   filterButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "white",
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: `${Colors.primary}30`,
+  },
+  filterButtonActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  filterButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.primary,
+    marginLeft: 4,
+  },
+  filterButtonTextActive: {
+    color: "white",
+  },
+  chartToggle: {
+    flexDirection: "row",
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  chartToggleButton: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#2A3441",
-    borderRadius: 12,
     paddingVertical: 12,
-    paddingHorizontal: 16,
-    gap: 8,
+    borderRadius: 8,
   },
-  filterButtonActive: {
-    backgroundColor: "#4CAF50",
+  chartToggleButtonActive: {
+    backgroundColor: Colors.primary,
   },
-  filterText: {
+  chartToggleText: {
+    marginLeft: 8,
     fontSize: 14,
     fontWeight: "600",
-    color: "#8B9DC3",
+    color: Colors.primary,
   },
-  filterTextActive: {
-    color: "#FFFFFF",
+  chartToggleTextActive: {
+    color: "white",
   },
-  filterBadge: {
-    backgroundColor: "rgba(255,255,255,0.1)",
+  chartSection: {
+    marginBottom: 20,
+  },
+  chartContainer: {
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  chartTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  lineChart: {
+    flexDirection: "row",
+    alignItems: "end",
+    justifyContent: "space-between",
+    height: 120,
+  },
+  lineChartBar: {
+    flex: 1,
+    alignItems: "center",
+    marginHorizontal: 2,
+  },
+  lineChartBarFill: {
+    width: 16,
+    backgroundColor: Colors.primary,
     borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    minWidth: 20,
+    marginBottom: 8,
+  },
+  lineChartLabel: {
+    fontSize: 10,
+    color: "#666",
+    fontWeight: "500",
+  },
+  categoryChart: {
+    gap: 16,
+  },
+  categoryItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
   },
-  filterBadgeActive: {
-    backgroundColor: "rgba(255,255,255,0.2)",
+  categoryInfo: {
+    flexDirection: "row",
+    alignItems: "center",
   },
-  filterBadgeText: {
-    fontSize: 12,
+  categoryColor: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  categoryName: {
+    fontSize: 14,
+    color: "#333",
+    fontWeight: "500",
+  },
+  categoryAmount: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  quickActionsContainer: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 16,
+  },
+  quickActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  quickAction: {
+    flex: 1,
+    minWidth: "47%",
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  quickActionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  quickActionTitle: {
+    fontSize: 14,
     fontWeight: "600",
-    color: "#8B9DC3",
+    color: "#333",
+    marginBottom: 4,
+    textAlign: "center",
   },
-  filterBadgeTextActive: {
-    color: "#FFFFFF",
+  quickActionSubtitle: {
+    fontSize: 12,
+    color: "#666",
+    textAlign: "center",
+  },
+  summaryCard: {
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  summaryHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  summaryTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+    marginLeft: 12,
+  },
+  summaryStats: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  summaryStatItem: {
+    alignItems: "center",
+  },
+  summaryStatValue: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: Colors.primary,
+    marginBottom: 4,
+  },
+  summaryStatLabel: {
+    fontSize: 12,
+    color: "#666",
+    textAlign: "center",
+  },
+  summaryInsight: {
+    fontSize: 14,
+    color: "#666",
+    fontStyle: "italic",
+    textAlign: "center",
+    backgroundColor: "#f8f9fa",
+    padding: 12,
+    borderRadius: 8,
   },
   transactionsSection: {
-    paddingHorizontal: 20,
-    paddingTop: 32,
+    marginBottom: 30,
   },
-  transactionHeader: {
+  sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 16,
   },
   seeAllText: {
-    fontSize: 16,
+    fontSize: 14,
+    color: Colors.primary,
     fontWeight: "600",
-    color: "#4CAF50",
   },
-  transactionsContainer: {
-    backgroundColor: "#2A3441",
-    borderRadius: 16,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 3,
+  transactionsList: {
+    backgroundColor: "white",
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   transactionItem: {
     flexDirection: "row",
     alignItems: "center",
+    paddingHorizontal: 16,
     paddingVertical: 16,
-    paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#444",
-  },
-  lastTransaction: {
-    borderBottomWidth: 0,
+    borderBottomColor: "#f0f0f0",
   },
   transactionLeft: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    flex: 1,
   },
   transactionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    alignItems: "center",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: "center",
-    marginRight: 16,
+    alignItems: "center",
+    marginRight: 12,
   },
   transactionDetails: {
     flex: 1,
   },
-  transactionName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    marginBottom: 4,
-  },
-  transactionMeta: {
+  transactionNameRow: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 2,
   },
-  transactionCategory: {
-    fontSize: 14,
-    color: "#4CAF50",
-    fontWeight: "500",
+  transactionName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+    flex: 1,
   },
-  transactionTime: {
-    fontSize: 14,
-    color: "#ccc",
+  transactionStatus: {
+    marginLeft: 8,
   },
-  transactionDate: {
+  transactionDescription: {
     fontSize: 12,
-    color: "#888",
+    color: "#666",
+    marginBottom: 2,
+  },
+  transactionDateTime: {
+    fontSize: 11,
+    color: "#999",
   },
   transactionRight: {
     alignItems: "flex-end",
   },
   transactionAmount: {
     fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: -0.2,
-    marginBottom: 4,
+    fontWeight: "bold",
+    marginBottom: 2,
   },
-  transactionType: {
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  transactionTypeText: {
+  transactionCategory: {
     fontSize: 12,
-    fontWeight: "600",
-    textTransform: "capitalize",
+    color: "#666",
   },
-  chartSection: {
-    paddingHorizontal: 20,
-    paddingTop: 32,
-  },
-  chartContainer: {
-    backgroundColor: "#2A3441",
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  chartSubtitle: {
-    fontSize: 16,
-    color: "#ccc",
-    marginBottom: 16,
-    textAlign: "center",
-  },
-  chart: {
-    borderRadius: 16,
-    marginTop: 8,
-  },
-  quickActionsSection: {
-    paddingHorizontal: 20,
-    paddingTop: 32,
-  },
-  quickActionsContainer: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  quickActionItem: {
-    flex: 1,
-    backgroundColor: "#2A3441",
-    borderRadius: 16,
-    padding: 20,
-    alignItems: "center",
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  quickActionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-  quickActionText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    textAlign: "center",
-  },
-});
-
-export default WalletScreen;
+})

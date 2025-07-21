@@ -1,3 +1,5 @@
+"use client";
+
 import {
   View,
   Text,
@@ -5,88 +7,287 @@ import {
   StyleSheet,
   ScrollView,
   StatusBar,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import Colors from '@/constants/Colors';
+  SafeAreaView,
+  Switch,
+  Alert,
+  Share,
+  FlatList,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
+import Colors from "@/constants/Colors";
+import { useState } from "react";
 
 const Settings = () => {
   const router = useRouter();
+  const [darkMode, setDarkMode] = useState(false);
+  const [notifications, setNotifications] = useState(true);
+  const [biometrics, setBiometrics] = useState(true);
+  const [autoBackup, setAutoBackup] = useState(false);
+
+  const userInfo = {
+    name: "Eleanor Pena",
+    email: "eleanor.pena@email.com",
+    membershipTier: "Premium",
+    joinDate: "Member since July 2024",
+    avatar: "EP",
+  };
+
+  const quickToggles = [
+    {
+      id: "darkMode",
+      title: "Dark Mode",
+      description: "Switch to dark theme",
+      icon: "moon",
+      value: darkMode,
+      onToggle: setDarkMode,
+      color: Colors.secondary,
+    },
+    {
+      id: "notifications",
+      title: "Push Notifications",
+      description: "Receive transaction alerts",
+      icon: "notifications",
+      value: notifications,
+      onToggle: setNotifications,
+      color: Colors.info,
+    },
+    {
+      id: "biometrics",
+      title: "Biometric Login",
+      description: "Use fingerprint or Face ID",
+      icon: "finger-print",
+      value: biometrics,
+      onToggle: setBiometrics,
+      color: Colors.success,
+    },
+    {
+      id: "autoBackup",
+      title: "Auto Backup",
+      description: "Backup data automatically",
+      icon: "cloud-upload",
+      value: autoBackup,
+      onToggle: setAutoBackup,
+      color: Colors.warning,
+    },
+  ];
 
   const settingsData = [
     {
-      title: 'Profile',
+      title: "Account & Profile",
       items: [
         {
-          label: 'Personal Information',
-          description: 'Manage your personal details and preferences',
-          icon: 'person-outline',
-          iconColor: '#007AFF',
-          iconBg: '#007AFF20',
-          route: '/(tabs)/(settings)/profile-details',
+          label: "Personal Information",
+          description: "Manage your personal details",
+          icon: "person-outline",
+          iconColor: Colors.secondary,
+          iconBg: Colors.secondary + "15",
+          route: "/(tabs)/(settings)/profile-details",
+          badge: null,
+        },
+        {
+          label: "Payment Methods",
+          description: "Cards, banks, and payment options",
+          icon: "card-outline",
+          iconColor: Colors.success,
+          iconBg: Colors.success + "15",
+          route: "/(tabs)/(settings)/transaction-settings",
+          badge: "2 Cards",
+        },
+        {
+          label: "Transaction Limits",
+          description: "Set spending and transfer limits",
+          icon: "speedometer-outline",
+          iconColor: Colors.warning,
+          iconBg: Colors.warning + "15",
+          route: "/(tabs)/(settings)/transaction-settings",
+          badge: null,
         },
       ],
     },
     {
-      title: 'Security & Privacy',
+      title: "Security & Privacy",
       items: [
         {
-          label: 'Security Settings',
-          description: 'Password, biometrics, and account security',
-          icon: 'shield-checkmark-outline',
-          iconColor: '#34C759',
-          iconBg: '#34C75920',
-          route: '/(tabs)/(settings)/security-settings',
+          label: "Security Settings",
+          description: "Password, 2FA, and login security",
+          icon: "shield-checkmark-outline",
+          iconColor: Colors.error,
+          iconBg: Colors.error + "15",
+          route: "/(tabs)/(settings)/security-settings",
+          badge: "Strong",
+        },
+        {
+          label: "Privacy Controls",
+          description: "Data sharing and privacy options",
+          icon: "eye-off-outline",
+          iconColor: Colors.info,
+          iconBg: Colors.info + "15",
+          route: "/(tabs)/(settings)/security-settings",
+          badge: null,
+        },
+        {
+          label: "Login Activity",
+          description: "Recent logins and device history",
+          icon: "time-outline",
+          iconColor: Colors.secondary,
+          iconBg: Colors.secondary + "15",
+          route: "/(tabs)/(settings)/security-settings",
+          badge: "3 devices",
         },
       ],
     },
     {
-      title: 'Transactions',
+      title: "Preferences",
       items: [
         {
-          label: 'Transaction Settings',
-          description: 'Manage payment methods and transaction limits',
-          icon: 'card-outline',
-          iconColor: '#FF9500',
-          iconBg: '#FF950020',
-          route: '/(tabs)/(settings)/transaction-settings',
+          label: "App Preferences",
+          description: "Language, currency, and display",
+          icon: "settings-outline",
+          iconColor: Colors.primary,
+          iconBg: Colors.primary + "15",
+          route: "/(tabs)/(settings)/general-settings",
+          badge: null,
+        },
+        {
+          label: "Notification Settings",
+          description: "Customize alerts and reminders",
+          icon: "notifications-outline",
+          iconColor: Colors.info,
+          iconBg: Colors.info + "15",
+          route: "/(tabs)/(settings)/general-settings",
+          badge: null,
+        },
+        {
+          label: "Transaction Categories",
+          description: "Organize your spending categories",
+          icon: "pricetags-outline",
+          iconColor: Colors.success,
+          iconBg: Colors.success + "15",
+          route: "/(tabs)/(settings)/transaction-settings",
+          badge: "12 categories",
         },
       ],
     },
     {
-      title: 'General',
+      title: "Support & Information",
       items: [
         {
-          label: 'App Preferences',
-          description: 'Notifications, language, and display settings',
-          icon: 'settings-outline',
-          iconColor: '#5856D6',
-          iconBg: '#5856D620',
-          route: '/(tabs)/(settings)/general-settings',
+          label: "Help Center",
+          description: "FAQs and support articles",
+          icon: "help-circle-outline",
+          iconColor: Colors.info,
+          iconBg: Colors.info + "15",
+          route: "/(tabs)/(settings)/about-settings",
+          badge: null,
         },
-      ],
-    },
-    {
-      title: 'Support',
-      items: [
         {
-          label: 'About SurakshyaPay',
-          description: 'App version, terms, and privacy policy',
-          icon: 'information-circle-outline',
-          iconColor: '#FF3B30',
-          iconBg: '#FF3B3020',
-          route: '/(tabs)/(settings)/about-settings',
+          label: "Contact Support",
+          description: "Get help from our team",
+          icon: "chatbubble-outline",
+          iconColor: Colors.success,
+          iconBg: Colors.success + "15",
+          route: "/(tabs)/(settings)/about-settings",
+          badge: "24/7",
+        },
+        {
+          label: "App Information",
+          description: "Version, terms, and privacy policy",
+          icon: "information-circle-outline",
+          iconColor: Colors.warning,
+          iconBg: Colors.warning + "15",
+          route: "/(tabs)/(settings)/about-settings",
+          badge: "v2.1.0",
         },
       ],
     },
   ];
 
-  const handleLogout = () => {
-    // You can add any logout logic here (clearing tokens, etc.)
-    router.push('/login'); // Adjust the route path as needed
+  const quickActions = [
+    {
+      title: "Share App",
+      icon: "share-outline",
+      color: Colors.secondary,
+      action: () => handleShareApp(),
+    },
+    {
+      title: "Rate App",
+      icon: "star-outline",
+      color: Colors.warning,
+      action: () => handleRateApp(),
+    },
+    {
+      title: "Backup Data",
+      icon: "cloud-download-outline",
+      color: Colors.info,
+      action: () => handleBackupData(),
+    },
+    {
+      title: "Export Data",
+      icon: "download-outline",
+      color: Colors.success,
+      action: () => handleExportData(),
+    },
+  ];
+
+  const handleShareApp = async () => {
+    try {
+      await Share.share({
+        message: "Check out SurakshyaPay - the most secure digital wallet app!",
+        url: "https://surakshyapay.com",
+      });
+    } catch (error) {
+      console.error("Error sharing app:", error);
+    }
   };
 
-  const renderSettingItem = (item) => (
+  const handleRateApp = () => {
+    Alert.alert(
+      "Rate SurakshyaPay",
+      "Would you like to rate our app on the App Store?",
+      [
+        { text: "Later", style: "cancel" },
+        { text: "Rate Now", onPress: () => console.log("Opening app store") },
+      ]
+    );
+  };
+
+  const handleBackupData = () => {
+    Alert.alert(
+      "Backup Data",
+      "Your data will be securely backed up to the cloud.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Backup", onPress: () => console.log("Starting backup") },
+      ]
+    );
+  };
+
+  const handleExportData = () => {
+    Alert.alert("Export Data", "Export your transaction data as a CSV file.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Export", onPress: () => console.log("Exporting data") },
+    ]);
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Sign Out",
+      "Are you sure you want to sign out of your account?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Sign Out",
+          style: "destructive",
+          onPress: () => router.push("/login"),
+        },
+      ]
+    );
+  };
+
+  const renderSettingItem = (item: (typeof settingsData)[0]["items"][0]) => (
     <TouchableOpacity
       key={item.label}
       style={styles.settingItem}
@@ -95,25 +296,34 @@ const Settings = () => {
     >
       <View style={styles.settingContent}>
         <View style={[styles.iconContainer, { backgroundColor: item.iconBg }]}>
-          <Ionicons name={item.icon} size={22} color={item.iconColor} />
+          <Ionicons name={item.icon as any} size={22} color={item.iconColor} />
         </View>
         <View style={styles.textContainer}>
-          <Text style={styles.settingLabel}>{item.label}</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.settingLabel}>{item.label}</Text>
+            {item.badge && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{item.badge}</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.settingDescription}>{item.description}</Text>
         </View>
       </View>
-      <Ionicons name="chevron-forward" size={20} color="#6B7280" />
+      <Ionicons name="chevron-forward" size={18} color={Colors.neutral400} />
     </TouchableOpacity>
   );
 
-  const renderSection = (section, index) => (
+  const renderSection = (section: (typeof settingsData)[0], index: number) => (
     <View key={section.title} style={styles.section}>
       <Text style={styles.sectionTitle}>{section.title}</Text>
       <View style={styles.sectionContent}>
         {section.items.map((item, itemIndex) => (
           <View key={item.label}>
             {renderSettingItem(item)}
-            {itemIndex < section.items.length - 1 && <View style={styles.itemSeparator} />}
+            {itemIndex < section.items.length - 1 && (
+              <View style={styles.itemSeparator} />
+            )}
           </View>
         ))}
       </View>
@@ -124,45 +334,246 @@ const Settings = () => {
     <>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
       <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity 
-            onPress={() => router.back()} 
-            style={styles.backButton}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="arrow-back" size={24} color="#ffffff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Settings</Text>
-        </View>
+        {/* Background Gradient */}
+        <LinearGradient
+          colors={[
+            Colors.primary,
+            Colors.primaryLight,
+            Colors.backgroundSecondary,
+          ]}
+          style={styles.backgroundGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
 
-        {/* Content */}
-        <ScrollView 
-          style={styles.scrollView}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
-          {settingsData.map((section, index) => renderSection(section, index))}
-          
-          {/* Logout Button */}
-          <View style={styles.logoutSection}>
+        <SafeAreaView style={styles.safeArea}>
+          {/* Header */}
+          <View style={styles.header}>
             <TouchableOpacity
-              style={styles.logoutButton}
-              onPress={handleLogout}
+              onPress={() => router.back()}
+              style={styles.backButton}
               activeOpacity={0.7}
             >
-              <View style={styles.logoutContent}>
-                <View style={styles.logoutIconContainer}>
-                  <Ionicons name="log-out-outline" size={22} color="#FF3B30" />
-                </View>
-                <Text style={styles.logoutText}>Logout</Text>
-              </View>
+              <BlurView
+                intensity={20}
+                tint="light"
+                style={styles.backButtonBlur}
+              >
+                <Ionicons
+                  name="arrow-back"
+                  size={24}
+                  color={Colors.textInverse}
+                />
+              </BlurView>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Settings</Text>
+            <TouchableOpacity style={styles.headerAction} activeOpacity={0.7}>
+              <BlurView
+                intensity={20}
+                tint="light"
+                style={styles.headerActionBlur}
+              >
+                <Ionicons
+                  name="search-outline"
+                  size={20}
+                  color={Colors.textInverse}
+                />
+              </BlurView>
             </TouchableOpacity>
           </View>
-          
-          {/* Bottom spacing */}
-          <View style={styles.bottomSpacing} />
-        </ScrollView>
+
+          <ScrollView
+            style={styles.scrollView}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            {/* Profile Card */}
+            <View style={styles.profileSection}>
+              <View style={styles.profileCard}>
+                <LinearGradient
+                  colors={[Colors.secondary, Colors.secondaryLight]}
+                  style={styles.profileGradient}
+                >
+                  <View style={styles.profileContent}>
+                    <View style={styles.profileLeft}>
+                      <View style={styles.avatarContainer}>
+                        <LinearGradient
+                          colors={[Colors.accent, Colors.accentLight]}
+                          style={styles.avatarGradient}
+                        >
+                          <Text style={styles.avatarText}>
+                            {userInfo.avatar}
+                          </Text>
+                        </LinearGradient>
+                        <View style={styles.onlineIndicator} />
+                      </View>
+                      <View style={styles.profileInfo}>
+                        <Text style={styles.profileName}>{userInfo.name}</Text>
+                        <Text style={styles.profileEmail}>
+                          {userInfo.email}
+                        </Text>
+                        <View style={styles.membershipContainer}>
+                          <View style={styles.membershipBadge}>
+                            <Ionicons name="star" size={12} color="#FFD700" />
+                            <Text style={styles.membershipText}>
+                              {userInfo.membershipTier}
+                            </Text>
+                          </View>
+                          <Text style={styles.joinDate}>
+                            {userInfo.joinDate}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.editProfileButton}
+                      onPress={() =>
+                        router.push("/(tabs)/(settings)/profile-details")
+                      }
+                    >
+                      <Ionicons
+                        name="create-outline"
+                        size={18}
+                        color={Colors.textInverse}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </LinearGradient>
+              </View>
+            </View>
+
+            {/* Quick Toggles */}
+            <View style={styles.quickTogglesSection}>
+              <Text style={styles.sectionTitle}>Quick Settings</Text>
+              <View style={styles.quickTogglesContainer}>
+                <FlatList
+                  data={quickToggles}
+                  numColumns={2}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item: toggle, index }) => (
+                    <View
+                      key={toggle.id}
+                      style={[
+                        styles.quickToggleItem,
+                        index % 2 === 1 && styles.quickToggleItemRight,
+                      ]}
+                    >
+                      <View style={styles.quickToggleContent}>
+                        <View
+                          style={[
+                            styles.quickToggleIcon,
+                            { backgroundColor: toggle.color + "15" },
+                          ]}
+                        >
+                          <Ionicons
+                            name={toggle.icon as any}
+                            size={20}
+                            color={toggle.color}
+                          />
+                        </View>
+                        <View style={styles.quickToggleInfo}>
+                          <Text style={styles.quickToggleTitle}>
+                            {toggle.title}
+                          </Text>
+                          <Text style={styles.quickToggleDescription}>
+                            {toggle.description}
+                          </Text>
+                        </View>
+                        <Switch
+                          value={toggle.value}
+                          onValueChange={toggle.onToggle}
+                          trackColor={{
+                            false: Colors.neutral300,
+                            true: toggle.color + "40",
+                          }}
+                          thumbColor={
+                            toggle.value ? toggle.color : Colors.background
+                          }
+                          style={styles.switch}
+                        />
+                      </View>
+                    </View>
+                  )}
+                  contentContainerStyle={styles.quickTogglesContainer}
+                  columnWrapperStyle={{
+                    justifyContent: "space-between", // ensures spacing between items in a row
+                    // paddingHorizontal: 10, // adjust as needed
+                  }}
+                />
+              </View>
+            </View>
+
+            {/* Settings Sections */}
+            {settingsData.map((section, index) =>
+              renderSection(section, index)
+            )}
+
+            {/* App Info */}
+            <View style={styles.appInfoSection}>
+              <View style={styles.appInfoCard}>
+                <View style={styles.appInfoContent}>
+                  <View style={styles.appInfoLeft}>
+                    <View style={styles.appIcon}>
+                      <LinearGradient
+                        colors={[Colors.secondary, Colors.secondaryLight]}
+                        style={styles.appIconGradient}
+                      >
+                        <Ionicons
+                          name="shield-checkmark"
+                          size={24}
+                          color={Colors.textInverse}
+                        />
+                      </LinearGradient>
+                    </View>
+                    <View style={styles.appInfoText}>
+                      <Text style={styles.appName}>SurakshyaPay</Text>
+                      <Text style={styles.appVersion}>
+                        Version 2.1.0 (Build 241)
+                      </Text>
+                      <Text style={styles.appDescription}>
+                        Secure Digital Payments
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.securityBadge}>
+                    <Ionicons
+                      name="shield-checkmark"
+                      size={14}
+                      color={Colors.success}
+                    />
+                    <Text style={styles.securityText}>Verified</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            {/* Logout Button */}
+            <View style={styles.logoutSection}>
+              <TouchableOpacity
+                style={styles.logoutButton}
+                onPress={handleLogout}
+                activeOpacity={0.7}
+              >
+                <LinearGradient
+                  colors={[Colors.error, "#FF6B6B"]}
+                  style={styles.logoutGradient}
+                >
+                  <View style={styles.logoutContent}>
+                    <Ionicons
+                      name="log-out-outline"
+                      size={22}
+                      color={Colors.textInverse}
+                    />
+                    <Text style={styles.logoutText}>Sign Out</Text>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+
+            {/* Bottom Spacing */}
+            <View style={styles.bottomSpacing} />
+          </ScrollView>
+        </SafeAreaView>
       </View>
     </>
   );
@@ -171,135 +582,431 @@ const Settings = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.primary,
+  },
+  backgroundGradient: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  safeArea: {
+    flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 24,
+    paddingTop: 20,
     paddingBottom: 20,
-    backgroundColor: Colors.primary,
   },
   backButton: {
-    marginRight: 16,
-    padding: 8,
-    borderRadius: 8,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  backButtonBlur: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#ffffff',
-    letterSpacing: 0.5,
+    fontWeight: "700",
+    color: Colors.textInverse,
+    letterSpacing: -0.3,
+  },
+  headerAction: {
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  headerActionBlur: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+  },
+  profileSection: {
+    marginBottom: 32,
+  },
+  profileCard: {
+    borderRadius: 20,
+    shadowColor: Colors.shadowDark,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  profileGradient: {
+    borderRadius: 20,
+    padding: 24,
+  },
+  profileContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  profileLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  avatarContainer: {
+    position: "relative",
+    marginRight: 16,
+  },
+  avatarGradient: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: Colors.shadowDark,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  avatarText: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: Colors.textInverse,
+    letterSpacing: 0.5,
+  },
+  onlineIndicator: {
+    position: "absolute",
+    bottom: 2,
+    right: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: Colors.success,
+    borderWidth: 3,
+    borderColor: Colors.textInverse,
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  profileName: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: Colors.textInverse,
+    marginBottom: 4,
+    letterSpacing: -0.3,
+  },
+  profileEmail: {
+    fontSize: 14,
+    color: Colors.neutral200,
+    marginBottom: 8,
+    fontWeight: "500",
+  },
+  membershipContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  membershipBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 215, 0, 0.2)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    marginRight: 12,
+  },
+  membershipText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#FFD700",
+    marginLeft: 4,
+  },
+  joinDate: {
+    fontSize: 11,
+    color: Colors.neutral300,
+    fontWeight: "500",
+  },
+  editProfileButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  quickTogglesSection: {
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: Colors.textInverse,
+    marginBottom: 16,
+    letterSpacing: -0.2,
+  },
+  quickTogglesContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  quickToggleItem: {
+    width: "48%",
+    backgroundColor: Colors.background,
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  quickToggleItemRight: {
+    marginLeft: "4%",
+  },
+  quickToggleContent: {
+    alignItems: "center",
+  },
+  quickToggleIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  quickToggleInfo: {
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  quickToggleTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+    marginBottom: 2,
+    textAlign: "center",
+  },
+  quickToggleDescription: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 14,
+  },
+  switch: {
+    transform: [{ scaleX: 0.9 }, { scaleY: 0.9 }],
   },
   section: {
     marginBottom: 24,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
-    marginBottom: 12,
-    marginLeft: 4,
-    opacity: 0.9,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
   sectionContent: {
-    backgroundColor: '#F3F4F6', 
+    backgroundColor: Colors.background,
     borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
+    overflow: "hidden",
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
   },
   settingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#F3F4F6', 
+    backgroundColor: Colors.background,
   },
   settingContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
   },
   iconContainer: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 16,
   },
   textContainer: {
     flex: 1,
   },
-  settingLabel: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#1C1C1E',
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 2,
   },
+  settingLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+    flex: 1,
+    letterSpacing: -0.1,
+  },
+  badge: {
+    backgroundColor: Colors.secondary + "15",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: Colors.secondary,
+  },
   settingDescription: {
-    fontSize: 14,
-    color: '#6B7280', 
+    fontSize: 13,
+    color: Colors.textSecondary,
     lineHeight: 18,
+    fontWeight: "500",
   },
   itemSeparator: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: '#D1D5DB',
-    marginLeft: 76,
+    height: 1,
+    backgroundColor: Colors.borderLight,
+    marginLeft: 80,
+  },
+  quickActionsSection: {
+    marginBottom: 32,
+  },
+  quickActionsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  quickActionItem: {
+    width: "23%",
+    backgroundColor: Colors.background,
+    borderRadius: 16,
+    padding: 16,
+    alignItems: "center",
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  quickActionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  quickActionText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+    textAlign: "center",
+    lineHeight: 14,
+  },
+  appInfoSection: {
+    marginBottom: 24,
+  },
+  appInfoCard: {
+    backgroundColor: Colors.background,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  appInfoContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  appInfoLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  appIcon: {
+    marginRight: 16,
+  },
+  appIconGradient: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  appInfoText: {
+    flex: 1,
+  },
+  appName: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    marginBottom: 2,
+  },
+  appVersion: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginBottom: 2,
+    fontWeight: "500",
+  },
+  appDescription: {
+    fontSize: 11,
+    color: Colors.textTertiary,
+    fontWeight: "500",
+  },
+  securityBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.success + "15",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  securityText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: Colors.success,
+    marginLeft: 4,
   },
   logoutSection: {
     marginBottom: 24,
   },
   logoutButton: {
-    backgroundColor: '#F3F4F6', 
     borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
+    shadowColor: Colors.error,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 6,
+  },
+  logoutGradient: {
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
   },
   logoutContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  logoutIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-    backgroundColor: '#FF3B3020', 
+    flexDirection: "row",
+    alignItems: "center",
   },
   logoutText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#FF3B30', 
+    color: Colors.textInverse,
+    fontSize: 16,
+    fontWeight: "700",
+    marginLeft: 8,
+    letterSpacing: -0.2,
   },
   bottomSpacing: {
     height: 40,

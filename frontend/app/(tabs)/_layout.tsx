@@ -1,205 +1,335 @@
-import { Tabs, useSegments } from "expo-router";
-import React from "react";
-import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  ViewStyle,
-} from "react-native";
-import {
-  House,
-  ChartPie,
-  WalletMinimal,
-  Settings2,
-  ScanLine,
-} from "lucide-react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Colors from "@/constants/Colors";
-import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+"use client"
+
+import { Tabs, useSegments } from "expo-router"
+import { View, TouchableOpacity, StyleSheet, type ViewStyle, Text, Platform } from "react-native"
+import { House, ChartPie, WalletMinimal, Settings2, ScanLine } from "lucide-react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { LinearGradient } from "expo-linear-gradient"
+import Colors from "@/constants/Colors"
+import type { BottomTabBarProps } from "@react-navigation/bottom-tabs"
 
 export default function TabLayout() {
-  const segments = useSegments();
-  const lastSegment = segments[segments.length - 1];
+  const segments = useSegments()
+  const lastSegment = segments[segments.length - 1]
 
-  const hideOnScreens = ["topup", "withdraw", "details", "notification", "scan", "settings", "profile-details", "security-settings", "about-settings"
-    , "transaction-settings", "general-settings"
+  const hideOnScreens = [
+    "topup",
+    "withdraw",
+    "details",
+    "notification",
+    "scan",
+    "settings",
+    "profile-details",
+    "security-settings",
+    "about-settings",
+    "transaction-settings",
+    "general-settings",
   ]
-  const shouldHideTabBar = hideOnScreens.includes(lastSegment);
+  const shouldHideTabBar = hideOnScreens.includes(lastSegment)
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
-        tabBarActiveTintColor: Colors.primary,
-        tabBarStyle: shouldHideTabBar ? {
-          display: "none",
-          height: 0,
-        } : {
-          position: "absolute",
-          height: 70,
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
-          backgroundColor: "white",
-          elevation: 10,
-          borderTopWidth: 0,
-        },
+        tabBarActiveTintColor: Colors.secondary,
+        tabBarInactiveTintColor: Colors.textSecondary,
+        tabBarStyle: shouldHideTabBar
+          ? {
+              display: "none",
+              height: 0,
+            }
+          : {
+              position: "absolute",
+              height: Platform.OS === "ios" ? 70 : 65,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              backgroundColor: "transparent",
+              borderTopWidth: 0,
+              elevation: 0,
+              shadowOpacity: 0,
+            },
       }}
-      tabBar={(props) => shouldHideTabBar ? null : <CustomTabBar {...props} />}
+      tabBar={(props) => (shouldHideTabBar ? null : <PremiumTabBar {...props} />)}
     />
-  );
+  )
 }
 
-export function CustomTabBar({
-  state,
-  descriptors,
-  navigation,
-  style,
-}: BottomTabBarProps & { style?: ViewStyle }) {
-  const insets = useSafeAreaInsets();
+export function PremiumTabBar({ state, descriptors, navigation, style }: BottomTabBarProps & { style?: ViewStyle }) {
+  const insets = useSafeAreaInsets()
 
-  const routeOrder = ["index", "statistics", "scan", "wallet", "settings"];
+  const routeOrder = ["index", "statistics", "scan", "wallet", "settings"]
   const orderedRoutes = routeOrder
     .map((name) => state.routes.find((route) => route.name === name))
-    .filter(Boolean) as typeof state.routes;
+    .filter(Boolean) as typeof state.routes
 
-  const getIcon = (name: string, color: string) => {
+  const getIcon = (name: string, color: string, size = 22) => {
     switch (name) {
       case "index":
-        return <House size={25} color={color} />;
+        return <House size={size} color={color} strokeWidth={2.5} />
       case "statistics":
-        return <ChartPie size={25} color={color} />;
+        return <ChartPie size={size} color={color} strokeWidth={2.5} />
       case "scan":
-        return <ScanLine size={25} color={color} />;
+        return <ScanLine size={size} color={color} strokeWidth={2.5} />
       case "wallet":
-        return <WalletMinimal size={25} color={color} />;
+        return <WalletMinimal size={size} color={color} strokeWidth={2.5} />
       case "settings":
-        return <Settings2 size={25} color={color} />;
+        return <Settings2 size={size} color={color} strokeWidth={2.5} />
       default:
-        return null;
+        return null
     }
-  };
+  }
+
+  const getTabLabel = (name: string) => {
+    switch (name) {
+      case "index":
+        return "Home"
+      case "statistics":
+        return "Analytics"
+      case "scan":
+        return "Scan"
+      case "wallet":
+        return "Wallet"
+      case "settings":
+        return "Settings"
+      default:
+        return name
+    }
+  }
 
   const tabBarStyle = StyleSheet.flatten([
     styles.tabBarContainer,
     style,
-    { paddingBottom: insets.bottom },
-  ]);
+    { paddingBottom: Math.max(insets.bottom, 12) },
+  ])
 
   return (
     <View style={tabBarStyle}>
-      {orderedRoutes.map((route) => {
-        const isFocused =
-          state.index === state.routes.findIndex((r) => r.key === route.key);
+      {/* Background */}
+      <View style={styles.backgroundContainer}>
+        <LinearGradient
+          colors={[Colors.primary, Colors.primaryLight]}
+          style={styles.gradientBackground}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+      </View>
 
-        const onPress = () => {
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          });
+      {/* Tab Items Container */}
+      <View style={styles.tabItemsContainer}>
+        {orderedRoutes.map((route, index) => {
+          const isFocused = state.index === state.routes.findIndex((r) => r.key === route.key)
+          const isCenter = route.name === "scan"
 
-          if (!event.defaultPrevented) {
-            navigation.navigate(route.name);
+          const onPress = () => {
+            const event = navigation.emit({
+              type: "tabPress",
+              target: route.key,
+              canPreventDefault: true,
+            })
+
+            if (!event.defaultPrevented) {
+              navigation.navigate(route.name)
+            }
           }
-        };
 
-        if (route.name === "scan") {
+          if (isCenter) {
+            return (
+              <View key={route.key} style={styles.centerButtonContainer}>
+                <TouchableOpacity onPress={onPress} style={styles.centerButton} activeOpacity={0.8}>
+                  <LinearGradient
+                    colors={[Colors.secondary, Colors.secondaryLight]}
+                    style={styles.centerButtonGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    {getIcon(route.name, Colors.textInverse, 24)}
+                  </LinearGradient>
+
+                  {/* Floating Ring */}
+                  <View style={styles.centerButtonRing} />
+                </TouchableOpacity>
+
+                {/* Center Button Label */}
+                <Text style={styles.centerButtonLabel}>Scan</Text>
+              </View>
+            )
+          }
+
           return (
-            <View key={route.key} style={styles.centerButtonWrapper}>
-              <TouchableOpacity onPress={onPress} style={styles.centerButton}>
-                <ScanLine size={28} color="white" />
-              </TouchableOpacity>
-            </View>
-          );
-        }
+            <TouchableOpacity key={route.key} onPress={onPress} style={styles.tabButton} activeOpacity={0.7}>
+              <View style={styles.tabButtonContent}>
+                {/* Active Background */}
+                {isFocused && (
+                  <View style={styles.activeBackground}>
+                    <LinearGradient
+                      colors={["rgba(255, 255, 255, 0.15)", "rgba(255, 255, 255, 0.25)"]}
+                      style={styles.activeBackgroundGradient}
+                    />
+                  </View>
+                )}
 
-        return (
-          <TouchableOpacity
-            key={route.key}
-            onPress={onPress}
-            style={styles.tabButton}
-          >
-            <View style={styles.iconWrapper}>
-              {isFocused ? (
-                <View style={styles.focusedIconBackground}>
-                  {getIcon(route.name, "white")}
+                {/* Icon Container */}
+                <View style={[styles.iconContainer, isFocused && styles.iconContainerActive]}>
+                  {getIcon(route.name, isFocused ? Colors.textInverse : Colors.neutral300, isFocused ? 24 : 22)}
                 </View>
-              ) : (
-                getIcon(route.name, "#888")
-              )}
 
-              {isFocused && <View style={styles.underline} />}
-            </View>
-          </TouchableOpacity>
-        );
-      })}
+                {/* Label */}
+                <Text style={[styles.tabLabel, isFocused && styles.tabLabelActive]}>{getTabLabel(route.name)}</Text>
+
+                {/* Active Indicator */}
+                {isFocused && (
+                  <View style={styles.activeIndicator}>
+                    <LinearGradient
+                      colors={[Colors.accent, Colors.accentLight]}
+                      style={styles.activeIndicatorGradient}
+                    />
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+          )
+        })}
+      </View>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   tabBarContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    height: 100,
-    backgroundColor: "white",
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    elevation: 20,
-    paddingTop: 10,
+    backgroundColor: "transparent",
+    paddingTop: 0,
+  },
+  backgroundContainer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    overflow: "hidden",
+  },
+  gradientBackground: {
+    flex: 1,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  topAccent: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  tabItemsContainer: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-around",
+    height: 70,
+    paddingTop: 12,
+    paddingHorizontal: 12,
   },
   tabButton: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 6,
   },
-  centerButtonWrapper: {
-    position: "relative",
-    top: -30,
-    width: 70,
-    alignItems: "center",
-  },
-  centerButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#000",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 5,
-  },
-  iconWrapper: {
+  tabButtonContent: {
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
-    marginTop: 0,
+    minHeight: 44,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
-  focusedIconBackground: {
-    backgroundColor: Colors.secondary,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
+  activeBackground: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 12,
+    overflow: "hidden",
   },
-  underline: {
+  activeBackgroundGradient: {
+    flex: 1,
+    borderRadius: 12,
+  },
+  iconContainer: {
+    marginBottom: 3,
+    padding: 1,
+  },
+  iconContainerActive: {
+    transform: [{ scale: 1.05 }],
+  },
+  tabLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: Colors.neutral300,
+    letterSpacing: 0.2,
+    textAlign: "center",
+  },
+  tabLabelActive: {
+    color: Colors.textInverse,
+    fontWeight: "700",
+  },
+  activeIndicator: {
+    position: "absolute",
+    bottom: -1,
     width: 20,
     height: 2,
-    backgroundColor: Colors.secondary,
     borderRadius: 1,
-    marginTop: 4,
-    shadowColor: Colors.secondary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.7,
-    shadowRadius: 6,
-    elevation: 5,
+    overflow: "hidden",
   },
-});
+  activeIndicatorGradient: {
+    flex: 1,
+    borderRadius: 1,
+  },
+  centerButtonContainer: {
+    alignItems: "center",
+    position: "relative",
+    top: -16,
+  },
+  centerButton: {
+    position: "relative",
+    marginBottom: 6,
+  },
+  centerButtonGradient: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  centerButtonRing: {
+    position: "absolute",
+    top: -3,
+    left: -3,
+    right: -3,
+    bottom: -3,
+    borderRadius: 31,
+    borderWidth: 1.5,
+    borderColor: Colors.accent + "40",
+    backgroundColor: "transparent",
+  },
+  centerButtonLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: Colors.textInverse,
+    letterSpacing: 0.2,
+    marginTop: 2,
+  },
+})
