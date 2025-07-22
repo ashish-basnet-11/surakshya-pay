@@ -156,7 +156,7 @@ const BankingWalletUI = () => {
         >
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <TouchableOpacity style={styles.avatarContainer}>
+              <TouchableOpacity style={styles.avatarContainer} onPress={() => router.push('/(tabs)/(settings)/profile-details')}>
                 <LinearGradient colors={[Colors.secondary, Colors.secondaryLight]} style={styles.avatarGradient}>
                   <Text style={styles.avatarText}>EP</Text>
                 </LinearGradient>

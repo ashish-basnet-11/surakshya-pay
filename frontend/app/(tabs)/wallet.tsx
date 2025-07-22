@@ -476,7 +476,7 @@ export default function WalletScreen() {
         >
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.quickActions}>
-            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/send")}>
+            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/(tabs)/(index)/withdraw")}>
               <View style={[styles.quickActionIcon, { backgroundColor: "#4CAF5015" }]}>
                 <Ionicons name="send" size={24} color="#4CAF50" />
               </View>
@@ -500,7 +500,7 @@ export default function WalletScreen() {
               <Text style={styles.quickActionSubtitle}>QR code payments</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/transactions")}>
+            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/(tabs)/(index)/details")}>
               <View style={[styles.quickActionIcon, { backgroundColor: "#9C27B015" }]}>
                 <Ionicons name="receipt" size={24} color="#9C27B0" />
               </View>
@@ -564,9 +564,6 @@ export default function WalletScreen() {
         >
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent Activity ({sortedTransactions.length})</Text>
-            <TouchableOpacity onPress={() => router.push("/transactions")}>
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
           </View>
 
           <View style={styles.transactionsList}>
@@ -1017,11 +1014,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 16,
-  },
-  seeAllText: {
-    fontSize: 14,
-    color: Colors.primary,
-    fontWeight: "600",
   },
   transactionsList: {
     backgroundColor: "white",

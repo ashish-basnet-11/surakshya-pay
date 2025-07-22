@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,6 +9,7 @@ import {
   StatusBar,
   Linking,
   Alert,
+  BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -17,6 +18,17 @@ import { LinearGradient } from "expo-linear-gradient";
 
 const AboutSettings = () => {
   const router = useRouter();
+   useEffect(() => {
+        const backHandler = BackHandler.addEventListener(
+          'hardwareBackPress',
+          () => {
+            router.replace('/(tabs)/settings');
+            return true;
+          }
+        );
+    
+        return () => backHandler.remove();
+      }, [router]);
 
   const appVersion = '2.1.0';
   const buildNumber = '241';
@@ -49,7 +61,6 @@ const AboutSettings = () => {
         {
           text: 'In-App',
           onPress: () => {
-            // Navigate to feedback form
             Alert.alert('Feedback', 'Feedback form would open here.');
           },
         },
@@ -214,7 +225,7 @@ const AboutSettings = () => {
         />
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => router.push('/(tabs)/settings')}
             style={styles.backButton}
             activeOpacity={0.7}
           >

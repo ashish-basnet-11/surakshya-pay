@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     paddingLeft: 10,
   },
   headerText: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: '700',
     color: '#ffffff',
     letterSpacing: -0.3,

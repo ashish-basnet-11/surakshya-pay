@@ -15,6 +15,7 @@ import {
   Dimensions,
   StatusBar,
   Vibration,
+  BackHandler,
 } from "react-native"
 import { CameraView, useCameraPermissions } from "expo-camera"
 import * as ImagePicker from "expo-image-picker"
@@ -35,14 +36,25 @@ export default function ScanScreen() {
   const [isScanning, setIsScanning] = useState(false)
   const [scanResult, setScanResult] = useState<string | null>(null)
 
-  // Animation refs
+  
   const panY = useRef(new Animated.Value(0)).current
   const currentHeight = useRef(MIN_HEIGHT)
   const scanLineAnim = useRef(new Animated.Value(0)).current
   const pulseAnim = useRef(new Animated.Value(1)).current
   const fadeAnim = useRef(new Animated.Value(0)).current
 
-  // Start scan line animation
+   useEffect(() => {
+        const backHandler = BackHandler.addEventListener(
+          'hardwareBackPress',
+          () => {
+            router.replace('/(tabs)');
+            return true;
+          }
+        );
+    
+        return () => backHandler.remove();
+      }, [router]);
+
   useEffect(() => {
     const scanAnimation = Animated.loop(
       Animated.sequence([
@@ -60,7 +72,7 @@ export default function ScanScreen() {
     )
     scanAnimation.start()
 
-    // Pulse animation for scan frame
+ 
     const pulseAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -77,7 +89,7 @@ export default function ScanScreen() {
     )
     pulseAnimation.start()
 
-    // Fade in animation
+  
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 500,
@@ -151,7 +163,7 @@ export default function ScanScreen() {
 
       if (!result.canceled) {
         setIsScanning(true)
-        // Simulate processing
+        
         setTimeout(() => {
           setIsScanning(false)
           Alert.alert("QR Code Found", "Payment request for $25.00 from John's Store", [
@@ -211,7 +223,7 @@ export default function ScanScreen() {
     setScanResult(data)
     Vibration.vibrate(100)
 
-    // Simulate payment QR code
+    
     if (data.includes("pay") || data.includes("amount")) {
       Alert.alert("Payment QR Code Detected", `Amount: $45.00\nMerchant: Digital Store\n\nProceed with payment?`, [
         {

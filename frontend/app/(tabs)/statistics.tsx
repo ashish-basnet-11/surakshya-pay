@@ -11,6 +11,7 @@ import {
   Alert,
   Animated,
   TextInput,
+  BackHandler,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useRouter } from "expo-router"
@@ -44,9 +45,20 @@ export default function StatisticsScreen() {
   const [selectedChart, setSelectedChart] = useState<"pie" | "line" | "bar">("pie")
   const [searchQuery, setSearchQuery] = useState("")
   const [filteredTransactions, setFilteredTransactions] = useState(mockTransactions)
-
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(50)).current
+
+   useEffect(() => {
+        const backHandler = BackHandler.addEventListener(
+          'hardwareBackPress',
+          () => {
+            router.replace('/(tabs)');
+            return true;
+          }
+        );
+    
+        return () => backHandler.remove();
+      }, [router]);
 
   useEffect(() => {
     Animated.parallel([
@@ -422,7 +434,7 @@ export default function StatisticsScreen() {
         >
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent Transactions ({filteredTransactions.length})</Text>
-            <TouchableOpacity onPress={() => router.push("/transactions")}>
+            <TouchableOpacity onPress={() => router.push("/(tabs)/wallet")}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
