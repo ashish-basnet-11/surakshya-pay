@@ -879,6 +879,6 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   bottomSpacing: {
-    height:70,
+    height:100,
   }
 })

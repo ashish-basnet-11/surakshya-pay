@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
 },
   headerContent: {
     flex: 1,
-    alignItems: "center"
+    marginLeft: 10,
   },
   headerText: {
     fontSize: 24,
