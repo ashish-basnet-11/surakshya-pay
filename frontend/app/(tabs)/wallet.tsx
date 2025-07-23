@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import {
   StyleSheet,
   View,
@@ -11,10 +11,12 @@ import {
   Alert,
   Animated,
   TextInput,
+  BackHandler,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useRouter } from "expo-router"
 import Colors from "@/constants/Colors"
+import { useFocusEffect } from "@react-navigation/native"
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window")
 
@@ -121,6 +123,21 @@ export default function WalletScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(50)).current
   const balanceAnim = useRef(new Animated.Value(0)).current
+  useFocusEffect(
+  useCallback(() => {
+    const onBackPress = () => {
+      router.replace('/(tabs)'); 
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      onBackPress
+    );
+
+    return () => backHandler.remove();
+  }, [])
+);
 
   useEffect(() => {
     Animated.parallel([
@@ -260,17 +277,17 @@ export default function WalletScreen() {
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
+          <Ionicons name="arrow-back" size={24} color="#ffffff" />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Wallet</Text>
 
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={handleRefresh} style={styles.headerButton}>
-            <Ionicons name="refresh" size={20} color={Colors.primary} />
+            <Ionicons name="refresh" size={20} color="#ffffff"/>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleExport} style={styles.headerButton}>
-            <Ionicons name="download" size={20} color={Colors.primary} />
+            <Ionicons name="download" size={20} color="#ffffff"/>
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -476,7 +493,7 @@ export default function WalletScreen() {
         >
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.quickActions}>
-            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/send")}>
+            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/(tabs)/(index)/withdraw")}>
               <View style={[styles.quickActionIcon, { backgroundColor: "#4CAF5015" }]}>
                 <Ionicons name="send" size={24} color="#4CAF50" />
               </View>
@@ -500,7 +517,7 @@ export default function WalletScreen() {
               <Text style={styles.quickActionSubtitle}>QR code payments</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/transactions")}>
+            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/(tabs)/(index)/details")}>
               <View style={[styles.quickActionIcon, { backgroundColor: "#9C27B015" }]}>
                 <Ionicons name="receipt" size={24} color="#9C27B0" />
               </View>
@@ -564,9 +581,6 @@ export default function WalletScreen() {
         >
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent Activity ({sortedTransactions.length})</Text>
-            <TouchableOpacity onPress={() => router.push("/transactions")}>
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
           </View>
 
           <View style={styles.transactionsList}>
@@ -619,6 +633,7 @@ export default function WalletScreen() {
               </TouchableOpacity>
             ))}
           </View>
+          <View style={styles.bottomSpacing}/>
         </Animated.View>
       </ScrollView>
     </View>
@@ -637,25 +652,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 20,
-    backgroundColor: "white",
+    backgroundColor: Colors.primary,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 12,
+    elevation: 6,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     justifyContent: "center",
     alignItems: "center",
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#333",
+    color: "#ffffff",
   },
   headerActions: {
     flexDirection: "row",
@@ -665,7 +680,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: `${Colors.primary}15`,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -756,11 +771,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+     shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 12,
+    elevation: 6,
   },
   searchInput: {
     flex: 1,
@@ -816,10 +831,10 @@ const styles = StyleSheet.create({
     padding: 4,
     marginBottom: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 12,
+    elevation: 6,
   },
   chartToggleButton: {
     flex: 1,
@@ -849,10 +864,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 12,
+    elevation: 6,
   },
   chartTitle: {
     fontSize: 16,
@@ -933,10 +948,10 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 12,
+    elevation: 6,
   },
   quickActionIcon: {
     width: 48,
@@ -964,10 +979,10 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 12,
+    elevation: 6,
   },
   summaryHeader: {
     flexDirection: "row",
@@ -1017,19 +1032,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
-  seeAllText: {
-    fontSize: 14,
-    color: Colors.primary,
-    fontWeight: "600",
-  },
   transactionsList: {
     backgroundColor: "white",
     borderRadius: 12,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 12,
+    elevation: 6,
   },
   transactionItem: {
     flexDirection: "row",
@@ -1090,4 +1100,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#666",
   },
+  bottomSpacing: {
+    height:120,
+  }
 })

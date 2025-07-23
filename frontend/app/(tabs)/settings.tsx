@@ -12,13 +12,16 @@ import {
   Alert,
   Share,
   FlatList,
+  TextInput,
+  BackHandler,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import Colors from "@/constants/Colors";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 
 const Settings = () => {
   const router = useRouter();
@@ -26,6 +29,24 @@ const Settings = () => {
   const [notifications, setNotifications] = useState(true);
   const [biometrics, setBiometrics] = useState(true);
   const [autoBackup, setAutoBackup] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+ 
+   useFocusEffect(
+  useCallback(() => {
+    const onBackPress = () => {
+      router.replace('/(tabs)'); 
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      onBackPress
+    );
+
+    return () => backHandler.remove();
+  }, [])
+);
 
   const userInfo = {
     name: "Eleanor Pena",
@@ -349,37 +370,65 @@ const Settings = () => {
         <SafeAreaView style={styles.safeArea}>
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={styles.backButton}
-              activeOpacity={0.7}
-            >
-              <BlurView
-                intensity={20}
-                tint="light"
-                style={styles.backButtonBlur}
-              >
-                <Ionicons
-                  name="arrow-back"
-                  size={24}
-                  color={Colors.textInverse}
+            {showSearch ? (
+              <View style={styles.searchContainer}>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search settings..."
+                  placeholderTextColor={Colors.neutral300}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  autoFocus={true}
                 />
-              </BlurView>
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Settings</Text>
-            <TouchableOpacity style={styles.headerAction} activeOpacity={0.7}>
-              <BlurView
-                intensity={20}
-                tint="light"
-                style={styles.headerActionBlur}
-              >
-                <Ionicons
-                  name="search-outline"
-                  size={20}
-                  color={Colors.textInverse}
-                />
-              </BlurView>
-            </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowSearch(false);
+                    setSearchQuery("");
+                  }}
+                  style={styles.searchCloseButton}
+                >
+                  <Ionicons name="close" size={24} color={Colors.textInverse} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <TouchableOpacity
+                  onPress={() => router.back()}
+                  style={styles.backButton}
+                  activeOpacity={0.7}
+                >
+                  <BlurView
+                    intensity={20}
+                    tint="light"
+                    style={styles.backButtonBlur}
+                  >
+                    <Ionicons
+                      name="arrow-back"
+                      size={24}
+                      color={Colors.textInverse}
+                    />
+                  </BlurView>
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Settings</Text>
+                <TouchableOpacity
+                  style={styles.headerAction}
+                  activeOpacity={0.7}
+                  onPress={() => setShowSearch(true)}
+                >
+                  <BlurView
+                    intensity={20}
+                    tint="light"
+                    style={styles.headerActionBlur}
+                  >
+                    <Ionicons
+                      name="search-outline"
+                      size={20}
+                      color={Colors.textInverse}
+                    />
+                  </BlurView>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
 
           <ScrollView
@@ -422,6 +471,27 @@ const Settings = () => {
                           <Text style={styles.joinDate}>
                             {userInfo.joinDate}
                           </Text>
+                        </View>
+                        <View style={styles.kycContainer}>
+                          <TouchableOpacity
+                            style={styles.kycContainer}
+                            onPress={() =>
+                              router.push("/(tabs)/(settings)/verifyKyc")
+                            }
+                            activeOpacity={0.7}
+                          >
+                            <Ionicons
+                              name="shield-checkmark-outline"
+                              size={14}
+                              color={Colors.success}
+                            />
+                            <Text style={styles.kycText}>Verify KYC</Text>
+                            <Ionicons
+                              name="chevron-forward"
+                              size={14}
+                              color={Colors.neutral300}
+                            />
+                          </TouchableOpacity>
                         </View>
                       </View>
                     </View>
@@ -496,8 +566,7 @@ const Settings = () => {
                   )}
                   contentContainerStyle={styles.quickTogglesContainer}
                   columnWrapperStyle={{
-                    justifyContent: "space-between", // ensures spacing between items in a row
-                    // paddingHorizontal: 10, // adjust as needed
+                    justifyContent: "space-between",
                   }}
                 />
               </View>
@@ -598,11 +667,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingTop: 50,
     paddingBottom: 20,
   },
   backButton: {
-    borderRadius: 12,
+    borderRadius: 25,
     overflow: "hidden",
   },
   backButtonBlur: {
@@ -614,22 +683,41 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.1)",
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "700",
     color: Colors.textInverse,
     letterSpacing: -0.3,
   },
   headerAction: {
-    borderRadius: 12,
+    borderRadius: 25,
     overflow: "hidden",
   },
   headerActionBlur: {
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: 25,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(255, 255, 255, 0.1)",
+  },
+  searchContainer: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 44,
+  },
+  searchInput: {
+    flex: 1,
+    color: Colors.textInverse,
+    fontSize: 16,
+    paddingVertical: 8,
+  },
+  searchCloseButton: {
+    marginLeft: 8,
+    padding: 4,
   },
   scrollView: {
     flex: 1,
@@ -736,6 +824,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.neutral300,
     fontWeight: "500",
+  },
+  kycContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    gap: 6,
+  },
+  kycText: {
+    fontSize: 12,
+    color: Colors.success,
+    fontWeight: "500",
+    marginRight: 4,
   },
   editProfileButton: {
     width: 40,

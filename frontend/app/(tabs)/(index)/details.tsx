@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,13 +9,13 @@ import {
   ScrollView,
   StatusBar,
   RefreshControl,
+  BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Colors from '@/constants/Colors';
 
-// Enhanced transaction data with more details
 const weeklyTransactions = [
   {
     id: 'TXN1001',
@@ -124,6 +124,22 @@ const Details = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<'weekly' | 'monthly'>('weekly');
   const [refreshing, setRefreshing] = useState(false);
 
+   useFocusEffect(
+           useCallback(() => {
+             const onBackPress = () => {
+               router.replace('/(tabs)'); 
+               return true;
+             };
+         
+             const backHandler = BackHandler.addEventListener(
+               'hardwareBackPress',
+               onBackPress
+             );
+         
+             return () => backHandler.remove();
+           }, [])
+         );
+
   useLayoutEffect(() => {
     const parent = navigation.getParent();
     if (parent) {
@@ -145,13 +161,10 @@ const Details = () => {
     }, 2000);
   }, []);
 
-
-
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
       <SafeAreaView style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => router.push('/(tabs)')}
@@ -168,9 +181,6 @@ const Details = () => {
           </View>
         </View>
 
-
-
-        {/* Period Filter */}
         <View style={styles.filterContainer}>
           <View style={styles.filterWrapper}>
             <TouchableOpacity
@@ -210,7 +220,6 @@ const Details = () => {
           </View>
         </View>
 
-        {/* Transaction List */}
         <ScrollView 
           style={styles.scrollView}
           contentContainerStyle={styles.listContainer}
@@ -270,7 +279,6 @@ const TransactionCard = ({
   return (
     <TouchableOpacity style={[styles.card, isLast && styles.cardLast]} activeOpacity={0.7}>
       <View style={styles.cardContent}>
-        {/* Avatar and Icon */}
         <View style={styles.avatarContainer}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{transaction.avatar}</Text>
@@ -287,7 +295,6 @@ const TransactionCard = ({
           </View>
         </View>
 
-        {/* Transaction Details */}
         <View style={styles.transactionDetails}>
           <View style={styles.transactionHeader}>
             <Text style={styles.transactionName} numberOfLines={1}>
@@ -343,29 +350,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    marginTop: Platform.OS === 'ios' ? 50 : 40,
+    marginBottom: 16,
   },
   backButton: {
     padding: 8,
-    borderRadius: 8,
-    marginRight: 12,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginRight: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerContent: {
     flex: 1,
+    paddingLeft: 10,
   },
   headerText: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#fff',
-    letterSpacing: 0.5,
+    color: '#ffffff',
+    letterSpacing: -0.3,
   },
   headerSubtext: {
     fontSize: 14,
     color: '#B3C5D7',
-    marginTop: 2,
+    marginTop: 4,
   },
-
   filterContainer: {
     paddingHorizontal: 20,
     marginBottom: 20,

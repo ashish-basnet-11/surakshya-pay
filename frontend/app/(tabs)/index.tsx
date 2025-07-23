@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useCallback } from "react"
 import {
   View,
   Text,
@@ -12,12 +12,14 @@ import {
   Platform,
   Animated,
   RefreshControl,
+  BackHandler,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { LinearGradient } from "expo-linear-gradient"
 import { BlurView } from "expo-blur"
 import Colors from "@/constants/Colors"
 import { useRouter } from "expo-router"
+import { useFocusEffect } from "@react-navigation/native"
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window")
 
@@ -26,6 +28,22 @@ const BankingWalletUI = () => {
   const [refreshing, setRefreshing] = useState(false)
   const router = useRouter()
   const scrollY = useRef(new Animated.Value(0)).current
+
+   useFocusEffect(
+           useCallback(() => {
+             const onBackPress = () => {
+               router.replace('/(tabs)'); 
+               return true;
+             };
+         
+             const backHandler = BackHandler.addEventListener(
+               'hardwareBackPress',
+               onBackPress
+             );
+         
+             return () => backHandler.remove();
+           }, [])
+         );
 
   const toggleBalanceVisibility = () => {
     setIsBalanceVisible(!isBalanceVisible)
@@ -44,7 +62,6 @@ const BankingWalletUI = () => {
       name: "Adobe Creative Suite",
       date: "Today • 2:30 PM",
       amount: -59.99,
-      category: "Software",
       status: "completed",
       icon: "brush-outline",
       color: Colors.error,
@@ -55,7 +72,6 @@ const BankingWalletUI = () => {
       name: "Freelance Payment",
       date: "Yesterday • 4:15 PM",
       amount: 2850.0,
-      category: "Income",
       status: "completed",
       icon: "briefcase-outline",
       color: Colors.success,
@@ -66,7 +82,6 @@ const BankingWalletUI = () => {
       name: "Microsoft 365",
       date: "Dec 18 • 9:00 AM",
       amount: -12.99,
-      category: "Subscription",
       status: "completed",
       icon: "laptop-outline",
       color: Colors.warning,
@@ -77,7 +92,6 @@ const BankingWalletUI = () => {
       name: "Investment Return",
       date: "Dec 17 • 11:30 AM",
       amount: 450.75,
-      category: "Investment",
       status: "pending",
       icon: "trending-up-outline",
       color: Colors.info,
@@ -160,7 +174,7 @@ const BankingWalletUI = () => {
         >
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <TouchableOpacity style={styles.avatarContainer}>
+              <TouchableOpacity style={styles.avatarContainer} onPress={() => router.push('/(tabs)/(settings)/profile-details')}>
                 <LinearGradient colors={[Colors.secondary, Colors.secondaryLight]} style={styles.avatarGradient}>
                   <Text style={styles.avatarText}>EP</Text>
                 </LinearGradient>
@@ -248,13 +262,7 @@ const BankingWalletUI = () => {
               <View style={styles.balanceContent}>
                 <Text style={styles.balance}>{isBalanceVisible ? "$124,580.50" : "$•••,•••.••"}</Text>
                 <View style={styles.balanceChange}>
-                  <View style={styles.trendingIcon}>
-                    <Ionicons name="trending-up" size={14} color={Colors.success} />
-                  </View>
-                  <Text style={styles.balanceChangeText}>+8.2% this month</Text>
-                  <View style={styles.changeIndicator}>
-                    <Text style={styles.changeAmount}>+$9,420</Text>
-                  </View>
+                  <Text style={styles.balanceChangeText}>Your Transactions, Zero Exposure</Text>
                 </View>
               </View>
 
@@ -629,15 +637,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexWrap: "wrap",
   },
-  trendingIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.success + "20",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 8,
-  },
   balanceChangeText: {
     color: Colors.success,
     fontSize: 14,
@@ -840,17 +839,6 @@ const styles = StyleSheet.create({
   transactionMeta: {
     flexDirection: "row",
     alignItems: "center",
-  },
-  categoryBadge: {
-    backgroundColor: Colors.secondary + "15",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  transactionCategory: {
-    fontSize: 11,
-    color: Colors.secondary,
-    fontWeight: "600",
   },
   transactionDot: {
     width: 3,

@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useState, useEffect } from 'react';
+import React, { useLayoutEffect, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Colors from '@/constants/Colors';
 
 const KEYS = [
@@ -33,17 +33,21 @@ const Withdraw = () => {
   const navigation = useNavigation();
 
   // Handle hardware back button
-  useEffect(() => {
-    const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
-      () => {
-        router.replace('/(tabs)');
-        return true;
-      }
-    );
-
-    return () => backHandler.remove();
-  }, [router]);
+  useFocusEffect(
+          useCallback(() => {
+            const onBackPress = () => {
+              router.replace('/(tabs)'); 
+              return true;
+            };
+        
+            const backHandler = BackHandler.addEventListener(
+              'hardwareBackPress',
+              onBackPress
+            );
+        
+            return () => backHandler.remove();
+          }, [])
+        );
 
   useLayoutEffect(() => {
     const parent = navigation.getParent();
@@ -322,27 +326,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    marginTop: Platform.OS === 'ios' ? 50 : 40,
+    marginBottom: 16,
   },
   backButton: {
     padding: 8,
-    borderRadius: 8,
-    marginRight: 12,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginRight: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerContent: {
     flex: 1,
+    paddingLeft: 10,
   },
   headerText: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: '#ffffff',
-    letterSpacing: 0.5,
+    letterSpacing: -0.3,
   },
   headerSubtext: {
     fontSize: 14,
     color: '#B3C5D7',
-    marginTop: 2,
+    marginTop: 4,
   },
   content: {
     flex: 1,
