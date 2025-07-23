@@ -1,10 +1,11 @@
 from fastapi import FastAPI
-import redis
-import psycopg2
-import os
-from dotenv import load_dotenv
+from app.api.router import api_router
+from app.database.session import engine
+from app.database import base
 
-load_dotenv()
+
+base.Base.metadata.drop_all(bind=engine)
+base.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -12,19 +13,4 @@ app = FastAPI()
 def root():
     return {"message": "Backend running ✅"}
 
-@app.get("/redis")
-def check_redis():
-    r = redis.Redis(host=os.getenv("REDIS_HOST"), port=int(os.getenv("REDIS_PORT")))
-    r.set("test", "hello redis")
-    return {"redis": r.get("test")}
-
-@app.get("/db")
-def check_db():
-    conn = psycopg2.connect(
-        dbname=os.getenv("POSTGRES_DB"),
-        user=os.getenv("POSTGRES_USER"),
-        password=os.getenv("POSTGRES_PASSWORD"),
-        host=os.getenv("POSTGRES_HOST"),
-        port=os.getenv("POSTGRES_PORT")
-    )
-    return {"db": "connected!"}
+app.include_router(api_router, prefix="/api/v1")
