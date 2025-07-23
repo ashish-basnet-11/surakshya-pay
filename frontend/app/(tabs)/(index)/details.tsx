@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,11 @@ import {
   ScrollView,
   StatusBar,
   RefreshControl,
+  BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Colors from '@/constants/Colors';
 
 const weeklyTransactions = [
@@ -122,6 +123,22 @@ const Details = () => {
   const navigation = useNavigation();
   const [selectedPeriod, setSelectedPeriod] = useState<'weekly' | 'monthly'>('weekly');
   const [refreshing, setRefreshing] = useState(false);
+
+   useFocusEffect(
+           useCallback(() => {
+             const onBackPress = () => {
+               router.replace('/(tabs)'); 
+               return true;
+             };
+         
+             const backHandler = BackHandler.addEventListener(
+               'hardwareBackPress',
+               onBackPress
+             );
+         
+             return () => backHandler.remove();
+           }, [])
+         );
 
   useLayoutEffect(() => {
     const parent = navigation.getParent();

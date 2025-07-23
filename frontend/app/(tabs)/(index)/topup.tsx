@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect } from 'react';
+import React, { useState, useLayoutEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,10 +11,11 @@ import {
   ActivityIndicator,
   StatusBar,
   Animated,
+  BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Colors from '@/constants/Colors';
 
 const KEYS = [
@@ -45,6 +46,22 @@ const TopUp = () => {
   const [proofResult, setProofResult] = useState<'success' | 'failure' | null>(null);
   const [proofId, setProofId] = useState<string | null>(null);
   const [fadeAnim] = useState(new Animated.Value(1));
+
+   useFocusEffect(
+           useCallback(() => {
+             const onBackPress = () => {
+               router.replace('/(tabs)'); 
+               return true;
+             };
+         
+             const backHandler = BackHandler.addEventListener(
+               'hardwareBackPress',
+               onBackPress
+             );
+         
+             return () => backHandler.remove();
+           }, [])
+         );
 
   const handleTopUp = async () => {
     const numAmount = Number(amount);

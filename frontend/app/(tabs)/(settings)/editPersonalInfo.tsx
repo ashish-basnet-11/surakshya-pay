@@ -11,10 +11,11 @@ import {
   Platform,
   BackHandler,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Colors from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 
 const EditPersonalInfo = () => {
   const router = useRouter();
@@ -23,17 +24,22 @@ const EditPersonalInfo = () => {
   const [phone, setPhone] = useState("+977 9812345678");
   const [address, setAddress] = useState("Kathmandu, Nepal");
   
-  useEffect(() => {
-    const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
-      () => {
-        router.replace('/(tabs)/(settings)/profile-details');
+    useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        router.replace('/(tabs)/(settings)/profile-details'); 
         return true;
-      }
-    );
+      };
+  
+      const backHandler = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress
+      );
+  
+      return () => backHandler.remove();
+    }, [])
+  );
 
-    return () => backHandler.remove();
-  }, [router]);
 
   const handleSave = () => {
     Alert.alert("Success", "Your personal information has been saved.");

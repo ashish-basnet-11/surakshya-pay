@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,10 +9,12 @@ import {
   StatusBar,
   RefreshControl,
   Alert,
+  BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
+import { useFocusEffect } from '@react-navigation/native';
 
 const notifications = [
   {
@@ -121,8 +123,25 @@ const Notification = () => {
   const router = useRouter();
   const [notificationList, setNotificationList] = useState(notifications);
   const [refreshing, setRefreshing] = useState(false);
-
   const unreadCount = notificationList.filter(item => !item.isRead).length;
+
+   useFocusEffect(
+           useCallback(() => {
+             const onBackPress = () => {
+               router.replace('/(tabs)'); 
+               return true;
+             };
+         
+             const backHandler = BackHandler.addEventListener(
+               'hardwareBackPress',
+               onBackPress
+             );
+         
+             return () => backHandler.remove();
+           }, [])
+         );
+
+
 
   const markAllAsRead = () => {
     Alert.alert(

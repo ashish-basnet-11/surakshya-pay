@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -17,21 +17,27 @@ import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
+import { useFocusEffect } from "@react-navigation/native";
 
 const ProfileDetails = () => {
   const router = useRouter();
   const [image, setImage] = useState<string | null>(null);
   
-  useEffect(() => {
+  useFocusEffect(
+  useCallback(() => {
+    const onBackPress = () => {
+      router.replace('/(tabs)/settings'); 
+      return true;
+    };
+
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
-      () => {
-        router.replace('/(tabs)/settings');
-        return true;
-      }
+      onBackPress
     );
+
     return () => backHandler.remove();
-  }, [router]);
+  }, [])
+);
 
   const goBackToSettings = () => {
     router.push("/settings");

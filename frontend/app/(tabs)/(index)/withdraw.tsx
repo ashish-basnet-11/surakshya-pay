@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useState, useEffect } from 'react';
+import React, { useLayoutEffect, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Colors from '@/constants/Colors';
 
 const KEYS = [
@@ -33,17 +33,21 @@ const Withdraw = () => {
   const navigation = useNavigation();
 
   // Handle hardware back button
-  useEffect(() => {
-    const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
-      () => {
-        router.replace('/(tabs)');
-        return true;
-      }
-    );
-
-    return () => backHandler.remove();
-  }, [router]);
+  useFocusEffect(
+          useCallback(() => {
+            const onBackPress = () => {
+              router.replace('/(tabs)'); 
+              return true;
+            };
+        
+            const backHandler = BackHandler.addEventListener(
+              'hardwareBackPress',
+              onBackPress
+            );
+        
+            return () => backHandler.remove();
+          }, [])
+        );
 
   useLayoutEffect(() => {
     const parent = navigation.getParent();

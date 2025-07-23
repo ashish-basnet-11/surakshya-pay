@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -14,20 +14,25 @@ import { Ionicons, MaterialCommunityIcons, Feather } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import { useFocusEffect } from "@react-navigation/native";
 
 const GeneralSettings = () => {
   const router = useRouter();
-   useEffect(() => {
+    useFocusEffect(
+      useCallback(() => {
+        const onBackPress = () => {
+          router.replace('/(tabs)/settings'); 
+          return true;
+        };
+    
         const backHandler = BackHandler.addEventListener(
           'hardwareBackPress',
-          () => {
-            router.replace('/(tabs)/settings');
-            return true;
-          }
+          onBackPress
         );
     
         return () => backHandler.remove();
-      }, [router]);
+      }, [])
+    );
 
   const [darkMode, setDarkMode] = useState(false);
   const [autoUpdate, setAutoUpdate] = useState(true);

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useCallback } from "react"
 import {
   View,
   Text,
@@ -12,12 +12,14 @@ import {
   Platform,
   Animated,
   RefreshControl,
+  BackHandler,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { LinearGradient } from "expo-linear-gradient"
 import { BlurView } from "expo-blur"
 import Colors from "@/constants/Colors"
 import { useRouter } from "expo-router"
+import { useFocusEffect } from "@react-navigation/native"
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window")
 
@@ -26,6 +28,22 @@ const BankingWalletUI = () => {
   const [refreshing, setRefreshing] = useState(false)
   const router = useRouter()
   const scrollY = useRef(new Animated.Value(0)).current
+
+   useFocusEffect(
+           useCallback(() => {
+             const onBackPress = () => {
+               router.replace('/(tabs)'); 
+               return true;
+             };
+         
+             const backHandler = BackHandler.addEventListener(
+               'hardwareBackPress',
+               onBackPress
+             );
+         
+             return () => backHandler.remove();
+           }, [])
+         );
 
   const toggleBalanceVisibility = () => {
     setIsBalanceVisible(!isBalanceVisible)

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -15,20 +15,25 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { LinearGradient } from "expo-linear-gradient";
+import { useFocusEffect } from '@react-navigation/native';
 
 const AboutSettings = () => {
   const router = useRouter();
-   useEffect(() => {
-        const backHandler = BackHandler.addEventListener(
-          'hardwareBackPress',
-          () => {
-            router.replace('/(tabs)/settings');
+    useFocusEffect(
+        useCallback(() => {
+          const onBackPress = () => {
+            router.replace('/(tabs)/settings'); 
             return true;
-          }
-        );
-    
-        return () => backHandler.remove();
-      }, [router]);
+          };
+      
+          const backHandler = BackHandler.addEventListener(
+            'hardwareBackPress',
+            onBackPress
+          );
+      
+          return () => backHandler.remove();
+        }, [])
+      );
 
   const appVersion = '2.1.0';
   const buildNumber = '241';

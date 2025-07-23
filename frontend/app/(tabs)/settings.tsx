@@ -20,7 +20,8 @@ import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import Colors from "@/constants/Colors";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 
 const Settings = () => {
   const router = useRouter();
@@ -31,17 +32,21 @@ const Settings = () => {
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
  
-    useEffect(() => {
-      const backHandler = BackHandler.addEventListener(
-        'hardwareBackPress',
-        () => {
-          router.replace('/(tabs)');
-          return true;
-        }
-      );
-  
-      return () => backHandler.remove();
-    }, [router]);
+   useFocusEffect(
+  useCallback(() => {
+    const onBackPress = () => {
+      router.replace('/(tabs)'); 
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      onBackPress
+    );
+
+    return () => backHandler.remove();
+  }, [])
+);
 
   const userInfo = {
     name: "Eleanor Pena",

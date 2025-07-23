@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,13 @@ import {
   ScrollView,
   Platform,
   TouchableOpacity,
+  BackHandler,
 } from 'react-native';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import Colors from '@/constants/Colors';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from "expo-linear-gradient";
+import { useFocusEffect } from '@react-navigation/native';
 
 const SecuritySettings = () => {
   const router = useRouter();
@@ -19,6 +21,22 @@ const SecuritySettings = () => {
   const [isFaceIDEnabled, setIsFaceIDEnabled] = useState(true);
   const [isTwoFactorEnabled, setIsTwoFactorEnabled] = useState(false);
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true);
+
+    useFocusEffect(
+        useCallback(() => {
+          const onBackPress = () => {
+            router.replace('/(tabs)/settings'); 
+            return true;
+          };
+      
+          const backHandler = BackHandler.addEventListener(
+            'hardwareBackPress',
+            onBackPress
+          );
+      
+          return () => backHandler.remove();
+        }, [])
+      );
 
   const securityOptions = [
     {

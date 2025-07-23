@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import {
   StyleSheet,
   View,
@@ -20,7 +20,7 @@ import {
 import { CameraView, useCameraPermissions } from "expo-camera"
 import * as ImagePicker from "expo-image-picker"
 import { Ionicons } from "@expo/vector-icons"
-import { useRouter } from "expo-router"
+import { useFocusEffect, useRouter } from "expo-router"
 import Colors from "@/constants/Colors"
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get("window")
@@ -43,17 +43,21 @@ export default function ScanScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current
   const fadeAnim = useRef(new Animated.Value(0)).current
 
-   useEffect(() => {
-        const backHandler = BackHandler.addEventListener(
-          'hardwareBackPress',
-          () => {
-            router.replace('/(tabs)');
-            return true;
-          }
-        );
-    
-        return () => backHandler.remove();
-      }, [router]);
+   useFocusEffect(
+       useCallback(() => {
+         const onBackPress = () => {
+           router.replace('/(tabs)'); 
+           return true;
+         };
+     
+         const backHandler = BackHandler.addEventListener(
+           'hardwareBackPress',
+           onBackPress
+         );
+     
+         return () => backHandler.remove();
+       }, [])
+     );
 
   useEffect(() => {
     const scanAnimation = Animated.loop(

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import {
   StyleSheet,
   View,
@@ -11,10 +11,12 @@ import {
   Alert,
   Animated,
   TextInput,
+  BackHandler,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useRouter } from "expo-router"
 import Colors from "@/constants/Colors"
+import { useFocusEffect } from "@react-navigation/native"
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window")
 
@@ -121,6 +123,21 @@ export default function WalletScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(50)).current
   const balanceAnim = useRef(new Animated.Value(0)).current
+  useFocusEffect(
+  useCallback(() => {
+    const onBackPress = () => {
+      router.replace('/(tabs)'); 
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      onBackPress
+    );
+
+    return () => backHandler.remove();
+  }, [])
+);
 
   useEffect(() => {
     Animated.parallel([
