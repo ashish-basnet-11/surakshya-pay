@@ -1,0 +1,60 @@
+import { User } from "@/types/user";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+
+interface AuthState {
+  user: User | null;
+  accessToken: string | null;
+  refreshToken: string | null;
+  setUser: (user: User) => void;
+  setAccessToken: (token: string) => void;
+  setRefreshToken: (token: string) => void;
+  login: (
+    user: User,
+    accessToken: string,
+    refreshToken?: string
+  ) => void;
+  logout: () => void;
+}
+
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (
+      set: (fn: (state: AuthState) => AuthState | Partial<AuthState>) => void
+    ) => ({
+      user: null,
+      accessToken: null,
+      refreshToken: null,
+      setUser: (user: User) => set((state) => ({ ...state, user })),
+      setAccessToken: (accessToken: string) =>
+        set((state) => ({ ...state, accessToken })),
+      setRefreshToken: (refreshToken: string) =>
+        set((state) => ({ ...state, refreshToken })),
+      login: (
+        user: User,
+        accessToken: string,
+        refreshToken?: string
+      ) =>
+        set((state) => ({
+          user,
+          accessToken,
+          refreshToken: refreshToken || null,
+        })),
+      logout: () =>
+        set((state) => ({
+          ...state,
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+        })),
+    }),
+    {
+      name: "auth-storage",
+      partialize: (state: AuthState) => ({
+        user: state.user,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+      }),
+    }
+  )
+);
