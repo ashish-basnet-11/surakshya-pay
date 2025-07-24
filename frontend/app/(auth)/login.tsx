@@ -22,54 +22,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import * as LocalAuthentication from "expo-local-authentication";
-import { useMutation } from "@tanstack/react-query";
+import { useUserLogin } from "@/apis/authentication/login-user";
+import { UserLogin } from "@/types/user";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
-
-const MOCK_USERS = {
-  admin: {
-    username: "admin@surakshyapay.com",
-    password: "admin123",
-    role: "admin",
-    name: "System Administrator",
-  },
-  user1: {
-    username: "user@example.com",
-    password: "user123",
-    role: "user",
-    name: "John Doe",
-  },
-  user2: {
-    username: "john.smith",
-    password: "password123",
-    role: "user",
-    name: "John Smith",
-  },
-};
-
-const AuthService = {
-  authenticate: async (username: string, password: string) => {
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    const user = Object.values(MOCK_USERS).find(
-      (u) => u.username.toLowerCase() === username.toLowerCase()
-    );
-    if (!user) {
-      throw new Error("User not found");
-    }
-    if (user.password !== password) {
-      throw new Error("Invalid password");
-    }
-    return {
-      user: {
-        id: user.username,
-        name: user.name,
-        role: user.role,
-        username: user.username,
-      },
-      token: `mock_token_${Date.now()}`,
-    };
-  },
-};
 
 const Login = () => {
   const router = useRouter();
@@ -77,43 +33,57 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const { mutate: loginUser, isPending: isLoading } = useUserLogin();
 
   const toggleRememberMe = () => setRememberMe((prev) => !prev);
   const onForgotPasswordPress = () => router.push("/(auth)/verify");
   const onRegisterPress = () => router.push("/register");
-
-  const loginMutation = useMutation({
-    mutationFn: async () => {
-      return await AuthService.authenticate(username.trim(), password);
-    },
-    onSuccess: (authResult) => {
-      if (authResult.user.role === "admin") {
-        router.replace("/(admin)/dashboard");
-      } else {
-        router.replace("/(tabs)");
-      }
-    },
-    onError: (error: any) => {
-      Alert.alert("Login Failed", error.message || "An error occurred during login");
-    },
-    onSettled: () => {
-      setIsLoading(false);
-    },
-  });
 
   const onLoginPress = async () => {
     if (!username.trim() || !password.trim()) {
       Alert.alert("Error", "Please enter both username and password");
       return;
     }
-    setIsLoading(true);
-    loginMutation.mutate();
+    const user: UserLogin = {
+      username: username.trim(),
+      password: password,
+    };
+
+    const formData = new FormData();
+    formData.append("username", user.username);
+    formData.append("password", user.password);
+
+    loginUser(formData, {
+      onSuccess: (authResult) => {
+        console.log(authResult);
+        // if (authResult.success) {
+        //   router.replace("/(admin)/dashboard");
+        // } else {
+        //   router.replace("/(tabs)");
+        // }
+        if (authResult.success) {
+          Alert.alert("Login Successful", "You are logged in successfully");
+          router.replace("/(tabs)");
+        } else {
+          Alert.alert(
+            "Login Failed",
+            authResult.message || "An error occurred during login"
+          );
+        }
+      },
+      onError: (error: any) => {
+        Alert.alert(
+          "Login Failed",
+          error.message || "An error occurred during login"
+        );
+      },
+    });
   };
 
   const handleFingerprintLogin = async () => {
     const hasHardware = await LocalAuthentication.hasHardwareAsync();
-    const supported = await LocalAuthentication.supportedAuthenticationTypesAsync();
+    const supported =
+      await LocalAuthentication.supportedAuthenticationTypesAsync();
     const enrolled = await LocalAuthentication.isEnrolledAsync();
     if (!hasHardware || supported.length === 0 || !enrolled) {
       Alert.alert("Unavailable", "Biometric authentication is not set up");
@@ -125,12 +95,12 @@ const Login = () => {
       disableDeviceFallback: true,
     });
     if (result.success) {
-      const user = MOCK_USERS.user1;
-      if (user.role === "admin") {
-        router.replace("/(admin)/dashboard");
-      } else {
-        router.replace("/(tabs)");
-      }
+      router.replace("/(tabs)");
+      // const user = MOCK_USERS.user1;
+      // if (user.role === "admin") {
+      //   router.replace("/(admin)/dashboard");
+      // } else {
+      // }
     } else {
       Alert.alert("Authentication Failed", "Fingerprint did not match");
     }
@@ -158,11 +128,17 @@ const Login = () => {
                       colors={[Colors.secondary, Colors.secondaryLight]}
                       style={styles.logoGradient}
                     >
-                      <Ionicons name="shield-checkmark" size={32} color={Colors.textInverse} />
+                      <Ionicons
+                        name="shield-checkmark"
+                        size={32}
+                        color={Colors.textInverse}
+                      />
                     </LinearGradient>
                   </View>
                   <Text style={styles.brandName}>SurakshyaPay</Text>
-                  <Text style={styles.brandTagline}>Secure Digital Payments</Text>
+                  <Text style={styles.brandTagline}>
+                    Secure Digital Payments
+                  </Text>
                 </View>
                 <View style={styles.welcomeContainer}>
                   <Text style={styles.welcomeTitle}>Welcome Back</Text>
@@ -187,7 +163,11 @@ const Login = () => {
                       <Text style={styles.inputLabel}>Email or Username</Text>
                       <View style={styles.inputContainer}>
                         <View style={styles.inputIcon}>
-                          <Ionicons name="person-outline" size={20} color={Colors.textSecondary} />
+                          <Ionicons
+                            name="person-outline"
+                            size={20}
+                            color={Colors.textSecondary}
+                          />
                         </View>
                         <TextInput
                           placeholder="Enter your email or username"
@@ -206,7 +186,11 @@ const Login = () => {
                       <Text style={styles.inputLabel}>Password</Text>
                       <View style={styles.inputContainer}>
                         <View style={styles.inputIcon}>
-                          <Ionicons name="lock-closed-outline" size={20} color={Colors.textSecondary} />
+                          <Ionicons
+                            name="lock-closed-outline"
+                            size={20}
+                            color={Colors.textSecondary}
+                          />
                         </View>
                         <TextInput
                           placeholder="Enter your password"
@@ -223,7 +207,9 @@ const Login = () => {
                           disabled={isLoading}
                         >
                           <Ionicons
-                            name={showPassword ? "eye-outline" : "eye-off-outline"}
+                            name={
+                              showPassword ? "eye-outline" : "eye-off-outline"
+                            }
                             size={20}
                             color={Colors.textSecondary}
                           />
@@ -238,9 +224,18 @@ const Login = () => {
                         disabled={isLoading}
                         activeOpacity={0.7}
                       >
-                        <View style={[styles.checkbox, rememberMe && styles.checkboxActive]}>
+                        <View
+                          style={[
+                            styles.checkbox,
+                            rememberMe && styles.checkboxActive,
+                          ]}
+                        >
                           {rememberMe && (
-                            <Ionicons name="checkmark" size={14} color={Colors.textInverse} />
+                            <Ionicons
+                              name="checkmark"
+                              size={14}
+                              color={Colors.textInverse}
+                            />
                           )}
                         </View>
                         <Text style={styles.rememberMeText}>Remember me</Text>
@@ -251,14 +246,21 @@ const Login = () => {
                         disabled={isLoading}
                         activeOpacity={0.7}
                       >
-                        <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                        <Text style={styles.forgotPasswordText}>
+                          Forgot Password?
+                        </Text>
                       </TouchableOpacity>
                     </View>
                     <View style={styles.loginRow}>
                       <TouchableOpacity
-                        style={[styles.loginButtonFlex, isLoading && styles.loginButtonDisabled]}
+                        style={[
+                          styles.loginButtonFlex,
+                          isLoading && styles.loginButtonDisabled,
+                        ]}
                         onPress={onLoginPress}
-                        disabled={isLoading || !username.trim() || !password.trim()}
+                        disabled={
+                          isLoading || !username.trim() || !password.trim()
+                        }
                         activeOpacity={0.8}
                       >
                         <LinearGradient
@@ -272,7 +274,9 @@ const Login = () => {
                           {isLoading ? (
                             <View style={styles.loadingContainer}>
                               <View style={styles.loadingSpinner} />
-                              <Text style={styles.loginButtonText}>Signing In...</Text>
+                              <Text style={styles.loginButtonText}>
+                                Signing In...
+                              </Text>
                             </View>
                           ) : (
                             <Text style={styles.loginButtonText}>Sign In</Text>
@@ -285,13 +289,22 @@ const Login = () => {
                         onPress={handleFingerprintLogin}
                         activeOpacity={0.7}
                       >
-                        <Ionicons name="finger-print" size={28} color={Colors.secondary} />
+                        <Ionicons
+                          name="finger-print"
+                          size={28}
+                          color={Colors.secondary}
+                        />
                       </TouchableOpacity>
                     </View>
 
                     <View style={styles.signUpContainer}>
-                      <Text style={styles.signUpText}>Don't have an account? </Text>
-                      <TouchableOpacity onPress={onRegisterPress} disabled={isLoading}>
+                      <Text style={styles.signUpText}>
+                        Don&apos;t have an account?{" "}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={onRegisterPress}
+                        disabled={isLoading}
+                      >
                         <Text style={styles.signUpLink}>Sign Up</Text>
                       </TouchableOpacity>
                     </View>

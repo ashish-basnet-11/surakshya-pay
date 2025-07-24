@@ -32,8 +32,23 @@ export async function apiGet<T = any>(url: string, config?: AxiosRequestConfig):
   return response.data;
 }
 
-export async function apiPost<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-  const response = await api.post<T>(url, data, config);
+export async function apiPost<T = any>(
+  url: string,
+  data?: any,
+  config: AxiosRequestConfig = {}
+): Promise<T> {
+  const isFormData = typeof FormData !== "undefined" && data instanceof FormData;
+
+  const headers = {
+    ...config.headers,
+    ...(isFormData ? { "Content-Type": "multipart/form-data" } : {}),
+  };
+
+  const response = await api.post<T>(url, data, {
+    ...config,
+    headers,
+  });
+
   return response.data;
 }
 

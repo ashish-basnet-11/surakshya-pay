@@ -33,6 +33,6 @@ export interface User extends UserInDBBase {}
 export interface UserInDB extends UserInDBBase {} 
 
 export interface UserLogin{
-  email: string;
+  username: string;
   password: string;
 }
