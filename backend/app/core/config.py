@@ -16,7 +16,7 @@ class Settings(BaseSettings):
 
     DATABASE_URL: Optional[str] = None
 
-    SECRET_KEY: str = secrets.token_urlsafe(32)
+    SECRET_KEY: str = "3fbf7a147e14474002f5ee1ac267bec9d08df5086be47c210081faa3c3d1da03c5a4e7aedfae7cd7b4f05391f52b4857"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     ALGORITHM: str = "HS256"

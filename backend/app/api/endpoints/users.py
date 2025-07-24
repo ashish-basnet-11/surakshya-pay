@@ -23,7 +23,7 @@ def read_users(
     return CommonResponse(success=True, message="Users fetched successfully", data=users)
 
 @router.post("/", response_model=CommonResponse[User])
-def create_user(
+async def create_user(
     *,
     db: Session = Depends(get_db),
     user_in: UserCreate,
@@ -32,9 +32,10 @@ def create_user(
     if user:
         raise HTTPException(
             status_code=400,
-            detail="The user with this username already exists in the system.",
+            detail="The user with this email already exists in the system.",
         )
-    user = crud.user.create_user(db=db, user=user_in)
+
+    user = await crud.user.create_user(db=db, user=user_in)
     return CommonResponse(success=True, message="User created successfully", data=user)
 
 @router.get("/{user_id}", response_model=CommonResponse[User])

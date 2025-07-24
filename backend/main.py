@@ -4,7 +4,7 @@ from app.database.session import engine
 from app.database import base
 
 
-base.Base.metadata.drop_all(bind=engine)
+# base.Base.metadata.drop_all(bind=engine)
 base.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()

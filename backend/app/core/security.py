@@ -40,6 +40,7 @@ def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None):
 def verify_token(token: str, credentials_exception):
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        print(payload)
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception

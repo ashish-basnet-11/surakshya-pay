@@ -4,7 +4,7 @@ import os
 
 w3 = Web3(Web3.HTTPProvider(os.getenv('WEB3_PROVIDER', 'http://127.0.0.1:8545')))
 
-CONTRACT_ADDRESS = os.getenv('DIGITAL_WALLET_CONTRACT_ADDRESS', '0x5FbDB2315678afecb367f032d93F642f64180aa3')
+CONTRACT_ADDRESS = os.getenv('DIGITAL_WALLET_CONTRACT_ADDRESS', '0x9010DFd9e35d84d9bB9b5759399CafE553FCdE4d')
 ABI_PATH = os.getenv('DIGITAL_WALLET_ABI_PATH', 'app/utils/digital_wallet.json')
 
 with open(ABI_PATH) as f:

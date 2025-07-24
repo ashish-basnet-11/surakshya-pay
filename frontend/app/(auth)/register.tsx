@@ -8,7 +8,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Dimensions,
   TouchableWithoutFeedback,
   Keyboard,
   KeyboardAvoidingView,
@@ -21,8 +20,8 @@ import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
-
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+import { UserCreate } from "@/types/user";
+import { useRegisterUser } from "@/apis/users/register-user";
 
 const Register = () => {
   const router = useRouter();
@@ -35,9 +34,10 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const { mutate: registerUser, isPending } = useRegisterUser();
 
   const onRegisterPress = async () => {
+    console.log("Hello")
     if (
       !firstName.trim() ||
       !lastName.trim() ||
@@ -83,30 +83,56 @@ const Register = () => {
       return;
     }
 
-    setIsLoading(true);
-
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      Alert.alert(
-        "Account Created",
-        "Your account has been created successfully. Please verify your email to continue.",
-        [
-          {
-            text: "Continue",
-            onPress: () => router.replace("/login"),
-          },
-        ]
-      );
-    }, 2000);
+    const user : UserCreate = {
+      full_name: `${firstName} ${lastName}`,
+      email: email.trim(),
+      password: password,
+      phone_number: phone.trim(),
+    };
+    
+    registerUser(user, {
+      onSuccess: (data) => {
+        if(data.success){
+          Alert.alert(
+            data?.message || "",
+            "Your account has been created successfully. Please verify your email to continue.",
+            [
+              {
+                text: "Continue",
+                onPress: () => router.replace("/login"),
+              },
+            ]
+          );
+        } else {
+          Alert.alert(
+            data?.message || "",
+            "There was an error creating the user.",
+            [
+              {
+                text: "Continue",
+                onPress: () => router.replace("/login"),
+              },
+            ]
+          );
+        }
+      },
+      onError: () => {
+        Alert.alert(
+          "Error Creating User",
+          "There was an error creating the user.",
+          [
+            {
+              text: "Continue",
+              onPress: () => router.replace("/login"),
+            },
+          ]
+        );
+      }
+    })
   };
 
   const goToLogin = () => {
     router.replace("/login");
-  };
-
-  const onSocialRegister = (provider: string) => {
-    console.log(`Register with ${provider}`);
   };
 
   return (
@@ -129,7 +155,7 @@ const Register = () => {
                 <TouchableOpacity
                   style={styles.backButton}
                   onPress={goToLogin}
-                  disabled={isLoading}
+                  disabled={isPending}
                   activeOpacity={0.7}
                 >
                   <View style={styles.backButtonContainer}>
@@ -191,7 +217,7 @@ const Register = () => {
                             autoCapitalize="words"
                             value={firstName}
                             onChangeText={setFirstName}
-                            editable={!isLoading}
+                            editable={!isPending}
                           />
                         </View>
                       </View>
@@ -213,7 +239,7 @@ const Register = () => {
                             autoCapitalize="words"
                             value={lastName}
                             onChangeText={setLastName}
-                            editable={!isLoading}
+                            editable={!isPending}
                           />
                         </View>
                       </View>
@@ -239,7 +265,7 @@ const Register = () => {
                           autoCorrect={false}
                           value={email}
                           onChangeText={setEmail}
-                          editable={!isLoading}
+                          editable={!isPending}
                         />
                       </View>
                     </View>
@@ -262,7 +288,7 @@ const Register = () => {
                           keyboardType="phone-pad"
                           value={phone}
                           onChangeText={setPhone}
-                          editable={!isLoading}
+                          editable={!isPending}
                         />
                       </View>
                     </View>
@@ -285,12 +311,12 @@ const Register = () => {
                           style={styles.input}
                           value={password}
                           onChangeText={setPassword}
-                          editable={!isLoading}
+                          editable={!isPending}
                         />
                         <TouchableOpacity
                           onPress={() => setShowPassword((prev) => !prev)}
                           style={styles.passwordToggle}
-                          disabled={isLoading}
+                          disabled={isPending}
                         >
                           <Ionicons
                             name={
@@ -324,14 +350,14 @@ const Register = () => {
                           style={styles.input}
                           value={confirmPassword}
                           onChangeText={setConfirmPassword}
-                          editable={!isLoading}
+                          editable={!isPending}
                         />
                         <TouchableOpacity
                           onPress={() =>
                             setShowConfirmPassword((prev) => !prev)
                           }
                           style={styles.passwordToggle}
-                          disabled={isLoading}
+                          disabled={isPending}
                         >
                           <Ionicons
                             name={
@@ -350,7 +376,7 @@ const Register = () => {
                     <TouchableOpacity
                       style={styles.termsContainer}
                       onPress={() => setAgreeToTerms((prev) => !prev)}
-                      disabled={isLoading}
+                      disabled={isPending}
                       activeOpacity={0.7}
                     >
                       <View
@@ -381,21 +407,21 @@ const Register = () => {
                     <TouchableOpacity
                       style={[
                         styles.registerButton,
-                        isLoading && styles.registerButtonDisabled,
+                        isPending && styles.registerButtonDisabled,
                       ]}
                       onPress={onRegisterPress}
-                      disabled={isLoading}
+                      disabled={isPending}
                       activeOpacity={0.8}
                     >
                       <LinearGradient
                         colors={
-                          isLoading
+                          isPending
                             ? [Colors.neutral400, Colors.neutral500]
                             : [Colors.secondary, Colors.secondaryLight]
                         }
                         style={styles.registerButtonGradient}
                       >
-                        {isLoading ? (
+                        {isPending ? (
                           <View style={styles.loadingContainer}>
                             <View style={styles.loadingSpinner} />
                             <Text style={styles.registerButtonText}>
@@ -422,7 +448,7 @@ const Register = () => {
                       <TouchableOpacity
                         style={styles.socialButton}
                         onPress={() => onSocialRegister("Google")}
-                        disabled={isLoading}
+                        disabled={isPending}
                         activeOpacity={0.7}
                       >
                         <View style={styles.socialIcon}>
@@ -434,7 +460,7 @@ const Register = () => {
                       <TouchableOpacity
                         style={styles.socialButton}
                         onPress={() => onSocialRegister("Apple")}
-                        disabled={isLoading}
+                        disabled={isPending}
                         activeOpacity={0.7}
                       >
                         <View style={styles.socialIcon}>
@@ -451,7 +477,7 @@ const Register = () => {
                       </Text>
                       <TouchableOpacity
                         onPress={goToLogin}
-                        disabled={isLoading}
+                        disabled={isPending}
                         activeOpacity={0.7}
                       >
                         <Text style={styles.signInLink}>Sign In</Text>

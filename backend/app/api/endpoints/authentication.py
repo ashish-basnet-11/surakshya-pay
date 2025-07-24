@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Body
+from fastapi.encoders import jsonable_encoder
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.core.security import create_access_token, create_refresh_token, verify_password, verify_token
@@ -9,22 +10,34 @@ from app.schemas.response import CommonResponse
 from app.services.notification_service import send_email
 from app.utils.dependencies import get_db
 from datetime import datetime
+from app.utils.zkp_helper import generate_proof_and_verify
+from app.schemas.user import User
 
 router = APIRouter()
 
 @router.post("/login", response_model=CommonResponse[Token])
 async def login_for_access_token(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
     user = get_user_by_email(db, email=form_data.username)
-    if not user or not verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    
+    if not user:
+        return CommonResponse(success=False, message="User not found!")
+    
+    zkp_proof_verification = await generate_proof_and_verify(form_data.password, user.zkp_salt, user.zkp_nullifier)
+
+    if not zkp_proof_verification["verified"]:
+        return CommonResponse(success=False, message="ZKP verification failed!")
+    
+    zkp_commitment = zkp_proof_verification["zkp_commitment"]
+    zkp_nullifier = zkp_proof_verification["zkp_nullifier"]
+
+    if not (zkp_commitment == user.zkp_commitment and zkp_nullifier == user.zkp_nullifier):
+        return CommonResponse(success=False, message="ZKP identity verification failed!")
+
     access_token = create_access_token(data={"sub": user.email})
     refresh_token = create_refresh_token(data={"sub": user.email})
     token_data = {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
-    return CommonResponse(success=True, message="Login successful", data=token_data)
+    user_data = User.model_validate(user).model_dump()
+    return CommonResponse(success=True, message="Login successful", data={**token_data, "user": user_data})
 
 @router.post("/refresh", response_model=CommonResponse[Token])
 async def refresh_access_token(refresh_token: str, db: Session = Depends(get_db)):
@@ -78,7 +91,7 @@ async def reset_password_flow(request: ResetPasswordRequest, db: Session = Depen
     if user.reset_password_otp_expires_at < datetime.utcnow():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="OTP has expired")
     
-    reset_password(db, user, request.new_password)
+    await reset_password(db, user, request.new_password)
     
     return CommonResponse(success=True, message="Password reset successfully") 
 
