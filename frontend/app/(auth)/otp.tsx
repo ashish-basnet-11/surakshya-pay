@@ -86,7 +86,7 @@ const Otp = () => {
     setResendTimer(30);
     setOtp("");
 
-    // Restart timer
+    
     const timer = setInterval(() => {
       setResendTimer((prev) => {
         if (prev <= 1) {
@@ -330,7 +330,7 @@ export default Otp;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
   },
   content: {
     flex: 1,

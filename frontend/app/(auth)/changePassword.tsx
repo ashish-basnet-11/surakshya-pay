@@ -353,7 +353,7 @@ export default ChangePassword
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
   },
   content: {
     flex: 1,

@@ -57,17 +57,7 @@ const Login = () => {
 
     loginUser(formData, {
       onSuccess: (authResult) => {
-        console.log(authResult);
-        // if (authResult.success) {
-        //   router.replace("/(admin)/dashboard");
-        // } else {
-        //   router.replace("/(tabs)");
-        // }
         if (authResult.success) {
-          //  user: UserInDB,
-          //     accessToken: string,
-          //     refreshToken?: string
-          console.log(authResult);
           useAuthStore
             .getState()
             .login(
@@ -84,7 +74,6 @@ const Login = () => {
           } else {
             router.replace("/(tabs)");
           }
-          // router.replace("/(tabs)");
         } else {
           Alert.alert(
             "Login Failed",
@@ -117,11 +106,6 @@ const Login = () => {
     });
     if (result.success) {
       router.replace("/(tabs)");
-      // const user = MOCK_USERS.user1;
-      // if (user.role === "admin") {
-      //   router.replace("/(admin)/dashboard");
-      // } else {
-      // }
     } else {
       Alert.alert("Authentication Failed", "Fingerprint did not match");
     }
@@ -131,210 +115,213 @@ const Login = () => {
     <>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
       <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.container}
+        <LinearGradient
+          colors={[Colors.primary, Colors.primaryLight]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ flex: 1 }}
         >
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View style={styles.content}>
-              <LinearGradient
-                colors={[Colors.primary, Colors.primaryLight]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.headerSection}
-              >
-                <View style={styles.logoContainer}>
-                  <View style={styles.logoWrapper}>
-                    <LinearGradient
-                      colors={[Colors.secondary, Colors.secondaryLight]}
-                      style={styles.logoGradient}
-                    >
-                      <Ionicons
-                        name="shield-checkmark"
-                        size={32}
-                        color={Colors.textInverse}
-                      />
-                    </LinearGradient>
-                  </View>
-                  <Text style={styles.brandName}>SurakshyaPay</Text>
-                  <Text style={styles.brandTagline}>
-                    Secure Digital Payments
-                  </Text>
-                </View>
-                <View style={styles.welcomeContainer}>
-                  <Text style={styles.welcomeTitle}>Welcome Back</Text>
-                  <Text style={styles.welcomeSubtitle}>
-                    Sign in to access your secure digital wallet
-                  </Text>
-                </View>
-              </LinearGradient>
-
-              <View style={styles.formSection}>
-                <ScrollView
-                  style={styles.scrollView}
-                  contentContainerStyle={styles.scrollViewContent}
-                  showsVerticalScrollIndicator={false}
-                  keyboardShouldPersistTaps="handled"
-                  bounces={false}
-                >
-                  <View style={styles.formContainer}>
-                    <Text style={styles.formTitle}>Sign In</Text>
-
-                    <View style={styles.inputGroup}>
-                      <Text style={styles.inputLabel}>Email or Username</Text>
-                      <View style={styles.inputContainer}>
-                        <View style={styles.inputIcon}>
-                          <Ionicons
-                            name="person-outline"
-                            size={20}
-                            color={Colors.textSecondary}
-                          />
-                        </View>
-                        <TextInput
-                          placeholder="Enter your email or username"
-                          placeholderTextColor={Colors.textTertiary}
-                          style={styles.input}
-                          autoCapitalize="none"
-                          autoCorrect={false}
-                          value={username}
-                          onChangeText={setUsername}
-                          editable={!isLoading}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.container}
+          >
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+              <View style={styles.content}>
+                {/* Header section WITHOUT gradient background now */}
+                <View style={styles.headerSection}>
+                  <View style={styles.logoContainer}>
+                    <View style={styles.logoWrapper}>
+                      <LinearGradient
+                        colors={[Colors.secondary, Colors.secondaryLight]}
+                        style={styles.logoGradient}
+                      >
+                        <Ionicons
+                          name="shield-checkmark"
+                          size={32}
+                          color={Colors.textInverse}
                         />
-                      </View>
+                      </LinearGradient>
                     </View>
+                    <Text style={styles.brandName}>SurakshyaPay</Text>
+                    <Text style={styles.brandTagline}>
+                      Secure Digital Payments
+                    </Text>
+                  </View>
+                  <View style={styles.welcomeContainer}>
+                    <Text style={styles.welcomeTitle}>Welcome Back</Text>
+                    <Text style={styles.welcomeSubtitle}>
+                      Sign in to access your secure digital wallet
+                    </Text>
+                  </View>
+                </View>
 
-                    <View style={styles.inputGroup}>
-                      <Text style={styles.inputLabel}>Password</Text>
-                      <View style={styles.inputContainer}>
-                        <View style={styles.inputIcon}>
-                          <Ionicons
-                            name="lock-closed-outline"
-                            size={20}
-                            color={Colors.textSecondary}
+                <View style={styles.formSection}>
+                  <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.scrollViewContent}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    bounces={false}
+                  >
+                    <View style={styles.formContainer}>
+                      <Text style={styles.formTitle}>Sign In</Text>
+
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>Email or Username</Text>
+                        <View style={styles.inputContainer}>
+                          <View style={styles.inputIcon}>
+                            <Ionicons
+                              name="person-outline"
+                              size={20}
+                              color={Colors.textSecondary}
+                            />
+                          </View>
+                          <TextInput
+                            placeholder="Enter your email or username"
+                            placeholderTextColor={Colors.textTertiary}
+                            style={styles.input}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            value={username}
+                            onChangeText={setUsername}
+                            editable={!isLoading}
                           />
                         </View>
-                        <TextInput
-                          placeholder="Enter your password"
-                          placeholderTextColor={Colors.textTertiary}
-                          secureTextEntry={!showPassword}
-                          style={styles.input}
-                          value={password}
-                          onChangeText={setPassword}
-                          editable={!isLoading}
-                        />
+                      </View>
+
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>Password</Text>
+                        <View style={styles.inputContainer}>
+                          <View style={styles.inputIcon}>
+                            <Ionicons
+                              name="lock-closed-outline"
+                              size={20}
+                              color={Colors.textSecondary}
+                            />
+                          </View>
+                          <TextInput
+                            placeholder="Enter your password"
+                            placeholderTextColor={Colors.textTertiary}
+                            secureTextEntry={!showPassword}
+                            style={styles.input}
+                            value={password}
+                            onChangeText={setPassword}
+                            editable={!isLoading}
+                          />
+                          <TouchableOpacity
+                            onPress={() => setShowPassword((prev) => !prev)}
+                            style={styles.passwordToggle}
+                            disabled={isLoading}
+                          >
+                            <Ionicons
+                              name={
+                                showPassword ? "eye-outline" : "eye-off-outline"
+                              }
+                              size={20}
+                              color={Colors.textSecondary}
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+
+                      <View style={styles.optionsRow}>
                         <TouchableOpacity
-                          onPress={() => setShowPassword((prev) => !prev)}
-                          style={styles.passwordToggle}
+                          style={styles.rememberMeContainer}
+                          onPress={toggleRememberMe}
                           disabled={isLoading}
+                          activeOpacity={0.7}
+                        >
+                          <View
+                            style={[
+                              styles.checkbox,
+                              rememberMe && styles.checkboxActive,
+                            ]}
+                          >
+                            {rememberMe && (
+                              <Ionicons
+                                name="checkmark"
+                                size={14}
+                                color={Colors.textInverse}
+                              />
+                            )}
+                          </View>
+                          <Text style={styles.rememberMeText}>Remember me</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={onForgotPasswordPress}
+                          disabled={isLoading}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.forgotPasswordText}>
+                            Forgot Password?
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.loginRow}>
+                        <TouchableOpacity
+                          style={[
+                            styles.loginButtonFlex,
+                            isLoading && styles.loginButtonDisabled,
+                          ]}
+                          onPress={onLoginPress}
+                          disabled={
+                            isLoading || !username.trim() || !password.trim()
+                          }
+                          activeOpacity={0.8}
+                        >
+                          <LinearGradient
+                            colors={
+                              isLoading || !username.trim() || !password.trim()
+                                ? [Colors.neutral400, Colors.neutral500]
+                                : [Colors.secondary, Colors.secondaryLight]
+                            }
+                            style={[styles.loginButtonGradient, { flex: 1 }]}
+                          >
+                            {isLoading ? (
+                              <View style={styles.loadingContainer}>
+                                <View style={styles.loadingSpinner} />
+                                <Text style={styles.loginButtonText}>
+                                  Signing In...
+                                </Text>
+                              </View>
+                            ) : (
+                              <Text style={styles.loginButtonText}>Sign In</Text>
+                            )}
+                          </LinearGradient>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={styles.fingerprintButton}
+                          onPress={handleFingerprintLogin}
+                          activeOpacity={0.7}
                         >
                           <Ionicons
-                            name={
-                              showPassword ? "eye-outline" : "eye-off-outline"
-                            }
-                            size={20}
-                            color={Colors.textSecondary}
+                            name="finger-print"
+                            size={28}
+                            color={Colors.secondary}
                           />
                         </TouchableOpacity>
                       </View>
-                    </View>
 
-                    <View style={styles.optionsRow}>
-                      <TouchableOpacity
-                        style={styles.rememberMeContainer}
-                        onPress={toggleRememberMe}
-                        disabled={isLoading}
-                        activeOpacity={0.7}
-                      >
-                        <View
-                          style={[
-                            styles.checkbox,
-                            rememberMe && styles.checkboxActive,
-                          ]}
-                        >
-                          {rememberMe && (
-                            <Ionicons
-                              name="checkmark"
-                              size={14}
-                              color={Colors.textInverse}
-                            />
-                          )}
-                        </View>
-                        <Text style={styles.rememberMeText}>Remember me</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        onPress={onForgotPasswordPress}
-                        disabled={isLoading}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.forgotPasswordText}>
-                          Forgot Password?
+                      <View style={styles.signUpContainer}>
+                        <Text style={styles.signUpText}>
+                          Don&apos;t have an account?{" "}
                         </Text>
-                      </TouchableOpacity>
-                    </View>
-                    <View style={styles.loginRow}>
-                      <TouchableOpacity
-                        style={[
-                          styles.loginButtonFlex,
-                          isLoading && styles.loginButtonDisabled,
-                        ]}
-                        onPress={onLoginPress}
-                        disabled={
-                          isLoading || !username.trim() || !password.trim()
-                        }
-                        activeOpacity={0.8}
-                      >
-                        <LinearGradient
-                          colors={
-                            isLoading || !username.trim() || !password.trim()
-                              ? [Colors.neutral400, Colors.neutral500]
-                              : [Colors.secondary, Colors.secondaryLight]
-                          }
-                          style={[styles.loginButtonGradient, { flex: 1 }]}
+                        <TouchableOpacity
+                          onPress={onRegisterPress}
+                          disabled={isLoading}
                         >
-                          {isLoading ? (
-                            <View style={styles.loadingContainer}>
-                              <View style={styles.loadingSpinner} />
-                              <Text style={styles.loginButtonText}>
-                                Signing In...
-                              </Text>
-                            </View>
-                          ) : (
-                            <Text style={styles.loginButtonText}>Sign In</Text>
-                          )}
-                        </LinearGradient>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={styles.fingerprintButton}
-                        onPress={handleFingerprintLogin}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons
-                          name="finger-print"
-                          size={28}
-                          color={Colors.secondary}
-                        />
-                      </TouchableOpacity>
+                          <Text style={styles.signUpLink}>Sign Up</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
-
-                    <View style={styles.signUpContainer}>
-                      <Text style={styles.signUpText}>
-                        Don&apos;t have an account?{" "}
-                      </Text>
-                      <TouchableOpacity
-                        onPress={onRegisterPress}
-                        disabled={isLoading}
-                      >
-                        <Text style={styles.signUpLink}>Sign Up</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </ScrollView>
+                  </ScrollView>
+                </View>
               </View>
-            </View>
-          </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
+        </LinearGradient>
       </SafeAreaView>
     </>
   );
@@ -345,7 +332,7 @@ export default Login;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.primary,
+    backgroundColor: "transparent", // Make safeArea transparent so gradient shows behind
   },
   container: {
     flex: 1,
@@ -359,6 +346,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     alignItems: "center",
     minHeight: SCREEN_HEIGHT * 0.4,
+    // no backgroundColor here anymore
   },
   logoContainer: {
     alignItems: "center",
@@ -506,15 +494,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.secondary,
     fontWeight: "600",
-  },
-  loginButton: {
-    borderRadius: 16,
-    marginBottom: 32,
-    shadowColor: Colors.secondary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
   },
   loginButtonDisabled: {
     shadowOpacity: 0,

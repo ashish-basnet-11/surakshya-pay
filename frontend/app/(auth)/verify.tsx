@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
   },
   scrollViewContentContainer: {
     flexGrow: 1,
-    paddingBottom: 60, // extra padding to scroll past button
+    paddingBottom: 60, 
     paddingHorizontal: 24,
     paddingTop: 32,
   },

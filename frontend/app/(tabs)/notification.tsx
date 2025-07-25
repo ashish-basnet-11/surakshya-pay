@@ -263,8 +263,7 @@ const Notification = () => {
     );
   };
 
-  const renderHeader = () => null;
-
+ 
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
@@ -276,7 +275,7 @@ const Notification = () => {
             style={styles.backButton}
             activeOpacity={0.7}
           >
-            <Ionicons name="arrow-back" size={24} color= {Colors.primary} />
+            <Ionicons name="arrow-back" size={24} color= "#ffffff" />
           </TouchableOpacity>
           <View style={styles.headerContent}>
             <Text style={styles.headerText}>Notifications</Text>
@@ -321,7 +320,7 @@ const Notification = () => {
                   <Ionicons name="notifications-off-outline" size={48} color="#8E8E93" />
                   <Text style={styles.emptyTitle}>No Notifications</Text>
                   <Text style={styles.emptyDescription}>
-                    You're all caught up! New notifications will appear here.
+                    You&apos;re all caught up! New notifications will appear here.
                   </Text>
                 </View>
               }
@@ -341,11 +340,18 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundSecondary,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 20,
+    backgroundColor: Colors.primary,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   backButton: {
   padding: 8,
@@ -355,7 +361,7 @@ const styles = StyleSheet.create({
 },
   headerContent: {
     flex: 1,
-    marginLeft: 10,
+    marginLeft: 50,
   },
   headerText: {
     fontSize: 24,
