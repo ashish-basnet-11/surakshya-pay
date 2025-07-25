@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -12,237 +12,320 @@ import {
   Alert,
   SafeAreaView,
   StatusBar,
-} from "react-native"
-import { useRouter } from "expo-router"
-import { LinearGradient } from "expo-linear-gradient"
-import { Ionicons } from "@expo/vector-icons"
-import Colors from "@/constants/Colors"
+  Keyboard,
+  TouchableWithoutFeedback,
+  ScrollView,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import Colors from "@/constants/Colors";
+import { useVerifyOtp } from "@/apis/authentication/verify-otp";
+import { VerifyOtpRequest } from "@/types/authentication";
+import { useForgotPasswordStore } from "@/store/user-forgot-password-store";
 
 const Otp = () => {
-  const router = useRouter()
-  const [otp, setOtp] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [resendTimer, setResendTimer] = useState(30)
-  const [canResend, setCanResend] = useState(false)
-  const inputRef = useRef<TextInput>(null)
-
-  const isOtpValid = otp.length === 6
+  const router = useRouter();
+  const [otp, setOtp] = useState("");
+  const [resendTimer, setResendTimer] = useState(30);
+  const [canResend, setCanResend] = useState(false);
+  const inputRef = useRef<TextInput>(null);
+  const { mutate: verifyOtp, isPending: isLoading } = useVerifyOtp();
+  const isOtpValid = otp.length === 6;
 
   useEffect(() => {
-    // Start countdown timer
     const timer = setInterval(() => {
       setResendTimer((prev) => {
         if (prev <= 1) {
-          setCanResend(true)
-          clearInterval(timer)
-          return 0
+          setCanResend(true);
+          clearInterval(timer);
+          return 0;
         }
-        return prev - 1
-      })
-    }, 1000)
+        return prev - 1;
+      });
+    }, 1000);
 
-    return () => clearInterval(timer)
-  }, [])
+    return () => clearInterval(timer);
+  }, []);
 
   const handleChangeText = (text: string) => {
     if (text.length <= 6 && /^\d*$/.test(text)) {
-      setOtp(text)
+      setOtp(text);
     }
-  }
+  };
 
-  const handleVerify = async () => {
+  const handleVerify = () => {
     if (!isOtpValid) {
-      Alert.alert("Invalid OTP", "Please enter a 6-digit OTP code.")
-      return
+      Alert.alert("Invalid OTP", "Please enter a 6-digit OTP code.");
+      return;
     }
+    const props: VerifyOtpRequest = {
+      otp: otp,
+      email: useForgotPasswordStore.getState().email || "",
+    };
 
-    setIsLoading(true)
-
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-      router.replace("/changePassword")
-    } catch (error) {
-      Alert.alert("Error", "Verification failed. Please try again.")
-    } finally {
-      setIsLoading(false)
-    }
-  }
+    verifyOtp(props, {
+      onSuccess: (res) => {
+        if (res.success) {
+          useForgotPasswordStore.getState().setOtp(otp);
+          router.replace("/(auth)/changePassword");
+        } else {
+          Alert.alert("Verification Failed", res.message || "Invalid code");
+        }
+      },
+      onError: (error) => {
+        Alert.alert("Error", error.message || "Something went wrong");
+      },
+    });
+  };
 
   const handleResend = async () => {
-    if (!canResend) return
+    if (!canResend) return;
 
-    setCanResend(false)
-    setResendTimer(30)
-    setOtp("")
+    setCanResend(false);
+    setResendTimer(30);
+    setOtp("");
 
     // Restart timer
     const timer = setInterval(() => {
       setResendTimer((prev) => {
         if (prev <= 1) {
-          setCanResend(true)
-          clearInterval(timer)
-          return 0
+          setCanResend(true);
+          clearInterval(timer);
+          return 0;
         }
-        return prev - 1
-      })
-    }, 1000)
+        return prev - 1;
+      });
+    }, 1000);
 
-    Alert.alert("OTP Sent", "A new verification code has been sent to your phone.")
-  }
+    Alert.alert(
+      "OTP Sent",
+      "A new verification code has been sent to your phone."
+    );
+  };
 
   const handleOtpBoxPress = () => {
-    inputRef.current?.focus()
-  }
+    inputRef.current?.focus();
+  };
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, "0")}`
-  }
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
 
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
       <SafeAreaView style={styles.container}>
-        <KeyboardAvoidingView behavior={Platform.select({ ios: "padding", android: undefined })} style={styles.content}>
-          {/* Header */}
-          <LinearGradient colors={[Colors.primary, Colors.primaryLight]} style={styles.headerGradient}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
-              disabled={isLoading}
-              activeOpacity={0.7}
+        <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+          <KeyboardAvoidingView
+            behavior={Platform.select({ ios: "padding", android: undefined })}
+            style={styles.content}
+          >
+            <ScrollView
+              contentContainerStyle={{ flexGrow: 1 }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
             >
-              <View style={styles.backButtonContainer}>
-                <Ionicons name="arrow-back" size={24} color={Colors.textInverse} />
-              </View>
-            </TouchableOpacity>
-
-            <View style={styles.headerContent}>
-              <View style={styles.iconContainer}>
-                <LinearGradient colors={[Colors.secondary, Colors.secondaryLight]} style={styles.iconGradient}>
-                  <Ionicons name="shield-checkmark" size={32} color={Colors.textInverse} />
-                </LinearGradient>
-              </View>
-              <Text style={styles.headerTitle}>Verify Code</Text>
-              <Text style={styles.headerSubtitle}>
-                We've sent a 6-digit verification code to your registered phone number ending in ****67. Please enter it
-                below.
-              </Text>
-            </View>
-          </LinearGradient>
-
-          {/* Form */}
-          <View style={styles.formSection}>
-            <View style={styles.formContainer}>
-              {/* OTP Input */}
-              <View style={styles.otpGroup}>
-                <TouchableOpacity activeOpacity={1} onPress={handleOtpBoxPress}>
-                  <View style={styles.otpInputContainer}>
-                    {[...Array(6)].map((_, i) => (
-                      <View
-                        key={i}
-                        style={[styles.otpBox, otp[i] && styles.otpBoxFilled, i === otp.length && styles.otpBoxActive]}
-                      >
-                        <Text style={[styles.otpText, otp[i] && styles.otpTextFilled]}>{otp[i] || ""}</Text>
-                      </View>
-                    ))}
+              {/* Header */}
+              <LinearGradient
+                colors={[Colors.primary, Colors.primaryLight]}
+                style={styles.headerGradient}
+              >
+                <TouchableOpacity
+                  style={styles.backButton}
+                  onPress={() => router.back()}
+                  disabled={isLoading}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.backButtonContainer}>
+                    <Ionicons
+                      name="arrow-back"
+                      size={24}
+                      color={Colors.textInverse}
+                    />
                   </View>
                 </TouchableOpacity>
 
-                <TextInput
-                  ref={inputRef}
-                  value={otp}
-                  onChangeText={handleChangeText}
-                  keyboardType="number-pad"
-                  maxLength={6}
-                  style={styles.hiddenInput}
-                  autoFocus
-                  caretHidden={false}
-                  editable={!isLoading}
-                />
-              </View>
-
-              {/* Verify Button */}
-              <TouchableOpacity
-                style={[styles.verifyButton, (!isOtpValid || isLoading) && styles.verifyButtonDisabled]}
-                onPress={handleVerify}
-                disabled={!isOtpValid || isLoading}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={
-                    !isOtpValid || isLoading
-                      ? [Colors.neutral400, Colors.neutral500]
-                      : [Colors.secondary, Colors.secondaryLight]
-                  }
-                  style={styles.verifyButtonGradient}
-                >
-                  {isLoading ? (
-                    <View style={styles.loadingContainer}>
-                      <View style={styles.loadingSpinner} />
-                      <Text style={styles.verifyButtonText}>Verifying...</Text>
-                    </View>
-                  ) : (
-                    <View style={styles.buttonContent}>
-                      <Ionicons name="checkmark-circle" size={20} color={Colors.textInverse} />
-                      <Text style={styles.verifyButtonText}>Verify Code</Text>
-                    </View>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-
-              {/* Resend Section */}
-              <View style={styles.resendSection}>
-                {!canResend ? (
-                  <View style={styles.timerContainer}>
-                    <Ionicons name="time-outline" size={16} color={Colors.textSecondary} />
-                    <Text style={styles.timerText}>Resend code in {formatTime(resendTimer)}</Text>
+                <View style={styles.headerContent}>
+                  <View style={styles.iconContainer}>
+                    <LinearGradient
+                      colors={[Colors.secondary, Colors.secondaryLight]}
+                      style={styles.iconGradient}
+                    >
+                      <Ionicons
+                        name="shield-checkmark"
+                        size={32}
+                        color={Colors.textInverse}
+                      />
+                    </LinearGradient>
                   </View>
-                ) : (
-                  <TouchableOpacity style={styles.resendButton} onPress={handleResend} activeOpacity={0.7}>
-                    <Ionicons name="refresh" size={16} color={Colors.secondary} />
-                    <Text style={styles.resendText}>Resend Verification Code</Text>
+                  <Text style={styles.headerTitle}>Verify Code</Text>
+                  <Text style={styles.headerSubtitle}>
+                    We&apos;ve sent a 6-digit verification code to your registered
+                    phone number ending in ****67. Please enter it below.
+                  </Text>
+                </View>
+              </LinearGradient>
+
+              {/* Form */}
+              <View style={styles.formSection}>
+                <View style={styles.formContainer}>
+                  {/* OTP Input */}
+                  <View style={styles.otpGroup}>
+                    <TouchableOpacity
+                      activeOpacity={1}
+                      onPress={handleOtpBoxPress}
+                    >
+                      <View style={styles.otpInputContainer}>
+                        {[...Array(6)].map((_, i) => (
+                          <View
+                            key={i}
+                            style={[
+                              styles.otpBox,
+                              otp[i] && styles.otpBoxFilled,
+                              i === otp.length && styles.otpBoxActive,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.otpText,
+                                otp[i] && styles.otpTextFilled,
+                              ]}
+                            >
+                              {otp[i] || ""}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    </TouchableOpacity>
+
+                    <TextInput
+                      ref={inputRef}
+                      value={otp}
+                      onChangeText={handleChangeText}
+                      keyboardType="number-pad"
+                      maxLength={6}
+                      style={styles.hiddenInput}
+                      autoFocus={false}
+                      caretHidden={false}
+                      editable={!isLoading}
+                    />
+                  </View>
+
+                  {/* Verify Button */}
+                  <TouchableOpacity
+                    style={[
+                      styles.verifyButton,
+                      (!isOtpValid || isLoading) && styles.verifyButtonDisabled,
+                    ]}
+                    onPress={handleVerify}
+                    disabled={!isOtpValid || isLoading}
+                    activeOpacity={0.8}
+                  >
+                    <LinearGradient
+                      colors={
+                        !isOtpValid || isLoading
+                          ? [Colors.neutral400, Colors.neutral500]
+                          : [Colors.secondary, Colors.secondaryLight]
+                      }
+                      style={styles.verifyButtonGradient}
+                    >
+                      {isLoading ? (
+                        <View style={styles.loadingContainer}>
+                          <View style={styles.loadingSpinner} />
+                          <Text style={styles.verifyButtonText}>Verifying...</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.buttonContent}>
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={20}
+                            color={Colors.textInverse}
+                          />
+                          <Text style={styles.verifyButtonText}>Verify Code</Text>
+                        </View>
+                      )}
+                    </LinearGradient>
                   </TouchableOpacity>
-                )}
-              </View>
 
-              {/* Help Section */}
-              <View style={styles.helpSection}>
-                <View style={styles.helpCard}>
-                  <View style={styles.helpIcon}>
-                    <Ionicons name="information-circle" size={20} color={Colors.info} />
+                  {/* Resend Section */}
+                  <View style={styles.resendSection}>
+                    {!canResend ? (
+                      <View style={styles.timerContainer}>
+                        <Ionicons
+                          name="time-outline"
+                          size={16}
+                          color={Colors.textSecondary}
+                        />
+                        <Text style={styles.timerText}>
+                          Resend code in {formatTime(resendTimer)}
+                        </Text>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.resendButton}
+                        onPress={handleResend}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons
+                          name="refresh"
+                          size={16}
+                          color={Colors.secondary}
+                        />
+                        <Text style={styles.resendText}>
+                          Resend Verification Code
+                        </Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
-                  <View style={styles.helpContent}>
-                    <Text style={styles.helpTitle}>Didn't receive the code?</Text>
-                    <Text style={styles.helpText}>
-                      Check your messages or wait for the timer to resend. Contact support if you continue having
-                      issues.
-                    </Text>
+
+                  {/* Help Section */}
+                  <View style={styles.helpSection}>
+                    <View style={styles.helpCard}>
+                      <View style={styles.helpIcon}>
+                        <Ionicons
+                          name="information-circle"
+                          size={20}
+                          color={Colors.info}
+                        />
+                      </View>
+                      <View style={styles.helpContent}>
+                        <Text style={styles.helpTitle}>Didn&apos;t receive the code?</Text>
+                        <Text style={styles.helpText}>
+                          Check your messages or wait for the timer to resend.
+                          Contact support if you continue having issues.
+                        </Text>
+                      </View>
+                    </View>
                   </View>
+
+                  {/* Back to Login */}
+                  <TouchableOpacity
+                    style={styles.backToLoginButton}
+                    onPress={() => router.replace("/login")}
+                    disabled={isLoading}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name="arrow-back"
+                      size={16}
+                      color={Colors.secondary}
+                    />
+                    <Text style={styles.backToLoginText}>Back to Sign In</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
-
-              {/* Back to Login */}
-              <TouchableOpacity
-                style={styles.backToLoginButton}
-                onPress={() => router.replace("/login")}
-                disabled={isLoading}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="arrow-back" size={16} color={Colors.secondary} />
-                <Text style={styles.backToLoginText}>Back to Sign In</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
       </SafeAreaView>
     </>
-  )
-}
+  );
+};
 
-export default Otp
+export default Otp;
 
 const styles = StyleSheet.create({
   container: {
@@ -318,23 +401,8 @@ const styles = StyleSheet.create({
   formContainer: {
     flex: 1,
   },
-  formTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: Colors.textPrimary,
-    marginBottom: 32,
-    textAlign: "center",
-    letterSpacing: -0.3,
-  },
   otpGroup: {
     marginBottom: 32,
-  },
-  otpLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.textPrimary,
-    marginBottom: 16,
-    letterSpacing: 0.2,
   },
   otpInputContainer: {
     flexDirection: "row",
@@ -495,4 +563,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginLeft: 8,
   },
-})
+});

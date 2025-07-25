@@ -25,7 +25,8 @@ export default function TabLayout() {
     "transaction-settings",
     "general-settings",
     "verifyKyc",
-    "editPersonalInfo"
+    "editPersonalInfo",
+    "sendMoney"
   ]
   const shouldHideTabBar = hideOnScreens.includes(lastSegment)
 

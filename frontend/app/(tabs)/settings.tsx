@@ -10,7 +10,6 @@ import {
   SafeAreaView,
   Switch,
   Alert,
-  Share,
   FlatList,
   TextInput,
   BackHandler,
@@ -20,8 +19,9 @@ import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import Colors from "@/constants/Colors";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
+import { showMessage } from "react-native-flash-message";
 
 const Settings = () => {
   const router = useRouter();
@@ -31,22 +31,22 @@ const Settings = () => {
   const [autoBackup, setAutoBackup] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
- 
-   useFocusEffect(
-  useCallback(() => {
-    const onBackPress = () => {
-      router.replace('/(tabs)'); 
-      return true;
-    };
 
-    const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
-      onBackPress
-    );
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        router.replace("/(tabs)");
+        return true;
+      };
 
-    return () => backHandler.remove();
-  }, [])
-);
+      const backHandler = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress
+      );
+
+      return () => backHandler.remove();
+    }, [])
+  );
 
   const userInfo = {
     name: "Eleanor Pena",
@@ -226,73 +226,6 @@ const Settings = () => {
     },
   ];
 
-  const quickActions = [
-    {
-      title: "Share App",
-      icon: "share-outline",
-      color: Colors.secondary,
-      action: () => handleShareApp(),
-    },
-    {
-      title: "Rate App",
-      icon: "star-outline",
-      color: Colors.warning,
-      action: () => handleRateApp(),
-    },
-    {
-      title: "Backup Data",
-      icon: "cloud-download-outline",
-      color: Colors.info,
-      action: () => handleBackupData(),
-    },
-    {
-      title: "Export Data",
-      icon: "download-outline",
-      color: Colors.success,
-      action: () => handleExportData(),
-    },
-  ];
-
-  const handleShareApp = async () => {
-    try {
-      await Share.share({
-        message: "Check out SurakshyaPay - the most secure digital wallet app!",
-        url: "https://surakshyapay.com",
-      });
-    } catch (error) {
-      console.error("Error sharing app:", error);
-    }
-  };
-
-  const handleRateApp = () => {
-    Alert.alert(
-      "Rate SurakshyaPay",
-      "Would you like to rate our app on the App Store?",
-      [
-        { text: "Later", style: "cancel" },
-        { text: "Rate Now", onPress: () => console.log("Opening app store") },
-      ]
-    );
-  };
-
-  const handleBackupData = () => {
-    Alert.alert(
-      "Backup Data",
-      "Your data will be securely backed up to the cloud.",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Backup", onPress: () => console.log("Starting backup") },
-      ]
-    );
-  };
-
-  const handleExportData = () => {
-    Alert.alert("Export Data", "Export your transaction data as a CSV file.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Export", onPress: () => console.log("Exporting data") },
-    ]);
-  };
-
   const handleLogout = () => {
     Alert.alert(
       "Sign Out",
@@ -302,7 +235,13 @@ const Settings = () => {
         {
           text: "Sign Out",
           style: "destructive",
-          onPress: () => router.push("/login"),
+          onPress: () => {
+            showMessage({
+              message: "Logged out successfully!",
+              type: "success",
+            });
+            router.push("/login");
+          },
         },
       ]
     );

@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState } from "react"
+import { useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -12,73 +12,119 @@ import {
   Alert,
   SafeAreaView,
   StatusBar,
-} from "react-native"
-import { useRouter } from "expo-router"
-import { LinearGradient } from "expo-linear-gradient"
-import { Ionicons } from "@expo/vector-icons"
-import Colors from "@/constants/Colors"
+  ScrollView,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import Colors from "@/constants/Colors";
+import { useForgotPassword } from "@/apis/authentication/forgot-password";
+import { ForgotPasswordInterface } from "@/types/authentication";
+import { useForgotPasswordStore } from "@/store/user-forgot-password-store";
 
 const Verify = () => {
-  const router = useRouter()
-  const [email, setEmail] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const { mutate: forgotPassword, isPending } = useForgotPassword();
 
   const validateEmail = (email: string) => {
-    const re = /\S+@\S+\.\S+/
-    return re.test(email)
-  }
+    const re = /\S+@\S+\.\S+/;
+    return re.test(email);
+  };
 
   const onSendOtp = () => {
     if (!email) {
-      Alert.alert("Missing Email", "Please enter your email address")
-      return
+      Alert.alert("Missing Email", "Please enter your email address");
+      return;
     }
     if (!validateEmail(email)) {
-      Alert.alert("Invalid Email", "Please enter a valid email address")
-      return
+      Alert.alert("Invalid Email", "Please enter a valid email address");
+      return;
     }
 
-    setIsLoading(true)
-    setTimeout(() => {
-      setIsLoading(false)
-      router.push("/otp")
-    }, 1500)
-  }
+    const props: ForgotPasswordInterface = {
+      email: email,
+    };
+
+    forgotPassword(props, {
+      onSuccess: (authResult) => {
+        console.log(authResult);
+        if (authResult.success) {
+          useForgotPasswordStore.getState().setEmail(email);
+          router.replace({
+            pathname: "/(auth)/otp",
+          });
+        } else {
+          Alert.alert("Failed to send otp", authResult.message);
+        }
+        router.push("/otp");
+      },
+      onError: (error: Error) => {
+        Alert.alert(
+          "Error",
+          error.message || "Something went wrong. Please try again."
+        );
+      },
+    });
+  };
 
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
       <SafeAreaView style={styles.container}>
-        <KeyboardAvoidingView behavior={Platform.select({ ios: "padding", android: undefined })} style={styles.container}>
-
+        <KeyboardAvoidingView
+          behavior={Platform.select({ ios: "padding", android: "height" })}
+          style={styles.container}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
+        >
           {/* Header */}
-          <LinearGradient colors={[Colors.primary, Colors.primaryLight]} style={styles.headerGradient}>
-          <TouchableOpacity
+          <LinearGradient
+            colors={[Colors.primary, Colors.primaryLight]}
+            style={styles.headerGradient}
+          >
+            <TouchableOpacity
               style={styles.backButton}
               onPress={() => router.replace("/login")}
-              disabled={isLoading}
+              disabled={isPending}
               activeOpacity={0.7}
             >
               <View style={styles.backButtonContainer}>
-                <Ionicons name="arrow-back" size={24} color={Colors.textInverse} />
+                <Ionicons
+                  name="arrow-back"
+                  size={24}
+                  color={Colors.textInverse}
+                />
               </View>
             </TouchableOpacity>
 
             <View style={styles.headerContent}>
               <View style={styles.iconContainer}>
-                <LinearGradient colors={[Colors.info, "#60A5FA"]} style={styles.iconGradient}>
-                  <Ionicons name="mail-outline" size={32} color={Colors.textInverse} />
+                <LinearGradient
+                  colors={[Colors.info, "#60A5FA"]}
+                  style={styles.iconGradient}
+                >
+                  <Ionicons
+                    name="mail-outline"
+                    size={32}
+                    color={Colors.textInverse}
+                  />
                 </LinearGradient>
               </View>
               <Text style={styles.headerTitle}>Forgot Password?</Text>
               <Text style={styles.headerSubtitle}>
-                Don't worry! Enter your email address and we'll send you a verification code to reset your password.
+                Don&apos;t worry! Enter your email address and we&apos;ll send
+                you a verification code to reset your password.
               </Text>
             </View>
           </LinearGradient>
 
-          {/* Form */}
-          <View style={styles.formSection}>
+          {/* Scrollable Form Section */}
+          <ScrollView
+            style={styles.formSection}
+            contentContainerStyle={styles.scrollViewContentContainer}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={true}
+          >
             <View style={styles.formContainer}>
               <Text style={styles.formTitle}>Reset Password</Text>
 
@@ -86,7 +132,11 @@ const Verify = () => {
                 <Text style={styles.inputLabel}>Email Address</Text>
                 <View style={styles.inputContainer}>
                   <View style={styles.inputIcon}>
-                    <Ionicons name="mail-outline" size={20} color={Colors.textSecondary} />
+                    <Ionicons
+                      name="mail-outline"
+                      size={20}
+                      color={Colors.textSecondary}
+                    />
                   </View>
                   <TextInput
                     placeholder="Enter your email address"
@@ -97,40 +147,57 @@ const Verify = () => {
                     autoCorrect={false}
                     value={email}
                     onChangeText={setEmail}
-                    editable={!isLoading}
+                    editable={!isPending}
                     selectionColor={Colors.secondary}
                   />
                   {email ? (
-                    <TouchableOpacity style={styles.clearButton} onPress={() => setEmail("")} disabled={isLoading}>
-                      <Ionicons name="close-circle" size={20} color={Colors.textTertiary} />
+                    <TouchableOpacity
+                      style={styles.clearButton}
+                      onPress={() => setEmail("")}
+                      disabled={isPending}
+                    >
+                      <Ionicons
+                        name="close-circle"
+                        size={20}
+                        color={Colors.textTertiary}
+                      />
                     </TouchableOpacity>
                   ) : null}
                 </View>
               </View>
 
               <TouchableOpacity
-                style={[styles.sendButton, (!email || isLoading) && styles.sendButtonDisabled]}
+                style={[
+                  styles.sendButton,
+                  (!email || isPending) && styles.sendButtonDisabled,
+                ]}
                 onPress={onSendOtp}
-                disabled={!email || isLoading}
+                disabled={!email || isPending}
                 activeOpacity={0.8}
               >
                 <LinearGradient
                   colors={
-                    !email || isLoading
+                    !email || isPending
                       ? [Colors.neutral400, Colors.neutral500]
                       : [Colors.secondary, Colors.secondaryLight]
                   }
                   style={styles.sendButtonGradient}
                 >
-                  {isLoading ? (
+                  {isPending ? (
                     <View style={styles.loadingContainer}>
                       <View style={styles.loadingSpinner} />
                       <Text style={styles.sendButtonText}>Sending...</Text>
                     </View>
                   ) : (
                     <View style={styles.buttonContent}>
-                      <Ionicons name="send" size={20} color={Colors.textInverse} />
-                      <Text style={styles.sendButtonText}>Send Verification Code</Text>
+                      <Ionicons
+                        name="send"
+                        size={20}
+                        color={Colors.textInverse}
+                      />
+                      <Text style={styles.sendButtonText}>
+                        Send Verification Code
+                      </Text>
                     </View>
                   )}
                 </LinearGradient>
@@ -139,13 +206,17 @@ const Verify = () => {
               <View style={styles.helpSection}>
                 <View style={styles.helpCard}>
                   <View style={styles.helpIcon}>
-                    <Ionicons name="information-circle" size={20} color={Colors.info} />
+                    <Ionicons
+                      name="information-circle"
+                      size={20}
+                      color={Colors.info}
+                    />
                   </View>
                   <View style={styles.helpContent}>
                     <Text style={styles.helpTitle}>Need Help?</Text>
                     <Text style={styles.helpText}>
-                      If you don't receive the email within a few minutes, please check your spam folder or contact
-                      support.
+                      If you don&apos;t receive the email within a few minutes,
+                      please check your spam folder or contact support.
                     </Text>
                   </View>
                 </View>
@@ -154,29 +225,36 @@ const Verify = () => {
               <TouchableOpacity
                 style={styles.backToLoginButton}
                 onPress={() => router.replace("/login")}
-                disabled={isLoading}
+                disabled={isPending}
                 activeOpacity={0.7}
               >
-                <Ionicons name="arrow-back" size={16} color={Colors.secondary} />
+                <Ionicons
+                  name="arrow-back"
+                  size={16}
+                  color={Colors.secondary}
+                />
                 <Text style={styles.backToLoginText}>Back to Sign In</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </>
-  )
-}
+  );
+};
 
-export default Verify
+export default Verify;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.primary,
   },
-  content: {
-    flex: 1,
+  scrollViewContentContainer: {
+    flexGrow: 1,
+    paddingBottom: 60, // extra padding to scroll past button
+    paddingHorizontal: 24,
+    paddingTop: 32,
   },
   headerGradient: {
     paddingTop: Platform.OS === "ios" ? 20 : 40,
@@ -233,8 +311,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    paddingTop: 32,
-    paddingHorizontal: 24,
     shadowColor: Colors.shadowDark,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
@@ -370,4 +446,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginLeft: 8,
   },
-})
+});

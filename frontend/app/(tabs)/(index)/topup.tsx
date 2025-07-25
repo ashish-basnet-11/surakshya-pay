@@ -71,12 +71,12 @@ const TopUp = () => {
     }
 
     if (numAmount < 1) {
-      Alert.alert('Minimum Amount', 'Minimum top-up amount is $1.');
+      Alert.alert('Minimum Amount', 'Minimum top-up amount is NPR 1.');
       return;
     }
 
     if (numAmount > 5000) {
-      Alert.alert('Maximum Amount', 'Maximum top-up amount is $5,000.');
+      Alert.alert('Maximum Amount', 'Maximum top-up amount is NPR 5,000.');
       return;
     }
 
@@ -179,7 +179,7 @@ const TopUp = () => {
           <Animated.View style={[styles.animatedContainer, { opacity: fadeAnim }]}>
             {/* Amount Display */}
             <View style={styles.amountSection}>
-              <Text style={styles.currencySymbol}>$</Text>
+              <Text style={styles.currencySymbol}>NPR</Text>
               <View style={styles.amountDisplayContainer}>
                 <Text style={styles.amountDisplay}>
                   {isAmountVisible ? formatAmount(amount) : amount.replace(/./g, '•')}
@@ -219,7 +219,7 @@ const TopUp = () => {
                         amount === quickAmount.toString() && styles.quickAmountTextActive,
                       ]}
                     >
-                      ${quickAmount.toLocaleString('en-US')}
+                    {quickAmount.toLocaleString('en-US')}
                     </Text>
                   </TouchableOpacity>
                 ))}

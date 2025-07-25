@@ -24,6 +24,8 @@ import Colors from "@/constants/Colors";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useUserLogin } from "@/apis/authentication/login-user";
 import { UserLogin } from "@/types/user";
+import { useAuthStore } from "@/store/use-auth-store";
+import { showMessage } from "react-native-flash-message";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -62,8 +64,27 @@ const Login = () => {
         //   router.replace("/(tabs)");
         // }
         if (authResult.success) {
-          Alert.alert("Login Successful", "You are logged in successfully");
-          router.replace("/(tabs)");
+          //  user: UserInDB,
+          //     accessToken: string,
+          //     refreshToken?: string
+          console.log(authResult);
+          useAuthStore
+            .getState()
+            .login(
+              authResult.data?.access_token || "",
+              authResult.data?.refresh_token,
+              authResult.data?.user
+            );
+          showMessage({
+            message: "Logged in successfully!",
+            type: "success",
+          });
+          if (authResult?.data?.user?.is_superuser) {
+            router.replace("/(admin)/dashboard");
+          } else {
+            router.replace("/(tabs)");
+          }
+          // router.replace("/(tabs)");
         } else {
           Alert.alert(
             "Login Failed",

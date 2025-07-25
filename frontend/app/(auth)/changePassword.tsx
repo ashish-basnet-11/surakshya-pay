@@ -18,6 +18,9 @@ import Colors from "@/constants/Colors"
 import { Ionicons } from "@expo/vector-icons"
 import { useRouter } from "expo-router"
 import { LinearGradient } from "expo-linear-gradient"
+import { ResetPasswordInterface } from "@/types/authentication"
+import { useResetPassword } from "@/apis/authentication/reset-password";
+import { useForgotPasswordStore } from "@/store/user-forgot-password-store"
 
 const ChangePassword = () => {
   const router = useRouter()
@@ -25,9 +28,9 @@ const ChangePassword = () => {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showNew, setShowNew] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const { mutate: ResetPassword, isPending: isLoading } = useResetPassword();
 
-  // Password strength validation
+  
   const getPasswordStrength = (password: string) => {
     let strength = 0
     const checks = {
@@ -85,21 +88,43 @@ const ChangePassword = () => {
       return
     }
 
-    setIsLoading(true)
+   
+  const email = useForgotPasswordStore.getState().email || "";
+  const otp = useForgotPasswordStore.getState().otp || "";
 
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+  const props: ResetPasswordInterface = {
+    email,
+    otp,
+    new_password: newPassword,
+  };
 
-      Alert.alert("Success", "Password changed successfully!", [
-        { text: "OK", onPress: () => router.replace("/login") },
-      ])
-    } catch (error) {
-      Alert.alert("Error", "Failed to change password. Please try again.")
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  ResetPassword(props, {
+    onSuccess: (res) => {
+      if (res.success) {
+        Alert.alert("Success", "Password changed successfully!", [
+          { text: "OK", onPress: () => router.replace("/login") },
+        ]);
+      } else {
+        Alert.alert("Reset password failed", res.message || "Unknown error");
+      }
+    },
+    onError: (error) => {
+      Alert.alert("Error", error.message || "Something went wrong");
+    },
+  });
+};
+      
+  //     await new Promise((resolve) => setTimeout(resolve, 1500))
+
+  //     Alert.alert("Success", "Password changed successfully!", [
+  //       { text: "OK", onPress: () => router.replace("/login") },
+  //     ])
+  //   } catch (error) {
+  //     Alert.alert("Error", "Failed to change password. Please try again.")
+  //   } finally {
+  //     setIsLoading(false)
+  //   }
+  // }
 
   return (
     <>
@@ -297,7 +322,7 @@ const ChangePassword = () => {
                     <View style={styles.helpContent}>
                       <Text style={styles.helpTitle}>Security Tips</Text>
                       <Text style={styles.helpText}>
-                        Use a unique password that you don't use elsewhere. Consider using a password manager for better
+                        Use a unique password that you don&apos;t use elsewhere. Consider using a password manager for better
                         security.
                       </Text>
                     </View>

@@ -276,7 +276,7 @@ const Notification = () => {
             style={styles.backButton}
             activeOpacity={0.7}
           >
-            <Ionicons name="arrow-back" size={24} color="#ffffff" />
+            <Ionicons name="arrow-back" size={24} color= {Colors.primary} />
           </TouchableOpacity>
           <View style={styles.headerContent}>
             <Text style={styles.headerText}>Notifications</Text>
@@ -338,7 +338,7 @@ export default Notification;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.backgroundSecondary,
   },
   header: {
     flexDirection: 'row',
