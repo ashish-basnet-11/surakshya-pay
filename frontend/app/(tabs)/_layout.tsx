@@ -25,7 +25,11 @@ export default function TabLayout() {
     "transaction-settings",
     "general-settings",
     "verifyKyc",
-    "editPersonalInfo"
+    "editPersonalInfo",
+    "sendMoney",
+    "budget-detail",
+    "create-budget",
+    "budget-goals"
   ]
   const shouldHideTabBar = hideOnScreens.includes(lastSegment)
 

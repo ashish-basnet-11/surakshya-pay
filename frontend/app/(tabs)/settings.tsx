@@ -10,7 +10,6 @@ import {
   SafeAreaView,
   Switch,
   Alert,
-  Share,
   FlatList,
   TextInput,
   BackHandler,
@@ -20,8 +19,10 @@ import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import Colors from "@/constants/Colors";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
+import { showMessage } from "react-native-flash-message";
+import { useAuthStore } from "@/store/use-auth-store";
 
 const Settings = () => {
   const router = useRouter();
@@ -31,30 +32,22 @@ const Settings = () => {
   const [autoBackup, setAutoBackup] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
- 
-   useFocusEffect(
-  useCallback(() => {
-    const onBackPress = () => {
-      router.replace('/(tabs)'); 
-      return true;
-    };
 
-    const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
-      onBackPress
-    );
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        router.replace("/(tabs)");
+        return true;
+      };
 
-    return () => backHandler.remove();
-  }, [])
-);
+      const backHandler = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress
+      );
 
-  const userInfo = {
-    name: "Eleanor Pena",
-    email: "eleanor.pena@email.com",
-    membershipTier: "Premium",
-    joinDate: "Member since July 2024",
-    avatar: "EP",
-  };
+      return () => backHandler.remove();
+    }, [])
+  );
 
   const quickToggles = [
     {
@@ -226,73 +219,6 @@ const Settings = () => {
     },
   ];
 
-  const quickActions = [
-    {
-      title: "Share App",
-      icon: "share-outline",
-      color: Colors.secondary,
-      action: () => handleShareApp(),
-    },
-    {
-      title: "Rate App",
-      icon: "star-outline",
-      color: Colors.warning,
-      action: () => handleRateApp(),
-    },
-    {
-      title: "Backup Data",
-      icon: "cloud-download-outline",
-      color: Colors.info,
-      action: () => handleBackupData(),
-    },
-    {
-      title: "Export Data",
-      icon: "download-outline",
-      color: Colors.success,
-      action: () => handleExportData(),
-    },
-  ];
-
-  const handleShareApp = async () => {
-    try {
-      await Share.share({
-        message: "Check out SurakshyaPay - the most secure digital wallet app!",
-        url: "https://surakshyapay.com",
-      });
-    } catch (error) {
-      console.error("Error sharing app:", error);
-    }
-  };
-
-  const handleRateApp = () => {
-    Alert.alert(
-      "Rate SurakshyaPay",
-      "Would you like to rate our app on the App Store?",
-      [
-        { text: "Later", style: "cancel" },
-        { text: "Rate Now", onPress: () => console.log("Opening app store") },
-      ]
-    );
-  };
-
-  const handleBackupData = () => {
-    Alert.alert(
-      "Backup Data",
-      "Your data will be securely backed up to the cloud.",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Backup", onPress: () => console.log("Starting backup") },
-      ]
-    );
-  };
-
-  const handleExportData = () => {
-    Alert.alert("Export Data", "Export your transaction data as a CSV file.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Export", onPress: () => console.log("Exporting data") },
-    ]);
-  };
-
   const handleLogout = () => {
     Alert.alert(
       "Sign Out",
@@ -302,7 +228,13 @@ const Settings = () => {
         {
           text: "Sign Out",
           style: "destructive",
-          onPress: () => router.push("/login"),
+          onPress: () => {
+            showMessage({
+              message: "Logged out successfully!",
+              type: "success",
+            });
+            router.push("/login");
+          },
         },
       ]
     );
@@ -451,27 +383,16 @@ const Settings = () => {
                           style={styles.avatarGradient}
                         >
                           <Text style={styles.avatarText}>
-                            {userInfo.avatar}
+                            {useAuthStore.getState().user?.full_name?.split(" ")[0][0]}
                           </Text>
                         </LinearGradient>
                         <View style={styles.onlineIndicator} />
                       </View>
                       <View style={styles.profileInfo}>
-                        <Text style={styles.profileName}>{userInfo.name}</Text>
+                        <Text style={styles.profileName}>{useAuthStore.getState().user?.full_name}</Text>
                         <Text style={styles.profileEmail}>
-                          {userInfo.email}
+                          {useAuthStore.getState().user?.email}
                         </Text>
-                        <View style={styles.membershipContainer}>
-                          <View style={styles.membershipBadge}>
-                            <Ionicons name="star" size={12} color="#FFD700" />
-                            <Text style={styles.membershipText}>
-                              {userInfo.membershipTier}
-                            </Text>
-                          </View>
-                          <Text style={styles.joinDate}>
-                            {userInfo.joinDate}
-                          </Text>
-                        </View>
                         <View style={styles.kycContainer}>
                           <TouchableOpacity
                             style={styles.kycContainer}
@@ -667,7 +588,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 24,
-    paddingTop: 50,
+    paddingTop: 20,
     paddingBottom: 20,
   },
   backButton: {
@@ -756,8 +677,8 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   avatarGradient: {
-    width: 60,
-    height: 60,
+    width: 50,
+    height: 50,
     borderRadius: 30,
     alignItems: "center",
     justifyContent: "center",
@@ -786,16 +707,17 @@ const styles = StyleSheet.create({
   },
   profileInfo: {
     flex: 1,
+    justifyContent: "center"
   },
   profileName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "700",
     color: Colors.textInverse,
     marginBottom: 4,
     letterSpacing: -0.3,
   },
   profileEmail: {
-    fontSize: 14,
+    fontSize: 10,
     color: Colors.neutral200,
     marginBottom: 8,
     fontWeight: "500",

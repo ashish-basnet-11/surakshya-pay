@@ -22,6 +22,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { UserCreate } from "@/types/user";
 import { useRegisterUser } from "@/apis/users/register-user";
+import { showMessage } from "react-native-flash-message";
 
 const Register = () => {
   const router = useRouter();
@@ -37,7 +38,7 @@ const Register = () => {
   const { mutate: registerUser, isPending } = useRegisterUser();
 
   const onRegisterPress = async () => {
-    console.log("Hello")
+    console.log("Hello");
     if (
       !firstName.trim() ||
       !lastName.trim() ||
@@ -83,52 +84,36 @@ const Register = () => {
       return;
     }
 
-    const user : UserCreate = {
+    const user: UserCreate = {
       full_name: `${firstName} ${lastName}`,
       email: email.trim(),
       password: password,
       phone_number: phone.trim(),
     };
-    
+
     registerUser(user, {
       onSuccess: (data) => {
-        if(data.success){
-          Alert.alert(
-            data?.message || "",
-            "Your account has been created successfully. Please verify your email to continue.",
-            [
-              {
-                text: "Continue",
-                onPress: () => router.replace("/login"),
-              },
-            ]
-          );
+        if (data.success) {
+          showMessage({
+            message:
+              data.message || "Your account has been created successfully.",
+            type: "success",
+          });
+          router.replace("/login");
         } else {
-          Alert.alert(
-            data?.message || "",
-            "There was an error creating the user.",
-            [
-              {
-                text: "Continue",
-                onPress: () => router.replace("/login"),
-              },
-            ]
-          );
+          showMessage({
+            message: data.message || "Failed to create account.",
+            type: "danger",
+          });
         }
       },
       onError: () => {
-        Alert.alert(
-          "Error Creating User",
-          "There was an error creating the user.",
-          [
-            {
-              text: "Continue",
-              onPress: () => router.replace("/login"),
-            },
-          ]
-        );
-      }
-    })
+        showMessage({
+          message: "Failed to create account.",
+          type: "danger",
+        });
+      },
+    });
   };
 
   const goToLogin = () => {
@@ -211,7 +196,7 @@ const Register = () => {
                             />
                           </View>
                           <TextInput
-                            placeholder="John"
+                            placeholder="First"
                             placeholderTextColor={Colors.textTertiary}
                             style={styles.input}
                             autoCapitalize="words"
@@ -233,7 +218,7 @@ const Register = () => {
                             />
                           </View>
                           <TextInput
-                            placeholder="Doe"
+                            placeholder="Last"
                             placeholderTextColor={Colors.textTertiary}
                             style={styles.input}
                             autoCapitalize="words"
@@ -257,7 +242,7 @@ const Register = () => {
                           />
                         </View>
                         <TextInput
-                          placeholder="john.doe@example.com"
+                          placeholder="Enter Email"
                           placeholderTextColor={Colors.textTertiary}
                           style={styles.input}
                           keyboardType="email-address"

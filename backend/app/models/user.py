@@ -28,6 +28,7 @@ class User(Base):
     transactions = relationship("Transaction", back_populates="owner")
     notifications = relationship("Notification", back_populates="owner")
     kyc = relationship("KYC", uselist=False, back_populates="user", foreign_keys="KYC.user_id")
+    budgets = relationship("Budget", back_populates="owner")
 
     @staticmethod
     def generate_username():

@@ -12,59 +12,73 @@ import {
   Animated,
   TextInput,
   BackHandler,
+  RefreshControl,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useRouter } from "expo-router"
 import Colors from "@/constants/Colors"
 import { useFocusEffect } from "@react-navigation/native"
+import { useGetSpendingStatistics } from "@/apis/statistics/get-spending-statistics"
+import Loader from "@/components/Loader"
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window")
 
-// Mock data
-const mockTransactions = [
-  { id: "1", name: "Coffee Shop", amount: -4.5, category: "Food", date: "2024-01-15", type: "expense" },
-  { id: "2", name: "Salary", amount: 3500.0, category: "Income", date: "2024-01-15", type: "income" },
-  { id: "3", name: "Grocery Store", amount: -85.2, category: "Food", date: "2024-01-14", type: "expense" },
-  { id: "4", name: "Gas Station", amount: -45.0, category: "Transport", date: "2024-01-14", type: "expense" },
-  { id: "5", name: "Netflix", amount: -15.99, category: "Entertainment", date: "2024-01-13", type: "expense" },
-  { id: "6", name: "Freelance Work", amount: 750.0, category: "Income", date: "2024-01-12", type: "income" },
-  { id: "7", name: "Restaurant", amount: -32.5, category: "Food", date: "2024-01-12", type: "expense" },
-  { id: "8", name: "Uber", amount: -18.75, category: "Transport", date: "2024-01-11", type: "expense" },
-]
+// Interfaces
+export interface TransactionSummary {
+  id: number
+  amount: number
+  category: string
+  description: string
+  timestamp: string // ISO format
+  transaction_type: "TRANSFER" | "WITHDRAWAL" | "DEPOSIT" | string
+}
 
-const categoryData = [
-  { name: "Food", amount: 122.2, percentage: 35, color: "#FF6B6B", icon: "restaurant" },
-  { name: "Transport", amount: 63.75, percentage: 18, color: "#4ECDC4", icon: "car" },
-  { name: "Entertainment", amount: 47.99, percentage: 14, color: "#45B7D1", icon: "game-controller" },
-  { name: "Shopping", amount: 89.5, percentage: 26, color: "#96CEB4", icon: "bag" },
-  { name: "Bills", amount: 25.0, percentage: 7, color: "#FFEAA7", icon: "receipt" },
-]
+export interface SpendingSummary {
+  total_income: number
+  total_expense: number
+  balance: number
+  spending_by_category: Record<string, number> // e.g., { food: 200, transport: 100 }
+  transaction_count: number
+  average_transaction_amount: number
+  min_transaction_amount: number
+  max_transaction_amount: number
+  recent_transactions: TransactionSummary[]
+}
 
 export default function StatisticsScreen() {
   const router = useRouter()
   const [selectedPeriod, setSelectedPeriod] = useState<"weekly" | "monthly">("monthly")
   const [selectedChart, setSelectedChart] = useState<"pie" | "line" | "bar">("pie")
   const [searchQuery, setSearchQuery] = useState("")
-  const [filteredTransactions, setFilteredTransactions] = useState(mockTransactions)
+  const [filteredTransactions, setFilteredTransactions] = useState<TransactionSummary[]>([])
+  const [refreshing, setRefreshing] = useState(false)
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(50)).current
 
-   useFocusEffect(
-         useCallback(() => {
-           const onBackPress = () => {
-             router.replace('/(tabs)'); 
-             return true;
-           };
-       
-           const backHandler = BackHandler.addEventListener(
-             'hardwareBackPress',
-             onBackPress
-           );
-       
-           return () => backHandler.remove();
-         }, [])
-       );
-  
+  // Fetch statistics data
+  const { 
+    data: statisticsData, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useGetSpendingStatistics({
+    refetchInterval: 30000, // Refetch every 30 seconds
+  })
+
+  const spendingSummary = statisticsData?.data
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        router.replace("/(tabs)")
+        return true
+      }
+
+      const backHandler = BackHandler.addEventListener("hardwareBackPress", onBackPress)
+
+      return () => backHandler.remove()
+    }, []),
+  )
 
   useEffect(() => {
     Animated.parallel([
@@ -82,22 +96,70 @@ export default function StatisticsScreen() {
   }, [])
 
   useEffect(() => {
-    const filtered = mockTransactions.filter(
-      (transaction) =>
-        transaction.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        transaction.category.toLowerCase().includes(searchQuery.toLowerCase()),
+    if (spendingSummary?.recent_transactions) {
+      const filtered = spendingSummary.recent_transactions.filter(
+        (transaction) =>
+          transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          transaction.category.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+      setFilteredTransactions(filtered)
+    }
+  }, [searchQuery, spendingSummary])
+
+  // Handle refresh
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    try {
+      await refetch()
+      // Add a small delay to show the refresh animation
+      setTimeout(() => {
+        setRefreshing(false)
+      }, 1000)
+    } catch (error) {
+      console.error("Refresh error:", error)
+      setRefreshing(false)
+    }
+  }, [refetch])
+
+  // Show loader while data is loading
+  if (isLoading && !refreshing) {
+    return <Loader />
+  }
+
+  // Show error state if there's an error
+  if (error || !spendingSummary) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Statistics</Text>
+          <View style={styles.headerActions} />
+        </View>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle" size={48} color={Colors.error} />
+          <Text style={styles.errorText}>Failed to load statistics</Text>
+          <Text style={styles.errorSubtext}>Please try again later</Text>
+        </View>
+      </View>
     )
-    setFilteredTransactions(filtered)
-  }, [searchQuery])
+  }
 
-  const totalIncome = mockTransactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0)
+  const totalIncome = spendingSummary.total_income
+  const totalExpenses = spendingSummary.total_expense
+  const netBalance = spendingSummary.balance
 
-  const totalExpenses = mockTransactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + Math.abs(t.amount), 0)
-
-  const netBalance = totalIncome - totalExpenses
   const balanceChange = selectedPeriod === "weekly" ? 12.5 : 8.3
+
+  // Generate category data from API
+  const categoryData = Object.entries(spendingSummary.spending_by_category).map(([category, amount]) => ({
+    name: category,
+    amount: amount,
+    percentage: totalExpenses > 0 ? Math.round((amount / totalExpenses) * 100) : 0,
+    color: getCategoryColor(category),
+    icon: getCategoryIcon(category),
+  }))
 
   const handleExport = () => {
     Alert.alert("Export Data", "Choose export format:", [
@@ -113,6 +175,39 @@ export default function StatisticsScreen() {
 
   const clearSearch = () => {
     setSearchQuery("")
+  }
+
+  const formatDate = (timestamp: string) => {
+    return new Date(timestamp).toISOString().split("T")[0]
+  }
+
+  // Helper functions for category styling
+  function getCategoryColor(category: string): string {
+    const colors: Record<string, string> = {
+      deposit: "#4CAF50",
+      withdrawal: "#F44336",
+      transfer: "#2196F3",
+      food: "#FF6B6B",
+      transport: "#4ECDC4",
+      entertainment: "#45B7D1",
+      shopping: "#96CEB4",
+      bills: "#FFEAA7",
+    }
+    return colors[category.toLowerCase()] || "#9E9E9E"
+  }
+
+  function getCategoryIcon(category: string): string {
+    const icons: Record<string, string> = {
+      deposit: "add-circle",
+      withdrawal: "remove-circle",
+      transfer: "swap-horizontal",
+      food: "restaurant",
+      transport: "car",
+      entertainment: "game-controller",
+      shopping: "bag",
+      bills: "receipt",
+    }
+    return icons[category.toLowerCase()] || "help-circle"
   }
 
   const renderPieChart = () => (
@@ -133,7 +228,7 @@ export default function StatisticsScreen() {
           ))}
           <View style={styles.pieCenter}>
             <Text style={styles.pieCenterText}>Total</Text>
-            <Text style={styles.pieCenterAmount}>${totalExpenses.toFixed(0)}</Text>
+            <Text style={styles.pieCenterAmount}>NPR {totalExpenses.toFixed(0)}</Text>
           </View>
         </View>
       </View>
@@ -142,7 +237,7 @@ export default function StatisticsScreen() {
           <View key={category.name} style={styles.legendItem}>
             <View style={[styles.legendColor, { backgroundColor: category.color }]} />
             <Text style={styles.legendText}>{category.name}</Text>
-            <Text style={styles.legendAmount}>${category.amount}</Text>
+            <Text style={styles.legendAmount}>NPR {category.amount}</Text>
           </View>
         ))}
       </View>
@@ -173,8 +268,10 @@ export default function StatisticsScreen() {
           <View key={category.name} style={styles.barChartItem}>
             <View style={styles.barChartInfo}>
               <Ionicons name={category.icon as any} size={20} color={category.color} />
-              <Text style={styles.barChartLabel}>{category.name}</Text>
-              <Text style={styles.barChartAmount}>${category.amount}</Text>
+              <View>
+                <Text style={styles.barChartLabel}>{category.name}</Text>
+                <Text style={styles.barChartAmount}>NPR {category.amount}</Text>
+              </View>
             </View>
             <View style={styles.barChartBarContainer}>
               <View
@@ -214,12 +311,21 @@ export default function StatisticsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#ffffff" />
         </TouchableOpacity>
-
         <Text style={styles.headerTitle}>Statistics</Text>
-
         <View style={styles.headerActions}>
+          <TouchableOpacity 
+            onPress={onRefresh} 
+            style={[styles.headerButton, refreshing && styles.headerButtonDisabled]}
+            disabled={refreshing}
+          >
+            <Ionicons 
+              name={refreshing ? "sync" : "refresh"} 
+              size={20} 
+              color="#ffffff" 
+            />
+          </TouchableOpacity>
           <TouchableOpacity onPress={handleExport} style={styles.headerButton}>
-            <Ionicons name="download" size={20} color="#ffffff"/>
+            <Ionicons name="download" size={20} color="#ffffff" />
           </TouchableOpacity>
           <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
             <Ionicons name="share" size={20} color="#ffffff" />
@@ -227,7 +333,16 @@ export default function StatisticsScreen() {
         </View>
       </Animated.View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+          />
+        }
+      >
         {/* Search Bar */}
         <Animated.View
           style={[
@@ -279,20 +394,18 @@ export default function StatisticsScreen() {
               </Text>
             </View>
           </View>
-
           <Text style={styles.balanceAmount}>
-            ${Math.abs(netBalance).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            NPR {Math.abs(netBalance).toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </Text>
-
           <View style={styles.balanceStats}>
             <View style={styles.balanceStat}>
               <Text style={styles.balanceStatLabel}>Income</Text>
-              <Text style={[styles.balanceStatAmount, { color: "#4CAF50" }]}>+${totalIncome.toLocaleString()}</Text>
+              <Text style={[styles.balanceStatAmount, { color: "#4CAF50" }]}>NPR {totalIncome.toLocaleString()}</Text>
             </View>
             <View style={styles.balanceStatDivider} />
             <View style={styles.balanceStat}>
               <Text style={styles.balanceStatLabel}>Expenses</Text>
-              <Text style={[styles.balanceStatAmount, { color: "#F44336" }]}>-${totalExpenses.toLocaleString()}</Text>
+              <Text style={[styles.balanceStatAmount, { color: "#F44336" }]}>NPR {totalExpenses.toLocaleString()}</Text>
             </View>
           </View>
         </Animated.View>
@@ -316,7 +429,6 @@ export default function StatisticsScreen() {
               Weekly
             </Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             style={[styles.filterButton, selectedPeriod === "monthly" && styles.filterButtonActive]}
             onPress={() => setSelectedPeriod("monthly")}
@@ -381,7 +493,7 @@ export default function StatisticsScreen() {
         </Animated.View>
 
         {/* Financial Insights */}
-        <Animated.View
+        {/* <Animated.View
           style={[
             styles.insightsCard,
             {
@@ -394,7 +506,6 @@ export default function StatisticsScreen() {
             <Ionicons name="bulb" size={24} color={Colors.primary} />
             <Text style={styles.insightsTitle}>Financial Insights</Text>
           </View>
-
           <View style={styles.insightsList}>
             <View style={styles.insightItem}>
               <View style={[styles.insightIcon, { backgroundColor: "#4CAF5015" }]}>
@@ -405,28 +516,34 @@ export default function StatisticsScreen() {
                 <Text style={styles.insightSubtext}>Great job on budgeting!</Text>
               </View>
             </View>
-
             <View style={styles.insightItem}>
               <View style={[styles.insightIcon, { backgroundColor: "#FF980015" }]}>
                 <Ionicons name="restaurant" size={16} color="#FF9800" />
               </View>
               <View style={styles.insightContent}>
-                <Text style={styles.insightText}>Food expenses are 35% of your total spending</Text>
+                <Text style={styles.insightText}>
+                  Food expenses are{" "}
+                  {Math.round(
+                    (spendingSummary.spending_by_category.food / spendingSummary.total_expense) * 100,
+                  )}
+                  % of your total spending
+                </Text>
                 <Text style={styles.insightSubtext}>Consider meal planning to save more</Text>
               </View>
             </View>
-
             <View style={styles.insightItem}>
               <View style={[styles.insightIcon, { backgroundColor: "#2196F315" }]}>
                 <Ionicons name="card" size={16} color="#2196F3" />
               </View>
               <View style={styles.insightContent}>
-                <Text style={styles.insightText}>You're on track to save $500 this month</Text>
+                <Text style={styles.insightText}>
+                  You're on track to save NPR {(spendingSummary.balance * 0.1).toFixed(0)} this month
+                </Text>
                 <Text style={styles.insightSubtext}>Keep up the excellent work!</Text>
               </View>
             </View>
           </View>
-        </Animated.View>
+        </Animated.View> */}
 
         {/* Recent Transactions */}
         <Animated.View
@@ -440,37 +557,34 @@ export default function StatisticsScreen() {
         >
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent Transactions ({filteredTransactions.length})</Text>
-            <TouchableOpacity onPress={() => router.push("/(tabs)/wallet")}>
+            <TouchableOpacity onPress={() => router.push("/(tabs)/(index)/details")}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
-
           <View style={styles.transactionsList}>
             {filteredTransactions.slice(0, 5).map((transaction) => (
               <View key={transaction.id} style={styles.transactionItem}>
                 <View style={styles.transactionIcon}>
                   <Ionicons
-                    name={transaction.type === "income" ? "arrow-down" : "arrow-up"}
+                    name={transaction.transaction_type === "DEPOSIT" ? "arrow-down" : "arrow-up"}
                     size={16}
-                    color={transaction.type === "income" ? "#4CAF50" : "#F44336"}
+                    color={transaction.transaction_type === "DEPOSIT" ? "#4CAF50" : "#F44336"}
                   />
                 </View>
-
                 <View style={styles.transactionDetails}>
-                  <Text style={styles.transactionName}>{transaction.name}</Text>
+                  <Text style={styles.transactionName}>{transaction.description}</Text>
                   <Text style={styles.transactionCategory}>{transaction.category}</Text>
                 </View>
-
                 <View style={styles.transactionAmount}>
                   <Text
                     style={[
                       styles.transactionAmountText,
-                      { color: transaction.type === "income" ? "#4CAF50" : "#F44336" },
+                      { color: transaction.transaction_type === "DEPOSIT" ? "#4CAF50" : "#F44336" },
                     ]}
                   >
-                    {transaction.type === "income" ? "+" : "-"}${Math.abs(transaction.amount).toFixed(2)}
+                    {transaction.transaction_type === "DEPOSIT" ? "+" : "-"}NPR {Math.abs(transaction.amount).toFixed(2)}
                   </Text>
-                  <Text style={styles.transactionDate}>{transaction.date}</Text>
+                  <Text style={styles.transactionDate}>{formatDate(transaction.timestamp)}</Text>
                 </View>
               </View>
             ))}
@@ -492,7 +606,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 50,
+    paddingTop: 20,
     paddingBottom: 20,
     backgroundColor: Colors.primary,
     shadowColor: "#000",
@@ -525,6 +639,9 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.1)",
     justifyContent: "center",
     alignItems: "center",
+  },
+  headerButtonDisabled: {
+    opacity: 0.5,
   },
   content: {
     flex: 1,
@@ -958,5 +1075,24 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 120,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 18,
+    color: "#333",
+    marginTop: 10,
+    textAlign: "center",
+    fontWeight: "600",
+  },
+  errorSubtext: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 5,
+    textAlign: "center",
   },
 })

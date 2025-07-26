@@ -2,6 +2,7 @@ import { Stack } from "expo-router";
 import { useFonts } from "expo-font";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
+import FlashMessage from 'react-native-flash-message';
 
 export default function RootLayout() {
   const [fontLoaded] = useFonts({
@@ -20,6 +21,7 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
       </Stack>
+      <FlashMessage position="top" />
     </QueryClientProvider>
   );
 }

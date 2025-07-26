@@ -12,132 +12,86 @@ import {
   Animated,
   TextInput,
   BackHandler,
+  RefreshControl,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useRouter } from "expo-router"
 import Colors from "@/constants/Colors"
 import { useFocusEffect } from "@react-navigation/native"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { budgetApi } from "@/apis/budget/budget-api"
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window")
 
-// Mock data
-const mockTransactions = [
-  {
-    id: "1",
-    name: "Coffee Shop",
-    amount: -4.5,
-    category: "Food",
-    date: "2024-01-15",
-    time: "09:30 AM",
-    type: "expense",
-    status: "completed",
-    description: "Morning coffee and pastry",
-  },
-  {
-    id: "2",
-    name: "Monthly Salary",
-    amount: 3500.0,
-    category: "Income",
-    date: "2024-01-15",
-    time: "12:00 PM",
-    type: "income",
-    status: "completed",
-    description: "January salary payment",
-  },
-  {
-    id: "3",
-    name: "Grocery Store",
-    amount: -85.2,
-    category: "Food",
-    date: "2024-01-14",
-    time: "06:45 PM",
-    type: "expense",
-    status: "completed",
-    description: "Weekly grocery shopping",
-  },
-  {
-    id: "4",
-    name: "Gas Station",
-    amount: -45.0,
-    category: "Transport",
-    date: "2024-01-14",
-    time: "08:15 AM",
-    type: "expense",
-    status: "pending",
-    description: "Fuel for car",
-  },
-  {
-    id: "5",
-    name: "Netflix Subscription",
-    amount: -15.99,
-    category: "Entertainment",
-    date: "2024-01-13",
-    time: "11:30 PM",
-    type: "expense",
-    status: "completed",
-    description: "Monthly streaming subscription",
-  },
-  {
-    id: "6",
-    name: "Freelance Project",
-    amount: 750.0,
-    category: "Income",
-    date: "2024-01-12",
-    time: "03:20 PM",
-    type: "income",
-    status: "completed",
-    description: "Web development project",
-  },
-  {
-    id: "7",
-    name: "Restaurant Dinner",
-    amount: -32.5,
-    category: "Food",
-    date: "2024-01-12",
-    time: "07:45 PM",
-    type: "expense",
-    status: "failed",
-    description: "Dinner with friends",
-  },
-  {
-    id: "8",
-    name: "Uber Ride",
-    amount: -18.75,
-    category: "Transport",
-    date: "2024-01-11",
-    time: "05:30 PM",
-    type: "expense",
-    status: "completed",
-    description: "Ride to downtown",
-  },
-]
-
-export default function WalletScreen() {
+export default function BudgetScreen() {
   const router = useRouter()
-  const [selectedFilter, setSelectedFilter] = useState<"all" | "income" | "expense">("all")
+  const queryClient = useQueryClient()
+  const [selectedFilter, setSelectedFilter] = useState<"all" | "active" | "warning" | "completed">("all")
   const [sortBy, setSortBy] = useState<"date" | "amount" | "name" | "category">("date")
   const [searchQuery, setSearchQuery] = useState("")
   const [showBalance, setShowBalance] = useState(true)
-  const [chartType, setChartType] = useState<"line" | "category">("line")
-
+  const [chartType, setChartType] = useState<"line" | "category">("category")
+  const [refreshing, setRefreshing] = useState(false)
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(50)).current
   const balanceAnim = useRef(new Animated.Value(0)).current
+
+  // API Queries
+  const { data: budgetSummary, isLoading: summaryLoading } = useQuery({
+    queryKey: ["budget-summary"],
+    queryFn: budgetApi.getBudgetSummary,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  })
+
+  const { data: budgetAnalytics, isLoading: analyticsLoading } = useQuery({
+    queryKey: ["budget-analytics"],
+    queryFn: budgetApi.getBudgetAnalytics,
+    refetchInterval: 30000,
+  })
+
+  const { data: budgetsData, isLoading: budgetsLoading } = useQuery({
+    queryKey: ["budgets", selectedFilter, sortBy],
+    queryFn: () => budgetApi.getBudgets({
+      status: selectedFilter === "all" ? undefined : selectedFilter,
+      sort_by: sortBy === "date" ? "created_at" : sortBy,
+      sort_order: "desc",
+      limit: 100
+    }),
+    refetchInterval: 30000,
+  })
+
+  const { data: searchResults, isLoading: searchLoading } = useQuery({
+    queryKey: ["budget-search", searchQuery],
+    queryFn: () => budgetApi.searchBudgets(searchQuery),
+    enabled: searchQuery.length > 0,
+  })
+
+  // Mutations
+  const deleteBudgetMutation = useMutation({
+    mutationFn: budgetApi.deleteBudget,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["budgets"] })
+      queryClient.invalidateQueries({ queryKey: ["budget-summary"] })
+      queryClient.invalidateQueries({ queryKey: ["budget-analytics"] })
+      Alert.alert("Success", "Budget deleted successfully!")
+    },
+    onError: (error) => {
+      Alert.alert("Error", "Failed to delete budget")
+    },
+  })
+
   useFocusEffect(
-  useCallback(() => {
-    const onBackPress = () => {
-      router.replace('/(tabs)'); 
-      return true;
-    };
+    useCallback(() => {
+      const onBackPress = () => {
+        router.replace("/(tabs)")
+        return true
+      }
 
-    const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
-      onBackPress
-    );
+      const backHandler = BackHandler.addEventListener("hardwareBackPress", onBackPress)
 
-    return () => backHandler.remove();
-  }, [])
-);
+      return () => backHandler.remove()
+    }, []),
+  )
 
   useEffect(() => {
     Animated.parallel([
@@ -160,46 +114,42 @@ export default function WalletScreen() {
     ]).start()
   }, [])
 
-  const filteredTransactions = mockTransactions.filter((transaction) => {
-    const matchesFilter = selectedFilter === "all" || transaction.type === selectedFilter
-    const matchesSearch =
-      transaction.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.category.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesFilter && matchesSearch
-  })
-
-  const sortedTransactions = [...filteredTransactions].sort((a, b) => {
-    switch (sortBy) {
-      case "date":
-        return new Date(b.date).getTime() - new Date(a.date).getTime()
-      case "amount":
-        return Math.abs(b.amount) - Math.abs(a.amount)
-      case "name":
-        return a.name.localeCompare(b.name)
-      case "category":
-        return a.category.localeCompare(b.category)
-      default:
-        return 0
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    try {
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["budget-summary"] }),
+        queryClient.refetchQueries({ queryKey: ["budget-analytics"] }),
+        queryClient.refetchQueries({ queryKey: ["budgets"] }),
+      ])
+    } catch (error) {
+      console.error("Refresh failed:", error)
+    } finally {
+      setRefreshing(false)
     }
-  })
+  }, [queryClient])
 
-  const totalBalance = mockTransactions.reduce((sum, t) => sum + t.amount, 0)
-  const totalIncome = mockTransactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0)
-  const totalExpenses = mockTransactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + Math.abs(t.amount), 0)
-  const pendingTransactions = mockTransactions.filter((t) => t.status === "pending").length
+  // Data processing
+  const budgets = budgetsData?.data || []
+  const summary = budgetSummary?.data
+  const analytics = budgetAnalytics?.data
+  const categoryProgress = analytics?.category_progress || []
+  const trendData = analytics?.trend_data || []
+
+  const filteredBudgets = searchQuery.length > 0 
+    ? (searchResults?.data || [])
+    : budgets
 
   const handleExport = () => {
-    Alert.alert("Export Transactions", "Choose export format:", [
+    Alert.alert("Export Budget Report", "Choose export format:", [
       { text: "Cancel", style: "cancel" },
-      { text: "PDF Report", onPress: () => Alert.alert("Success", "PDF report exported successfully!") },
-      { text: "CSV Data", onPress: () => Alert.alert("Success", "CSV data exported successfully!") },
+      { text: "PDF Report", onPress: () => Alert.alert("Success", "Budget report exported successfully!") },
+      { text: "CSV Data", onPress: () => Alert.alert("Success", "Budget data exported successfully!") },
     ])
   }
 
   const handleRefresh = () => {
-    Alert.alert("Success", "Wallet data refreshed!")
+    onRefresh()
   }
 
   const clearSearch = () => {
@@ -208,12 +158,12 @@ export default function WalletScreen() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "completed":
+      case "active":
         return "#4CAF50"
-      case "pending":
+      case "warning":
         return "#FF9800"
-      case "failed":
-        return "#F44336"
+      case "completed":
+        return "#2196F3"
       default:
         return "#666"
     }
@@ -221,53 +171,82 @@ export default function WalletScreen() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "completed":
+      case "active":
         return "checkmark-circle"
-      case "pending":
-        return "time"
-      case "failed":
-        return "close-circle"
+      case "warning":
+        return "warning"
+      case "completed":
+        return "checkmark-done"
       default:
         return "help-circle"
     }
   }
 
+  const getBudgetProgress = (spent: number, budget: number) => {
+    return Math.min((spent / budget) * 100, 100)
+  }
+
   const renderLineChart = () => (
     <View style={styles.chartContainer}>
-      <Text style={styles.chartTitle}>Spending Trend (Last 7 Days)</Text>
+      <Text style={styles.chartTitle}>Budget vs Spending (Last 7 Days)</Text>
       <View style={styles.lineChart}>
-        {[120, 85, 150, 95, 180, 110, 140].map((value, index) => (
+        {trendData.slice(0, 7).map((data, index) => (
           <View key={index} style={styles.lineChartBar}>
-            <View style={[styles.lineChartBarFill, { height: `${(value / 200) * 100}%` }]} />
-            <Text style={styles.lineChartLabel}>{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][index]}</Text>
+            <View
+              style={[styles.lineChartBarFill, { height: `${(data.budget / 200) * 100}%`, backgroundColor: "#E3F2FD" }]}
+            />
+            <View
+              style={[
+                styles.lineChartBarFill,
+                { height: `${(data.spent / 200) * 100}%`, position: "absolute", bottom: 0 },
+              ]}
+            />
+            <Text style={styles.lineChartLabel}>
+              {new Date(data.date).toLocaleDateString('en-US', { weekday: 'short' })}
+            </Text>
           </View>
         ))}
       </View>
     </View>
   )
 
-  const renderCategoryChart = () => {
-    const categories = [
-      { name: "Food", amount: 122.2, color: "#FF6B6B" },
-      { name: "Transport", amount: 63.75, color: "#4ECDC4" },
-      { name: "Entertainment", amount: 47.99, color: "#45B7D1" },
-      { name: "Shopping", amount: 89.5, color: "#96CEB4" },
-    ]
-
-    return (
-      <View style={styles.chartContainer}>
-        <Text style={styles.chartTitle}>Category Breakdown</Text>
-        <View style={styles.categoryChart}>
-          {categories.map((category) => (
-            <View key={category.name} style={styles.categoryItem}>
-              <View style={styles.categoryInfo}>
-                <View style={[styles.categoryColor, { backgroundColor: category.color }]} />
-                <Text style={styles.categoryName}>{category.name}</Text>
-              </View>
-              <Text style={styles.categoryAmount}>${category.amount}</Text>
+  const renderCategoryChart = () => (
+    <View style={styles.chartContainer}>
+      <Text style={styles.chartTitle}>Budget Progress by Category</Text>
+      <View style={styles.categoryChart}>
+        {categoryProgress.map((category) => (
+          <View key={category.category} style={styles.categoryItem}>
+            <View style={styles.categoryInfo}>
+              <View style={[styles.categoryColor, { backgroundColor: category.color }]} />
+              <Text style={styles.categoryName}>{category.category}</Text>
             </View>
-          ))}
-        </View>
+            <View style={styles.categoryProgress}>
+              <View style={styles.categoryProgressBar}>
+                <View
+                  style={[
+                    styles.categoryProgressFill,
+                    {
+                      width: `${category.progress_percentage}%`,
+                      backgroundColor:
+                        category.progress_percentage > 90 ? "#F44336" : category.progress_percentage > 75 ? "#FF9800" : "#4CAF50",
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={styles.categoryAmount}>
+                NPR {category.spent_amount.toFixed(2)}/{category.budget_amount.toFixed(2)}
+              </Text>
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  )
+
+  if (summaryLoading || analyticsLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading budget data...</Text>
       </View>
     )
   }
@@ -279,21 +258,30 @@ export default function WalletScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#ffffff" />
         </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>Wallet</Text>
-
+        <Text style={styles.headerTitle}>Budget</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={handleRefresh} style={styles.headerButton}>
-            <Ionicons name="refresh" size={20} color="#ffffff"/>
+            <Ionicons name="refresh" size={20} color="#ffffff" />
           </TouchableOpacity>
           <TouchableOpacity onPress={handleExport} style={styles.headerButton}>
-            <Ionicons name="download" size={20} color="#ffffff"/>
+            <Ionicons name="download" size={20} color="#ffffff" />
           </TouchableOpacity>
         </View>
       </Animated.View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Balance Card */}
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
+          />
+        }
+      >
+        {/* Budget Overview Card */}
         <Animated.View
           style={[
             styles.balanceCard,
@@ -305,49 +293,49 @@ export default function WalletScreen() {
         >
           <View style={styles.balanceHeader}>
             <View>
-              <Text style={styles.balanceLabel}>Total Balance</Text>
+              <Text style={styles.balanceLabel}>Monthly Budget</Text>
               <View style={styles.balanceRow}>
                 <Text style={styles.balanceAmount}>
-                  {showBalance ? `$${totalBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "••••••"}
+                  {showBalance ? `NPR ${summary?.monthly_budget?.toLocaleString("en-US", { minimumFractionDigits: 2 }) || "0.00"}` : "••••••"}
                 </Text>
                 <TouchableOpacity onPress={() => setShowBalance(!showBalance)} style={styles.eyeButton}>
                   <Ionicons name={showBalance ? "eye" : "eye-off"} size={20} color="#666" />
                 </TouchableOpacity>
               </View>
             </View>
-
             <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
               <Ionicons name="refresh" size={20} color={Colors.primary} />
             </TouchableOpacity>
           </View>
-
           <View style={styles.balanceStats}>
             <View style={styles.balanceStat}>
               <View style={styles.balanceStatHeader}>
-                <Ionicons name="trending-up" size={16} color="#4CAF50" />
-                <Text style={styles.balanceStatLabel}>Income</Text>
-              </View>
-              <Text style={[styles.balanceStatAmount, { color: "#4CAF50" }]}>+${totalIncome.toLocaleString()}</Text>
-            </View>
-
-            <View style={styles.balanceStatDivider} />
-
-            <View style={styles.balanceStat}>
-              <View style={styles.balanceStatHeader}>
                 <Ionicons name="trending-down" size={16} color="#F44336" />
-                <Text style={styles.balanceStatLabel}>Expenses</Text>
+                <Text style={styles.balanceStatLabel}>Spent</Text>
               </View>
-              <Text style={[styles.balanceStatAmount, { color: "#F44336" }]}>-${totalExpenses.toLocaleString()}</Text>
+              <Text style={[styles.balanceStatAmount, { color: "#F44336" }]}>
+                NPR {summary?.monthly_spent?.toLocaleString() || "0"}
+              </Text>
             </View>
-
             <View style={styles.balanceStatDivider} />
-
             <View style={styles.balanceStat}>
               <View style={styles.balanceStatHeader}>
-                <Ionicons name="time" size={16} color="#FF9800" />
-                <Text style={styles.balanceStatLabel}>Pending</Text>
+                <Ionicons name="trending-up" size={16} color="#4CAF50" />
+                <Text style={styles.balanceStatLabel}>Remaining</Text>
               </View>
-              <Text style={[styles.balanceStatAmount, { color: "#FF9800" }]}>{pendingTransactions}</Text>
+              <Text style={[styles.balanceStatAmount, { color: "#4CAF50" }]}>
+                NPR {summary?.monthly_remaining?.toLocaleString() || "0"}
+              </Text>
+            </View>
+            <View style={styles.balanceStatDivider} />
+            <View style={styles.balanceStat}>
+              <View style={styles.balanceStatHeader}>
+                <Ionicons name="warning" size={16} color="#FF9800" />
+                <Text style={styles.balanceStatLabel}>Alerts</Text>
+              </View>
+              <Text style={[styles.balanceStatAmount, { color: "#FF9800" }]}>
+                {summary?.warning_count || 0}
+              </Text>
             </View>
           </View>
         </Animated.View>
@@ -366,7 +354,7 @@ export default function WalletScreen() {
             <Ionicons name="search" size={20} color="#666" />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search by name or category..."
+              placeholder="Search budget categories..."
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholderTextColor="#666"
@@ -391,11 +379,12 @@ export default function WalletScreen() {
         >
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersScroll}>
             <View style={styles.filterGroup}>
-              <Text style={styles.filterGroupLabel}>Filter:</Text>
+              <Text style={styles.filterGroupLabel}>Status:</Text>
               {[
                 { key: "all", label: "All", icon: "list" },
-                { key: "income", label: "Income", icon: "trending-up" },
-                { key: "expense", label: "Expense", icon: "trending-down" },
+                { key: "active", label: "Active", icon: "checkmark-circle" },
+                { key: "warning", label: "Warning", icon: "warning" },
+                { key: "completed", label: "Completed", icon: "checkmark-done" },
               ].map((filter) => (
                 <TouchableOpacity
                   key={filter.key}
@@ -415,7 +404,6 @@ export default function WalletScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-
             <View style={styles.filterGroup}>
               <Text style={styles.filterGroupLabel}>Sort:</Text>
               {[
@@ -456,14 +444,13 @@ export default function WalletScreen() {
             <Ionicons name="trending-up" size={16} color={chartType === "line" ? "white" : Colors.primary} />
             <Text style={[styles.chartToggleText, chartType === "line" && styles.chartToggleTextActive]}>Trend</Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             style={[styles.chartToggleButton, chartType === "category" && styles.chartToggleButtonActive]}
             onPress={() => setChartType("category")}
           >
             <Ionicons name="pie-chart" size={16} color={chartType === "category" ? "white" : Colors.primary} />
             <Text style={[styles.chartToggleText, chartType === "category" && styles.chartToggleTextActive]}>
-              Categories
+              Progress
             </Text>
           </TouchableOpacity>
         </Animated.View>
@@ -491,39 +478,36 @@ export default function WalletScreen() {
             },
           ]}
         >
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={styles.sectionTitle}>Budget Actions</Text>
           <View style={styles.quickActions}>
-            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/(tabs)/(index)/withdraw")}>
+            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/(tabs)/create-budget")}>
               <View style={[styles.quickActionIcon, { backgroundColor: "#4CAF5015" }]}>
-                <Ionicons name="send" size={24} color="#4CAF50" />
+                <Ionicons name="add-circle" size={24} color="#4CAF50" />
               </View>
-              <Text style={styles.quickActionTitle}>Send Money</Text>
-              <Text style={styles.quickActionSubtitle}>Transfer to contacts</Text>
+              <Text style={styles.quickActionTitle}>Create Budget</Text>
+              <Text style={styles.quickActionSubtitle}>Set new spending limits</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/topup")}>
+            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/(tabs)/budget-goals")}>
               <View style={[styles.quickActionIcon, { backgroundColor: "#2196F315" }]}>
-                <Ionicons name="add-circle" size={24} color="#2196F3" />
+                <Ionicons name="flag" size={24} color="#2196F3" />
               </View>
-              <Text style={styles.quickActionTitle}>Top Up</Text>
-              <Text style={styles.quickActionSubtitle}>Add funds to wallet</Text>
+              <Text style={styles.quickActionTitle}>Set Goals</Text>
+              <Text style={styles.quickActionSubtitle}>Define savings targets</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/scan")}>
+            {/* <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/budget-alerts")}>
               <View style={[styles.quickActionIcon, { backgroundColor: "#FF980015" }]}>
-                <Ionicons name="qr-code" size={24} color="#FF9800" />
+                <Ionicons name="notifications" size={24} color="#FF9800" />
               </View>
-              <Text style={styles.quickActionTitle}>Scan & Pay</Text>
-              <Text style={styles.quickActionSubtitle}>QR code payments</Text>
+              <Text style={styles.quickActionTitle}>Alerts</Text>
+              <Text style={styles.quickActionSubtitle}>Manage notifications</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/(tabs)/(index)/details")}>
+            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/budget-analysis")}>
               <View style={[styles.quickActionIcon, { backgroundColor: "#9C27B015" }]}>
-                <Ionicons name="receipt" size={24} color="#9C27B0" />
+                <Ionicons name="analytics" size={24} color="#9C27B0" />
               </View>
-              <Text style={styles.quickActionTitle}>All Transactions</Text>
-              <Text style={styles.quickActionSubtitle}>View complete history</Text>
-            </TouchableOpacity>
+              <Text style={styles.quickActionTitle}>Analysis</Text>
+              <Text style={styles.quickActionSubtitle}>Detailed insights</Text>
+            </TouchableOpacity> */}
           </View>
         </Animated.View>
 
@@ -539,37 +523,33 @@ export default function WalletScreen() {
         >
           <View style={styles.summaryHeader}>
             <Ionicons name="analytics" size={24} color={Colors.primary} />
-            <Text style={styles.summaryTitle}>January Summary</Text>
+            <Text style={styles.summaryTitle}>Budget Summary</Text>
           </View>
-
           <View style={styles.summaryStats}>
             <View style={styles.summaryStatItem}>
-              <Text style={styles.summaryStatValue}>{mockTransactions.length}</Text>
-              <Text style={styles.summaryStatLabel}>Total Transactions</Text>
+              <Text style={styles.summaryStatValue}>{summary?.statistics?.total_budgets || 0}</Text>
+              <Text style={styles.summaryStatLabel}>Total Budgets</Text>
             </View>
             <View style={styles.summaryStatItem}>
               <Text style={styles.summaryStatValue}>
-                ${(totalExpenses / mockTransactions.filter((t) => t.type === "expense").length).toFixed(0)}
+                {Math.round(summary?.statistics?.budget_usage_percentage || 0)}%
               </Text>
-              <Text style={styles.summaryStatLabel}>Avg. Transaction</Text>
+              <Text style={styles.summaryStatLabel}>Budget Used</Text>
             </View>
             <View style={styles.summaryStatItem}>
               <Text style={styles.summaryStatValue}>
-                {Math.round(
-                  (mockTransactions.filter((t) => t.status === "completed").length / mockTransactions.length) * 100,
-                )}
-                %
+                {Math.round(summary?.statistics?.on_track_percentage || 0)}%
               </Text>
-              <Text style={styles.summaryStatLabel}>Success Rate</Text>
+              <Text style={styles.summaryStatLabel}>On Track</Text>
             </View>
           </View>
-
           <Text style={styles.summaryInsight}>
-            💡 You've saved 15% more compared to last month. Keep up the great work!
+            💡 You&apos;re staying within budget for {Math.round(summary?.statistics?.on_track_percentage || 0)}% of categories. 
+            {summary?.warning_count > 0 ? ` ${summary.warning_count} budget(s) need attention!` : " Keep up the good work!"}
           </Text>
         </Animated.View>
 
-        {/* Recent Transactions */}
+        {/* Budget Categories */}
         <Animated.View
           style={[
             styles.transactionsSection,
@@ -580,60 +560,71 @@ export default function WalletScreen() {
           ]}
         >
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Activity ({sortedTransactions.length})</Text>
+            <Text style={styles.sectionTitle}>Budget Categories ({filteredBudgets.length})</Text>
           </View>
-
           <View style={styles.transactionsList}>
-            {sortedTransactions.slice(0, 6).map((transaction) => (
-              <TouchableOpacity
-                key={transaction.id}
-                style={styles.transactionItem}
-                onPress={() => router.push(`/transactions/${transaction.id}`)}
-              >
-                <View style={styles.transactionLeft}>
-                  <View
-                    style={[
-                      styles.transactionIcon,
-                      { backgroundColor: transaction.type === "income" ? "#4CAF5015" : "#F4433615" },
-                    ]}
-                  >
-                    <Ionicons
-                      name={transaction.type === "income" ? "arrow-down" : "arrow-up"}
-                      size={16}
-                      color={transaction.type === "income" ? "#4CAF50" : "#F44336"}
-                    />
-                  </View>
-
-                  <View style={styles.transactionDetails}>
-                    <View style={styles.transactionNameRow}>
-                      <Text style={styles.transactionName}>{transaction.name}</Text>
-                      <View style={styles.transactionStatus}>
-                        <Ionicons
-                          name={getStatusIcon(transaction.status) as any}
-                          size={12}
-                          color={getStatusColor(transaction.status)}
-                        />
+            {filteredBudgets.slice(0, 6).map((budget) => {
+              const progress = getBudgetProgress(budget.spent_amount, budget.budget_amount)
+              return (
+                <TouchableOpacity
+                  key={budget.id}
+                  style={styles.transactionItem}
+                  onPress={() => router.push(`/(tabs)/budget-detail?budgetId=${budget.id}`)}
+                >
+                  <View style={styles.transactionLeft}>
+                    <View style={[styles.transactionIcon, { backgroundColor: `${budget.color}15` }]}>
+                      <Ionicons name={budget.icon as any} size={16} color={budget.color} />
+                    </View>
+                    <View style={styles.transactionDetails}>
+                      <View style={styles.transactionNameRow}>
+                        <Text style={styles.transactionName}>{budget.name}</Text>
+                        <View style={styles.transactionStatus}>
+                          <Ionicons
+                            name={getStatusIcon(budget.status) as any}
+                            size={12}
+                            color={getStatusColor(budget.status)}
+                          />
+                        </View>
+                      </View>
+                      <Text style={styles.transactionDescription}>{budget.description}</Text>
+                      <View style={styles.budgetProgressContainer}>
+                        <View style={styles.budgetProgressBar}>
+                          <View
+                            style={[
+                              styles.budgetProgressFill,
+                              {
+                                width: `${progress}%`,
+                                backgroundColor: progress > 90 ? "#F44336" : progress > 75 ? "#FF9800" : "#4CAF50",
+                              },
+                            ]}
+                          />
+                        </View>
+                        <Text style={styles.budgetProgressText}>{Math.round(progress)}%</Text>
                       </View>
                     </View>
-                    <Text style={styles.transactionDescription}>{transaction.description}</Text>
-                    <Text style={styles.transactionDateTime}>
-                      {transaction.date} • {transaction.time}
+                  </View>
+                  <View style={styles.transactionRight}>
+                    <Text style={[styles.transactionAmount, { color: "#333" }]}>
+                      NPR {budget.spent_amount.toFixed(2)}
+                    </Text>
+                    <Text style={styles.transactionCategory}>of NPR {budget.budget_amount.toFixed(2)}</Text>
+                    <Text
+                      style={[
+                        styles.transactionRemaining,
+                        {
+                          color: budget.remaining > 0 ? "#4CAF50" : "#F44336",
+                        },
+                      ]}
+                    >
+                      NPR {Math.abs(budget.remaining).toFixed(2)}{" "}
+                      {budget.remaining > 0 ? "left" : "over"}
                     </Text>
                   </View>
-                </View>
-
-                <View style={styles.transactionRight}>
-                  <Text
-                    style={[styles.transactionAmount, { color: transaction.type === "income" ? "#4CAF50" : "#F44336" }]}
-                  >
-                    {transaction.type === "income" ? "+" : "-"}${Math.abs(transaction.amount).toFixed(2)}
-                  </Text>
-                  <Text style={styles.transactionCategory}>{transaction.category}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+                </TouchableOpacity>
+              )
+            })}
           </View>
-          <View style={styles.bottomSpacing}/>
+          <View style={styles.bottomSpacing} />
         </Animated.View>
       </ScrollView>
     </View>
@@ -650,7 +641,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 50,
+    paddingTop: 20,
     paddingBottom: 20,
     backgroundColor: Colors.primary,
     shadowColor: "#000",
@@ -771,7 +762,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-     shadowColor: "#000",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
@@ -886,6 +877,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     marginHorizontal: 2,
+    position: "relative",
   },
   lineChartBarFill: {
     width: 16,
@@ -909,6 +901,7 @@ const styles = StyleSheet.create({
   categoryInfo: {
     flexDirection: "row",
     alignItems: "center",
+    flex: 1,
   },
   categoryColor: {
     width: 12,
@@ -920,9 +913,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#333",
     fontWeight: "500",
+    flex: 1,
+  },
+  categoryProgress: {
+    alignItems: "flex-end",
+    flex: 1,
+  },
+  categoryProgressBar: {
+    width: 100,
+    height: 6,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 3,
+    marginBottom: 4,
+  },
+  categoryProgressFill: {
+    height: "100%",
+    borderRadius: 3,
   },
   categoryAmount: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "bold",
     color: "#333",
   },
@@ -1082,11 +1091,27 @@ const styles = StyleSheet.create({
   transactionDescription: {
     fontSize: 12,
     color: "#666",
-    marginBottom: 2,
+    marginBottom: 4,
   },
-  transactionDateTime: {
-    fontSize: 11,
-    color: "#999",
+  budgetProgressContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  budgetProgressBar: {
+    flex: 1,
+    height: 4,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 2,
+    marginRight: 8,
+  },
+  budgetProgressFill: {
+    height: "100%",
+    borderRadius: 2,
+  },
+  budgetProgressText: {
+    fontSize: 10,
+    color: "#666",
+    fontWeight: "600",
   },
   transactionRight: {
     alignItems: "flex-end",
@@ -1099,8 +1124,24 @@ const styles = StyleSheet.create({
   transactionCategory: {
     fontSize: 12,
     color: "#666",
+    marginBottom: 2,
+  },
+  transactionRemaining: {
+    fontSize: 11,
+    fontWeight: "600",
   },
   bottomSpacing: {
-    height:120,
-  }
+    height: 120,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f8f9fa",
+  },
+  loadingText: {
+    fontSize: 18,
+    color: "#666",
+    fontStyle: "italic",
+  },
 })

@@ -1,8 +1,11 @@
-import React, { useLayoutEffect, useState, useEffect, useCallback } from 'react';
+import React, {
+  useLayoutEffect,
+  useState,
+  useCallback,
+} from "react";
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
@@ -13,17 +16,20 @@ import {
   BackHandler,
   StatusBar,
   Animated,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import Colors from '@/constants/Colors';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import Colors from "@/constants/Colors";
+import { useWithdrawMoney } from "@/apis/transaction/withdraw-money";
+import { WithDrawInterface } from "@/types/transaction";
+import { showMessage } from "react-native-flash-message";
 
 const KEYS = [
-  ['1', '2', '3'],
-  ['4', '5', '6'],
-  ['7', '8', '9'],
-  ['.', '0', '<'],
+  ["1", "2", "3"],
+  ["4", "5", "6"],
+  ["7", "8", "9"],
+  [".", "0", "<"],
 ];
 
 const QUICK_AMOUNTS = [10, 50, 100, 250];
@@ -32,47 +38,45 @@ const Withdraw = () => {
   const router = useRouter();
   const navigation = useNavigation();
 
-  // Handle hardware back button
   useFocusEffect(
-          useCallback(() => {
-            const onBackPress = () => {
-              router.replace('/(tabs)'); 
-              return true;
-            };
-        
-            const backHandler = BackHandler.addEventListener(
-              'hardwareBackPress',
-              onBackPress
-            );
-        
-            return () => backHandler.remove();
-          }, [])
-        );
+    useCallback(() => {
+      const onBackPress = () => {
+        router.replace("/(tabs)");
+        return true;
+      };
+
+      const backHandler = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress
+      );
+
+      return () => backHandler.remove();
+    }, [])
+  );
 
   useLayoutEffect(() => {
     const parent = navigation.getParent();
-    if (parent) parent.setOptions({ tabBarStyle: { display: 'none' } });
+    if (parent) parent.setOptions({ tabBarStyle: { display: "none" } });
     return () => {
       if (parent) parent.setOptions({ tabBarStyle: undefined });
     };
   }, [navigation]);
 
-  const [amount, setAmount] = useState('');
-  const [note, setNote] = useState('');
+  const [amount, setAmount] = useState("");
   const [isAmountVisible, setIsAmountVisible] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(1));
 
   const numAmount = Number(amount);
-  const isAmountValid = amount !== '' && !isNaN(numAmount) && numAmount > 0;
+  const isAmountValid = amount !== "" && !isNaN(numAmount) && numAmount > 0;
+  const { mutate: withdrawMoney, isPending } = useWithdrawMoney();
 
   const onKeyPress = (key: string) => {
-    if (key === '<') {
+    if (key === "<") {
       setAmount((prev) => prev.slice(0, -1));
       return;
     }
-    if (key === '.') {
-      if (!amount.includes('.') && amount.length > 0) {
+    if (key === ".") {
+      if (!amount.includes(".") && amount.length > 0) {
         setAmount((prev) => prev + key);
       }
       return;
@@ -87,63 +91,92 @@ const Withdraw = () => {
   };
 
   const formatAmount = (value: string) => {
-    if (!value) return '0';
+    if (!value) return "0";
     const num = parseFloat(value);
-    return isNaN(num) ? value : num.toLocaleString('en-US');
+    return isNaN(num) ? value : num.toLocaleString("en-US");
   };
 
   const handleWithdraw = async () => {
     if (!isAmountValid) {
-      Alert.alert('Invalid Amount', 'Please enter a valid withdrawal amount.');
+      Alert.alert("Invalid Amount", "Please enter a valid withdrawal amount.");
       return;
     }
 
     if (numAmount < 1) {
-      Alert.alert('Minimum Amount', 'Minimum withdrawal amount is $1.');
+      Alert.alert("Minimum Amount", "Minimum withdrawal amount is $1.");
       return;
     }
 
     if (numAmount > 2500) {
-      Alert.alert('Maximum Amount', 'Maximum withdrawal amount is $2,500 per transaction.');
+      Alert.alert(
+        "Maximum Amount",
+        "Maximum withdrawal amount is $2,500 per transaction."
+      );
       return;
     }
 
-    // Simulate processing
-    setIsProcessing(true);
-    Animated.timing(fadeAnim, {
-      toValue: 0.6,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-
+    const props: WithDrawInterface = {
+      amount: Number(amount),
+    };
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      Alert.alert(
-        'Withdrawal Successful',
-        `${formatAmount(amount)} has been withdrawn successfully.${note ? `\n\nNote: ${note}` : ''}`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setAmount('');
-              setNote('');
-              router.replace('/(tabs)');
-            }
+      withdrawMoney(props, {
+        onSuccess: (data) => {
+          if (data.success) {
+            showMessage({
+              message: data.message || "Money withdrawn successfully!",
+              type: "success",
+            });
+            router.push("/(tabs)");
+          } else {
+            showMessage({
+              message: data.message || "Failed to withdraw Money!",
+              type: "danger",
+            });
           }
-        ]
-      );
-    } catch (error) {
-      Alert.alert('Error', 'Withdrawal failed. Please try again.');
-    } finally {
-      setIsProcessing(false);
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+        },
+        onError: () => {
+          showMessage({
+            message: "Failed to withdraw Money!",
+            type: "danger",
+          });
+        },
+      });
+    } catch {
+      showMessage({
+        message: "Failed to withdraw Money!",
+        type: "danger",
+      });
     }
   };
+
+  //       if (response.success) {
+  //         Alert.alert (
+  //           'Withdraw Successful',
+  //           `${formatAmount(amount)} has been withdrawn successfully.`,
+  //        [
+  //           {
+  //             text: 'OK',
+  //             onPress: () => {
+  //               setAmount('');
+  //               router.replace('/(tabs)');
+  //             }
+  //           }
+  //         ]
+  //       );
+  //       } else {
+  //          Alert.alert('Failed', response.message || 'Something went wrong.');
+  //     }
+  //   } catch (error) {
+  //     Alert.alert('Error', error.message || 'Withdrawal failed. Please try again.');
+  //   } finally {
+  //     setIsProcessing(false);
+  //     Animated.timing(fadeAnim, {
+  //       toValue: 1,
+  //       duration: 300,
+  //       useNativeDriver: true,
+  //     }).start();
+  //   }
+  // };
 
   return (
     <>
@@ -151,50 +184,56 @@ const Withdraw = () => {
       <SafeAreaView style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity 
-            onPress={() => router.replace('/(tabs)')} 
+          <TouchableOpacity
+            onPress={() => router.replace("/(tabs)")}
             style={styles.backButton}
             activeOpacity={0.7}
-            disabled={isProcessing}
+            disabled={isPending}
           >
-            <Ionicons 
-              name="arrow-back" 
-              size={24} 
-              color={isProcessing ? '#B3C5D7' : '#ffffff'} 
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color={isPending ? "#B3C5D7" : "#ffffff"}
             />
           </TouchableOpacity>
           <View style={styles.headerContent}>
             <Text style={styles.headerText}>Withdraw Money</Text>
-            <Text style={styles.headerSubtext}>Transfer money from your wallet</Text>
+            <Text style={styles.headerSubtext}>
+              Transfer money from your wallet
+            </Text>
           </View>
         </View>
 
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.content}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
         >
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <Animated.View style={[styles.animatedContainer, { opacity: fadeAnim }]}>
+            <Animated.View
+              style={[styles.animatedContainer, { opacity: fadeAnim }]}
+            >
               {/* Amount Display */}
               <View style={styles.amountSection}>
-                <Text style={styles.currencySymbol}>$</Text>
+                <Text style={styles.currencySymbol}>NPR</Text>
                 <View style={styles.amountDisplayContainer}>
                   <Text style={styles.amountDisplay}>
-                    {isAmountVisible ? formatAmount(amount) : amount.replace(/./g, '•')}
+                    {isAmountVisible
+                      ? formatAmount(amount)
+                      : amount.replace(/./g, "•")}
                   </Text>
                   <TouchableOpacity
                     onPress={() => setIsAmountVisible((prev) => !prev)}
                     style={styles.visibilityButton}
                     activeOpacity={0.7}
-                    disabled={isProcessing}
+                    disabled={isPending}
                   >
                     <Ionicons
-                      name={isAmountVisible ? 'eye-outline' : 'eye-off-outline'}
+                      name={isAmountVisible ? "eye-outline" : "eye-off-outline"}
                       size={20}
                       color="#B3C5D7"
                     />
@@ -211,19 +250,21 @@ const Withdraw = () => {
                       key={quickAmount}
                       style={[
                         styles.quickAmountButton,
-                        amount === quickAmount.toString() && styles.quickAmountButtonActive,
+                        amount === quickAmount.toString() &&
+                          styles.quickAmountButtonActive,
                       ]}
                       onPress={() => setQuickAmount(quickAmount)}
                       activeOpacity={0.7}
-                      disabled={isProcessing}
+                      disabled={isPending}
                     >
                       <Text
                         style={[
                           styles.quickAmountText,
-                          amount === quickAmount.toString() && styles.quickAmountTextActive,
+                          amount === quickAmount.toString() &&
+                            styles.quickAmountTextActive,
                         ]}
                       >
-                        ${quickAmount.toLocaleString('en-US')}
+                        {quickAmount.toLocaleString("en-US")}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -242,14 +283,18 @@ const Withdraw = () => {
                         key={key}
                         style={[
                           styles.key,
-                          key === '<' ? styles.keySpecial : styles.keyNormal,
+                          key === "<" ? styles.keySpecial : styles.keyNormal,
                         ]}
                         onPress={() => onKeyPress(key)}
                         activeOpacity={0.7}
-                        disabled={isProcessing}
+                        disabled={isPending}
                       >
-                        {key === '<' ? (
-                          <Ionicons name="backspace-outline" size={22} color="#ffffff" />
+                        {key === "<" ? (
+                          <Ionicons
+                            name="backspace-outline"
+                            size={22}
+                            color="#ffffff"
+                          />
                         ) : (
                           <Text style={styles.keyText}>{key}</Text>
                         )}
@@ -259,44 +304,35 @@ const Withdraw = () => {
                 ))}
               </View>
 
-              {/* Note Input */}
-              <View style={styles.noteSection}>
-                <Text style={styles.noteLabel}>Add a note (optional)</Text>
-                <TextInput
-                  style={styles.noteInput}
-                  placeholder="Enter withdrawal purpose or note..."
-                  multiline
-                  numberOfLines={3}
-                  placeholderTextColor="#8E8E93"
-                  value={note}
-                  onChangeText={setNote}
-                  maxLength={100}
-                  editable={!isProcessing}
-                  textAlignVertical="top"
-                />
-                <Text style={styles.characterCount}>{note.length}/100</Text>
-              </View>
-
               {/* Withdraw Button */}
               <TouchableOpacity
                 style={[
                   styles.withdrawButton,
-                  (!isAmountValid || isProcessing) && styles.withdrawButtonDisabled,
+                  (!isAmountValid || isPending) &&
+                    styles.withdrawButtonDisabled,
                 ]}
                 onPress={handleWithdraw}
-                disabled={!isAmountValid || isProcessing}
+                disabled={!isAmountValid || isPending}
                 activeOpacity={0.8}
               >
-                {isProcessing ? (
+                {isPending ? (
                   <View style={styles.loadingContainer}>
-                    <Ionicons name="hourglass-outline" size={20} color="#ffffff" />
+                    <Ionicons
+                      name="hourglass-outline"
+                      size={20}
+                      color="#ffffff"
+                    />
                     <Text style={styles.loadingText}>Processing...</Text>
                   </View>
                 ) : (
                   <View style={styles.buttonContent}>
-                    <Ionicons name="arrow-up-circle-outline" size={20} color="#ffffff" />
+                    <Ionicons
+                      name="arrow-up-circle-outline"
+                      size={20}
+                      color="#ffffff"
+                    />
                     <Text style={styles.withdrawButtonText}>
-                      Withdraw{amount ? ` ${formatAmount(amount)}` : ''}
+                      Withdraw{amount ? ` ${formatAmount(amount)}` : ""}
                     </Text>
                   </View>
                 )}
@@ -304,7 +340,11 @@ const Withdraw = () => {
 
               {/* Security Notice */}
               <View style={styles.securityNotice}>
-                <Ionicons name="shield-checkmark-outline" size={16} color="#8E8E93" />
+                <Ionicons
+                  name="shield-checkmark-outline"
+                  size={16}
+                  color="#8E8E93"
+                />
                 <Text style={styles.securityText}>
                   Your transaction is secured with bank-level encryption
                 </Text>
@@ -323,19 +363,19 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 20,
-    marginTop: Platform.OS === 'ios' ? 50 : 40,
+    marginTop: Platform.OS === "ios" ? 20 : 20,
     marginBottom: 16,
   },
   backButton: {
     padding: 8,
     borderRadius: 25,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: "rgba(255,255,255,0.2)",
     marginRight: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerContent: {
     flex: 1,
@@ -343,13 +383,13 @@ const styles = StyleSheet.create({
   },
   headerText: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#ffffff',
+    fontWeight: "700",
+    color: "#ffffff",
     letterSpacing: -0.3,
   },
   headerSubtext: {
     fontSize: 14,
-    color: '#B3C5D7',
+    color: "#B3C5D7",
     marginTop: 4,
   },
   content: {
@@ -362,29 +402,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   amountSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 40,
     marginBottom: 20,
   },
   currencySymbol: {
     fontSize: 32,
-    fontWeight: '600',
-    color: '#B3C5D7',
+    fontWeight: "600",
+    color: "#B3C5D7",
     marginRight: 8,
   },
   amountDisplayContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
   },
   amountDisplay: {
     fontSize: 48,
-    fontWeight: '700',
-    color: '#ffffff',
+    fontWeight: "700",
+    color: "#ffffff",
     flex: 1,
-    textAlign: 'left',
+    textAlign: "left",
   },
   visibilityButton: {
     padding: 8,
@@ -395,39 +435,39 @@ const styles = StyleSheet.create({
   },
   quickAmountLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#B3C5D7',
+    fontWeight: "600",
+    color: "#B3C5D7",
     marginBottom: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
   quickAmountContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   quickAmountButton: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     borderRadius: 12,
     paddingVertical: 12,
     marginHorizontal: 4,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   quickAmountButtonActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderColor: '#ffffff',
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderColor: "#ffffff",
   },
   quickAmountText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#B3C5D7',
+    fontWeight: "600",
+    color: "#B3C5D7",
   },
   quickAmountTextActive: {
-    color: '#ffffff',
+    color: "#ffffff",
   },
   keyboardSection: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: 24,
@@ -439,8 +479,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   keyboardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 12,
   },
   key: {
@@ -448,53 +488,26 @@ const styles = StyleSheet.create({
     height: 56,
     marginHorizontal: 6,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   keyNormal: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: "#F8F9FA",
   },
   keySpecial: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: "#E3F2FD",
   },
   keyText: {
     fontSize: 24,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.primary,
-  },
-  noteSection: {
-    marginBottom: 24,
-  },
-  noteLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1C1C1E',
-    marginBottom: 8,
-  },
-  noteInput: {
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#F8F9FA',
-    color: '#1C1C1E',
-    fontSize: 16,
-    minHeight: 80,
-    maxHeight: 120,
-  },
-  characterCount: {
-    fontSize: 12,
-    color: '#8E8E93',
-    textAlign: 'right',
-    marginTop: 4,
   },
   withdrawButton: {
     backgroundColor: Colors.primary,
     borderRadius: 16,
     paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 16,
     shadowColor: Colors.primary,
     shadowOffset: {
@@ -506,41 +519,41 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   withdrawButtonDisabled: {
-    backgroundColor: '#B0BEC5',
+    backgroundColor: "#B0BEC5",
     shadowOpacity: 0,
     elevation: 0,
   },
   buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   withdrawButtonText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     marginLeft: 8,
   },
   loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   loadingText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 12,
   },
   securityNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 16,
   },
   securityText: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: "#8E8E93",
     marginLeft: 6,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });
 

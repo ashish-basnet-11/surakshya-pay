@@ -20,33 +20,57 @@ def get_statistics(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    # Calculate total income (DEPOSIT transactions)
     total_income = db.query(func.sum(Transaction.amount)).filter(
         Transaction.user_id == current_user.id,
-        Transaction.transaction_type == 'income'
+        Transaction.transaction_type == 'DEPOSIT'
     ).scalar() or 0.0
 
-    total_expense = db.query(func.sum(Transaction.amount)).filter(
+    # Calculate total expenses (WITHDRAWAL transactions + outgoing TRANSFER transactions)
+    total_withdrawals = db.query(func.sum(Transaction.amount)).filter(
         Transaction.user_id == current_user.id,
-        Transaction.transaction_type == 'expense'
+        Transaction.transaction_type == 'WITHDRAWAL'
     ).scalar() or 0.0
+    
+    # For transfers, we need to determine outgoing vs incoming
+    # Outgoing transfers (negative amounts or descriptions containing 'to')
+    outgoing_transfers = db.query(func.sum(Transaction.amount)).filter(
+        Transaction.user_id == current_user.id,
+        Transaction.transaction_type == 'TRANSFER',
+        Transaction.amount < 0
+    ).scalar() or 0.0
+    
+    # Also include transfers with descriptions indicating outgoing
+    outgoing_transfers_desc = db.query(func.sum(Transaction.amount)).filter(
+        Transaction.user_id == current_user.id,
+        Transaction.transaction_type == 'TRANSFER',
+        Transaction.description.ilike('%to%')
+    ).scalar() or 0.0
+    
+    total_expense = abs(total_withdrawals) + abs(outgoing_transfers) + abs(outgoing_transfers_desc)
 
-    balance = current_user.balance
+    # Get user balance
+    balance = float(current_user.balance) if current_user.balance else 0.0
 
+    # Calculate spending by category (for WITHDRAWAL and outgoing TRANSFER transactions)
     spending_by_category_query = db.query(
         Transaction.category,
-        func.sum(Transaction.amount)
+        func.sum(func.abs(Transaction.amount))
     ).filter(
         Transaction.user_id == current_user.id,
-        Transaction.transaction_type == 'expense'
+        Transaction.transaction_type.in_(['WITHDRAWAL', 'TRANSFER'])
     ).group_by(Transaction.category).all()
 
     spending_by_category: Dict[str, float] = {row[0]: row[1] for row in spending_by_category_query}
 
+    # Transaction statistics
     transaction_count = db.query(Transaction).filter(Transaction.user_id == current_user.id).count()
-    average_transaction_amount = db.query(func.avg(Transaction.amount)).filter(Transaction.user_id == current_user.id).scalar() or 0.0
-    min_transaction_amount = db.query(func.min(Transaction.amount)).filter(Transaction.user_id == current_user.id).scalar() or 0.0
-    max_transaction_amount = db.query(func.max(Transaction.amount)).filter(Transaction.user_id == current_user.id).scalar() or 0.0
-    recent_transactions_query = db.query(Transaction).filter(Transaction.user_id == current_user.id).order_by(Transaction.timestamp.desc()).limit(5).all()
+    average_transaction_amount = db.query(func.avg(func.abs(Transaction.amount))).filter(Transaction.user_id == current_user.id).scalar() or 0.0
+    min_transaction_amount = db.query(func.min(func.abs(Transaction.amount))).filter(Transaction.user_id == current_user.id).scalar() or 0.0
+    max_transaction_amount = db.query(func.max(func.abs(Transaction.amount))).filter(Transaction.user_id == current_user.id).scalar() or 0.0
+    
+    # Get recent transactions
+    recent_transactions_query = db.query(Transaction).filter(Transaction.user_id == current_user.id).order_by(Transaction.timestamp.desc()).limit(8).all()
     recent_transactions = [
         {
             "id": t.id,
@@ -58,6 +82,7 @@ def get_statistics(
         }
         for t in recent_transactions_query
     ]
+    
     stats = Statistics(
         total_income=total_income,
         total_expense=total_expense,

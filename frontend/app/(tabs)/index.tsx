@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,153 +8,208 @@ import {
   SafeAreaView,
   StatusBar,
   TouchableOpacity,
-  Dimensions,
   Platform,
   Animated,
   RefreshControl,
   BackHandler,
-} from "react-native"
-import { Ionicons } from "@expo/vector-icons"
-import { LinearGradient } from "expo-linear-gradient"
-import { BlurView } from "expo-blur"
-import Colors from "@/constants/Colors"
-import { useRouter } from "expo-router"
-import { useFocusEffect } from "@react-navigation/native"
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
+import Colors from "@/constants/Colors";
+import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
+import { useAuthStore } from "@/store/use-auth-store";
+import {
+  BadgeAlert,
+  BadgeCheck,
+  BanknoteArrowDown,
+  BanknoteArrowUp,
+  Send,
+} from "lucide-react-native";
+import { useCurrentUserDetail } from "@/apis/users/get-user-detail";
+import Loader from "@/components/Loader";
+import { useGetUserTransaction } from "@/apis/transaction/get-user-transaction";
+import { formatDateTime } from "@/utils/helpers";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window")
+// Function to get transaction display properties based on type
+const getTransactionDisplayProps = (transaction: any) => {
+  const baseProps = {
+    icon: "help-circle-outline" as any,
+    color: Colors.textSecondary,
+    bgColor: Colors.textSecondary + "15",
+    amountPrefix: "",
+    amountColor: Colors.textPrimary,
+  };
+
+  switch (transaction.transaction_type?.toUpperCase()) {
+    case "DEPOSIT":
+      return {
+        ...baseProps,
+        icon: "add-circle-outline",
+        color: Colors.success,
+        bgColor: Colors.success + "15",
+        amountPrefix: "+",
+        amountColor: Colors.success,
+      };
+
+    case "WITHDRAWAL":
+      return {
+        ...baseProps,
+        icon: "remove-circle-outline",
+        color: Colors.error,
+        bgColor: Colors.error + "15",
+        amountPrefix: "-",
+        amountColor: Colors.error,
+      };
+
+    case "TRANSFER":
+      // For transfers, we need to determine if this is money sent or received
+      // Based on the transaction description and amount
+      const isOutgoing = transaction.description
+        ?.toLowerCase()
+        .includes("transfer");
+      const isIncoming = transaction.description
+        ?.toLowerCase()
+        .includes("received");
+
+      // If it's clearly outgoing, show as negative
+      if (isOutgoing && !isIncoming) {
+        return {
+          ...baseProps,
+          icon: "remove-circle-outline",
+          color: Colors.warning,
+          bgColor: Colors.warning + "15",
+          amountPrefix: "-",
+          amountColor: Colors.warning,
+        };
+      }
+      // If it's clearly incoming, show as positive
+      else if (isIncoming && !isOutgoing) {
+        return {
+          ...baseProps,
+          icon: "arrow-up-circle-outline",
+          color: Colors.success,
+          bgColor: Colors.success + "15",
+          amountPrefix: "+",
+          amountColor: Colors.success,
+        };
+      }
+      // Default: use amount sign to determine
+      else {
+        const isPositive = transaction.amount > 0;
+        return {
+          ...baseProps,
+          icon: isPositive
+            ? "arrow-down-circle-outline"
+            : "arrow-up-circle-outline",
+          color: isPositive ? Colors.success : Colors.info,
+          bgColor: isPositive ? Colors.success + "15" : Colors.info + "15",
+          amountPrefix: isPositive ? "+" : "-",
+          amountColor: isPositive ? Colors.success : Colors.info,
+        };
+      }
+
+    default:
+      return baseProps;
+  }
+};
 
 const BankingWalletUI = () => {
-  const [isBalanceVisible, setIsBalanceVisible] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  const router = useRouter()
-  const scrollY = useRef(new Animated.Value(0)).current
+  const [isBalanceVisible, setIsBalanceVisible] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const router = useRouter();
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const { data, isLoading, refetch: refetchUser } = useCurrentUserDetail({});
+  const { data: transactions, isLoading: isTransactionsLoading, refetch: refetchTransactions } =
+    useGetUserTransaction({});
 
-   useFocusEffect(
-           useCallback(() => {
-             const onBackPress = () => {
-               router.replace('/(tabs)'); 
-               return true;
-             };
-         
-             const backHandler = BackHandler.addEventListener(
-               'hardwareBackPress',
-               onBackPress
-             );
-         
-             return () => backHandler.remove();
-           }, [])
-         );
+  useEffect(() => {
+    if (data?.data) {
+      useAuthStore.getState().setUser(data?.data);
+    }
+  }, [data]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        router.replace("/(tabs)");
+        return true;
+      };
+
+      const backHandler = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress
+      );
+
+      return () => backHandler.remove();
+    }, [])
+  );
 
   const toggleBalanceVisibility = () => {
-    setIsBalanceVisible(!isBalanceVisible)
-  }
+    setIsBalanceVisible(!isBalanceVisible);
+  };
 
-  const onRefresh = () => {
-    setRefreshing(true)
-    setTimeout(() => {
-      setRefreshing(false)
-    }, 2000)
-  }
-
-  const transactions = [
-    {
-      id: 1,
-      name: "Adobe Creative Suite",
-      date: "Today • 2:30 PM",
-      amount: -59.99,
-      status: "completed",
-      icon: "brush-outline",
-      color: Colors.error,
-      bgColor: Colors.error + "15",
-    },
-    {
-      id: 2,
-      name: "Freelance Payment",
-      date: "Yesterday • 4:15 PM",
-      amount: 2850.0,
-      status: "completed",
-      icon: "briefcase-outline",
-      color: Colors.success,
-      bgColor: Colors.success + "15",
-    },
-    {
-      id: 3,
-      name: "Microsoft 365",
-      date: "Dec 18 • 9:00 AM",
-      amount: -12.99,
-      status: "completed",
-      icon: "laptop-outline",
-      color: Colors.warning,
-      bgColor: Colors.warning + "15",
-    },
-    {
-      id: 4,
-      name: "Investment Return",
-      date: "Dec 17 • 11:30 AM",
-      amount: 450.75,
-      status: "pending",
-      icon: "trending-up-outline",
-      color: Colors.info,
-      bgColor: Colors.info + "15",
-    },
-  ]
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        refetchUser(),
+        refetchTransactions()
+      ]);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const actionButtons = [
     {
+      name: "Send Money",
+      icon: <Send size={22} color={Colors.textInverse} />,
+      gradient: [Colors.neutral900, Colors.neutral600] as const,
+      route: "/(tabs)/(index)/sendMoney" as any,
+      description: "Transfer money to others",
+    },
+    {
       name: "Add Money",
-      icon: "add-circle-outline",
-      gradient: [Colors.success, Colors.accentLight],
-      route: "/(tabs)/(index)/topup",
+      icon: <BanknoteArrowUp size={22} color={Colors.textInverse} />,
+      gradient: [Colors.success, Colors.accentLight] as const,
+      route: "/(tabs)/(index)/topup" as any,
       description: "Top up wallet",
     },
     {
       name: "Withdraw",
-      icon: "arrow-up-circle-outline",
-      gradient: [Colors.secondary, Colors.secondaryLight],
-      route: "/(tabs)/(index)/withdraw",
+      icon: <BanknoteArrowDown size={22} color={Colors.textInverse} />,
+      gradient: [Colors.secondary, Colors.secondaryLight] as const,
+      route: "/(tabs)/(index)/withdraw" as any,
       description: "Transfer funds",
     },
-    {
-      name: "Analytics",
-      icon: "analytics-outline",
-      gradient: [Colors.warning, "#FCD34D"],
-      route: "/(tabs)/(index)/details",
-      description: "View insights",
-    },
-  ]
-
-  const quickStats = [
-    {
-      label: "This Month",
-      value: "$12,450",
-      change: "+12.5%",
-      positive: true,
-      icon: "calendar-outline",
-    },
-    {
-      label: "Last 30 Days",
-      value: "$8,920",
-      change: "-3.2%",
-      positive: false,
-      icon: "time-outline",
-    },
-  ]
+  ];
 
   const headerOpacity = scrollY.interpolate({
     inputRange: [0, 100],
     outputRange: [1, 0.8],
     extrapolate: "clamp",
-  })
+  });
 
   const headerTranslateY = scrollY.interpolate({
     inputRange: [0, 100],
     outputRange: [0, 0],
     extrapolate: "clamp",
-  })
+  });
+
+  if (isLoading || isTransactionsLoading) {
+    return <Loader />;
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.primaryLight} />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryLight}
+      />
 
       {/* Animated Header */}
       <Animated.View
@@ -174,38 +229,75 @@ const BankingWalletUI = () => {
         >
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <TouchableOpacity style={styles.avatarContainer} onPress={() => router.push('/(tabs)/(settings)/profile-details')}>
-                <LinearGradient colors={[Colors.secondary, Colors.secondaryLight]} style={styles.avatarGradient}>
-                  <Text style={styles.avatarText}>EP</Text>
+              <TouchableOpacity
+                style={styles.avatarContainer}
+                onPress={() =>
+                  router.push("/(tabs)/(settings)/profile-details")
+                }
+              >
+                <LinearGradient
+                  colors={[Colors.secondary, Colors.secondaryLight]}
+                  style={styles.avatarGradient}
+                >
+                  <Text style={styles.avatarText}>AB</Text>
                 </LinearGradient>
                 <View style={styles.onlineIndicator} />
               </TouchableOpacity>
               <View style={styles.welcomeContainer}>
                 <Text style={styles.welcomeText}>Good afternoon</Text>
-                <Text style={styles.userName}>Eleanor Pena</Text>
-                <View style={styles.premiumBadge}>
-                  <Ionicons name="star" size={10} color="#FFD700" />
-                  <Text style={styles.premiumText}>Premium</Text>
-                </View>
+                <Text style={styles.userName}>
+                  {useAuthStore.getState().user?.full_name}
+                </Text>
+                {useAuthStore.getState().user?.kyc_status === "approved" ? (
+                  <View style={styles.premiumBadge}>
+                    <BadgeCheck size={12} color={Colors.success} />
+                    <Text style={styles.premiumText}>Verified</Text>
+                  </View>
+                ) : (
+                  <View style={styles.premiumBadge1}>
+                    <BadgeAlert size={12} color={Colors.warning} />
+                    <Text style={styles.premiumText1}>Pending</Text>
+                  </View>
+                )}
               </View>
             </View>
 
             <View style={styles.headerActions}>
-              <TouchableOpacity style={styles.headerButton} onPress={() => router.push("/scan")}>
+              <TouchableOpacity
+                style={styles.headerButton}
+                onPress={() => router.push("/scan")}
+              >
                 <LinearGradient
-                  colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.2)"]}
+                  colors={[
+                    "rgba(255, 255, 255, 0.1)",
+                    "rgba(255, 255, 255, 0.2)",
+                  ]}
                   style={styles.headerButtonGradient}
                 >
-                  <Ionicons name="qr-code-outline" size={20} color={Colors.textInverse} />
+                  <Ionicons
+                    name="qr-code-outline"
+                    size={20}
+                    color={Colors.textInverse}
+                  />
                 </LinearGradient>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.headerButton} onPress={() => router.push("/notification")}>
+              <TouchableOpacity
+                style={styles.headerButton}
+                onPress={() => router.push("/notification")}
+              >
                 <LinearGradient
-                  colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.2)"]}
+                  colors={[
+                    "rgba(255, 255, 255, 0.1)",
+                    "rgba(255, 255, 255, 0.2)",
+                  ]}
                   style={styles.headerButtonGradient}
                 >
-                  <Ionicons name="notifications-outline" size={20} color={Colors.textInverse} />
+                  <Ionicons
+                    name="notifications-outline"
+                    size={20}
+                    color={Colors.textInverse}
+                  />
                   <View style={styles.notificationBadge} />
                 </LinearGradient>
               </TouchableOpacity>
@@ -218,7 +310,10 @@ const BankingWalletUI = () => {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
         scrollEventThrottle={16}
         refreshControl={
           <RefreshControl
@@ -248,10 +343,19 @@ const BankingWalletUI = () => {
                   <Text style={styles.balanceLabel}>Available Balance</Text>
                   <View style={styles.balanceLabelUnderline} />
                 </View>
-                <TouchableOpacity style={styles.eyeButton} onPress={toggleBalanceVisibility}>
-                  <BlurView intensity={20} tint="light" style={styles.eyeButtonBlur}>
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={toggleBalanceVisibility}
+                >
+                  <BlurView
+                    intensity={20}
+                    tint="light"
+                    style={styles.eyeButtonBlur}
+                  >
                     <Ionicons
-                      name={isBalanceVisible ? "eye-outline" : "eye-off-outline"}
+                      name={
+                        isBalanceVisible ? "eye-outline" : "eye-off-outline"
+                      }
                       size={18}
                       color={Colors.textInverse}
                     />
@@ -260,9 +364,41 @@ const BankingWalletUI = () => {
               </View>
 
               <View style={styles.balanceContent}>
-                <Text style={styles.balance}>{isBalanceVisible ? "$124,580.50" : "$•••,•••.••"}</Text>
+                <View
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    alignItems: "flex-end",
+                    gap: 2,
+                  }}
+                >
+                  {isBalanceVisible ? (
+                    <View
+                      style={{
+                        display: "flex",
+                        flexDirection: "row",
+                        alignItems: "flex-end",
+                        gap: 2,
+                      }}
+                    >
+                      <Text style={styles.balanceCurrency}>
+                        NPR
+                        {/* {isBalanceVisible ? "NPR 124,580.50" : "$•••,•••.••"} */}
+                      </Text>
+                      <Text style={styles.balance}>
+                        {` ${parseFloat(
+                          useAuthStore.getState().user?.balance || "0"
+                        ).toFixed(2)}`}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.balance}>XXX.XX</Text>
+                  )}
+                </View>
                 <View style={styles.balanceChange}>
-                  <Text style={styles.balanceChangeText}>Your Transactions, Zero Exposure</Text>
+                  <Text style={styles.balanceChangeText}>
+                    Your Transactions, Zero Exposure
+                  </Text>
                 </View>
               </View>
 
@@ -307,29 +443,48 @@ const BankingWalletUI = () => {
           <View style={styles.actionsContainer}>
             {actionButtons.map((action, index) => {
               const handlePress = () => {
-                router.push(action.route)
-              }
+                router.push(action.route);
+              };
 
               return (
-                <TouchableOpacity key={index} style={styles.actionButton} onPress={handlePress} activeOpacity={0.8}>
+                <TouchableOpacity
+                  key={index}
+                  style={styles.actionButton}
+                  onPress={handlePress}
+                  activeOpacity={0.8}
+                >
                   <View style={styles.actionButtonCard}>
-                    <LinearGradient colors={action.gradient} style={styles.actionButtonGradient}>
+                    <LinearGradient
+                      colors={action.gradient}
+                      style={styles.actionButtonGradient}
+                    >
                       <View style={styles.actionIconContainer}>
-                        <Ionicons name={action.icon} size={22} color={Colors.textInverse} />
+                        {/* <Ionicons
+                          name={action.icon}
+                          size={22}
+                          color={Colors.textInverse}
+                        /> */}
+                        {action.icon}
                       </View>
                     </LinearGradient>
 
                     <View style={styles.actionTextContainer}>
                       <Text style={styles.actionText}>{action.name}</Text>
-                      <Text style={styles.actionDescription}>{action.description}</Text>
+                      <Text style={styles.actionDescription}>
+                        {action.description}
+                      </Text>
                     </View>
 
                     <View style={styles.actionArrow}>
-                      <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+                      <Ionicons
+                        name="chevron-forward"
+                        size={16}
+                        color={Colors.textSecondary}
+                      />
                     </View>
                   </View>
                 </TouchableOpacity>
-              )
+              );
             })}
           </View>
         </View>
@@ -337,81 +492,108 @@ const BankingWalletUI = () => {
         {/* Enhanced Transactions */}
         <View style={styles.transactionsSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Activity</Text>
-            <TouchableOpacity onPress={() => router.push("/(tabs)/wallet")}>
+            <Text style={styles.sectionTitle}>Recent Transactions</Text>
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/(index)/details")}
+            >
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.transactionsContainer}>
-            {transactions.map((transaction, index) => (
-              <TouchableOpacity
-                key={transaction.id}
-                style={[styles.transactionItem, index === transactions.length - 1 && styles.lastTransactionItem]}
-                activeOpacity={0.7}
-              >
-                <View style={styles.transactionLeft}>
-                  <View style={styles.transactionIconContainer}>
-                    <View style={[styles.transactionIconBg, { backgroundColor: transaction.bgColor }]}>
-                      <Ionicons name={transaction.icon} size={20} color={transaction.color} />
-                    </View>
-                    <View
-                      style={[
-                        styles.transactionStatusIndicator,
-                        {
-                          backgroundColor: transaction.status === "completed" ? Colors.success : Colors.warning,
-                        },
-                      ]}
-                    />
-                  </View>
-
-                  <View style={styles.transactionDetails}>
-                    <Text style={styles.transactionName}>{transaction.name}</Text>
-                    <View style={styles.transactionMeta}>
-                      <View style={styles.categoryBadge}>
-                        <Text style={styles.transactionCategory}>{transaction.category}</Text>
+            {transactions.data?.slice(0, 5).map((transaction, index) => {
+              const { icon, color, bgColor, amountPrefix, amountColor } =
+                getTransactionDisplayProps(transaction);
+              return (
+                <TouchableOpacity
+                  key={transaction.id}
+                  style={[
+                    styles.transactionItem,
+                    index === (transactions.data?.length ?? 1) - 1 &&
+                      styles.lastTransactionItem,
+                  ]}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.transactionLeft}>
+                    <View style={styles.transactionIconContainer}>
+                      <View
+                        style={[
+                          styles.transactionIconBg,
+                          { backgroundColor: bgColor },
+                        ]}
+                      >
+                        <Ionicons name={icon} size={20} color={color} />
                       </View>
-                      <View style={styles.transactionDot} />
-                      <Text style={styles.transactionDate}>{transaction.date}</Text>
+                      {/* <View
+                        style={[
+                          styles.transactionStatusIndicator,
+                          {
+                            backgroundColor:
+                              transaction.is_completed
+                                ? Colors.success
+                                : Colors.warning,
+                          },
+                        ]}
+                      /> */}
+                    </View>
+
+                    <View style={styles.transactionDetails}>
+                      <Text style={styles.transactionName}>
+                        {transaction.transaction_type.toUpperCase()}
+                      </Text>
+                      <View style={styles.transactionMeta}>
+                        <Text style={styles.transactionDate}>
+                          {transaction.description}
+                        </Text>
+                        <View style={styles.transactionDot} />
+                        <Text style={styles.transactionDate}>
+                          {formatDateTime(transaction.timestamp)}
+                        </Text>
+                      </View>
                     </View>
                   </View>
-                </View>
 
-                <View style={styles.transactionRight}>
-                  <Text
-                    style={[
-                      styles.transactionAmount,
-                      {
-                        color: transaction.amount > 0 ? Colors.success : Colors.textPrimary,
-                      },
-                    ]}
-                  >
-                    {transaction.amount > 0 ? "+" : ""}$
-                    {Math.abs(transaction.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                  </Text>
-                  <View
-                    style={[
-                      styles.transactionStatusBadge,
-                      {
-                        backgroundColor:
-                          transaction.status === "completed" ? Colors.success + "20" : Colors.warning + "20",
-                      },
-                    ]}
-                  >
+                  <View style={styles.transactionRight}>
                     <Text
                       style={[
-                        styles.transactionStatusText,
+                        styles.transactionAmount,
                         {
-                          color: transaction.status === "completed" ? Colors.success : Colors.warning,
+                          color: amountColor,
                         },
                       ]}
                     >
-                      {transaction.status}
+                      {amountPrefix}NPR{" "}
+                      {Math.abs(transaction.amount).toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                      })}
                     </Text>
+                    <View
+                      style={[
+                        styles.transactionStatusBadge,
+                        {
+                          backgroundColor: transaction.is_completed
+                            ? Colors.success + "20"
+                            : Colors.warning + "20",
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.transactionStatusText,
+                          {
+                            color: transaction.is_completed
+                              ? Colors.success
+                              : Colors.warning,
+                          },
+                        ]}
+                      >
+                        {transaction.is_completed ? "Completed" : "Pending"}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              </TouchableOpacity>
-            ))}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -420,12 +602,18 @@ const BankingWalletUI = () => {
           <Text style={styles.sectionTitle}>Financial Insights</Text>
           <View style={styles.insightsContainer}>
             <View style={styles.insightCard}>
-              <LinearGradient colors={[Colors.info + "20", Colors.info + "10"]} style={styles.insightGradient}>
+              <LinearGradient
+                colors={[Colors.info + "20", Colors.info + "10"]}
+                style={styles.insightGradient}
+              >
                 <View style={styles.insightIcon}>
                   <Ionicons name="bulb-outline" size={20} color={Colors.info} />
                 </View>
                 <Text style={styles.insightTitle}>Smart Saving Tip</Text>
-                <Text style={styles.insightText}>You're spending 15% less on subscriptions this month. Great job!</Text>
+                <Text style={styles.insightText}>
+                  You&apos;re spending 15% less on subscriptions this month.
+                  Great job!
+                </Text>
               </LinearGradient>
             </View>
           </View>
@@ -435,8 +623,8 @@ const BankingWalletUI = () => {
         <View style={styles.bottomSpacing} />
       </Animated.ScrollView>
     </SafeAreaView>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -454,7 +642,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === "ios" ? 20 : 40,
+    paddingTop: Platform.OS === "ios" ? 20 : 20,
   },
   headerLeft: {
     flexDirection: "row",
@@ -513,14 +701,29 @@ const styles = StyleSheet.create({
   premiumBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 215, 0, 0.2)",
+    backgroundColor: "rgba(16, 185, 129, 0.2)",
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
     alignSelf: "flex-start",
   },
   premiumText: {
-    color: "#FFD700",
+    color: Colors.success,
+    fontSize: 10,
+    fontWeight: "600",
+    marginLeft: 4,
+  },
+  premiumBadge1: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(245, 158, 11, 0.2)",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    alignSelf: "flex-start",
+  },
+  premiumText1: {
+    color: Colors.warning,
     fontSize: 10,
     fontWeight: "600",
     marginLeft: 4,
@@ -552,7 +755,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    marginTop: 10
+    marginTop: 10,
   },
   scrollContent: {
     paddingBottom: 120,
@@ -624,6 +827,13 @@ const styles = StyleSheet.create({
   },
   balanceContent: {
     // marginBottom: 28,
+  },
+  balanceCurrency: {
+    color: Colors.textInverse,
+    fontSize: 30,
+    fontWeight: "800",
+    letterSpacing: -1.5,
+    marginBottom: 12,
   },
   balance: {
     color: Colors.textInverse,
@@ -837,8 +1047,8 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   transactionMeta: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "column",
+    alignItems: "flex-start",
   },
   transactionDot: {
     width: 3,
@@ -910,6 +1120,6 @@ const styles = StyleSheet.create({
   bottomSpacing: {
     height: 40,
   },
-})
+});
 
-export default BankingWalletUI
+export default BankingWalletUI;
