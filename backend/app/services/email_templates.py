@@ -7,7 +7,7 @@ def get_transaction_email_template(
     new_balance: float = None
 ) -> str:
     """
-    Generate modern HTML email template for transaction notifications
+    HTML email template for transaction notifications
     """
     
     # Define transaction-specific content
@@ -32,7 +32,6 @@ def get_transaction_email_template(
         title = "Transaction Completed"
         description = f"Transaction of <strong>NPR {amount}</strong> completed"
     
-    # Generate the HTML template
     html_template = f"""
     <!DOCTYPE html>
     <html lang="en">
@@ -312,7 +311,7 @@ def get_otp_email_template(
     expiry_minutes: int = 10
 ) -> str:
     """
-    Generate modern HTML email template for OTP notifications
+    HTML email template for OTP notifications
     """
     
     # Define purpose-specific content
@@ -337,7 +336,6 @@ def get_otp_email_template(
         title = "Verification Code"
         description = "Verify your action with Surakshya Pay"
     
-    # Generate the HTML template
     html_template = f"""
     <!DOCTYPE html>
     <html lang="en">
@@ -653,7 +651,7 @@ def get_otp_email_template(
 
 def get_welcome_email_template(user_name: str, generated_user_name: str) -> str:
     """
-    Generate welcome email template for new users
+    welcome email template for new users
     """
     html_template = f"""
     <!DOCTYPE html>
@@ -836,6 +834,317 @@ def get_welcome_email_template(user_name: str, generated_user_name: str) -> str:
                     Thank you for choosing Surakshya Pay
                 </p>
                 <p style="font-size: 12px; color: #9ca3af;">
+                    This is an automated message. Please do not reply to this email.
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return html_template 
+
+def get_transfer_received_email_template(
+    amount: float,
+    tx_hash: str,
+    user_name: str,
+    from_username: str,
+    new_balance: float = None
+) -> str:
+    """
+    HTML email template for transfer received notifications
+    """
+    
+    html_template = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Money Received</title>
+        <style>
+            * {{
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }}
+            
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                line-height: 1.6;
+                color: #374151;
+                background-color: #f9fafb;
+            }}
+            
+            .container {{
+                max-width: 600px;
+                margin: 0 auto;
+                background-color: #ffffff;
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            }}
+            
+            .header {{
+                background: linear-gradient(135deg, #10B981, #059669);
+                padding: 40px 30px;
+                text-align: center;
+                color: white;
+            }}
+            
+            .header-icon {{
+                font-size: 48px;
+                margin-bottom: 16px;
+                display: block;
+            }}
+            
+            .header-title {{
+                font-size: 28px;
+                font-weight: 700;
+                margin-bottom: 8px;
+            }}
+            
+            .header-subtitle {{
+                font-size: 16px;
+                opacity: 0.9;
+            }}
+            
+            .content {{
+                padding: 40px 30px;
+            }}
+            
+            .greeting {{
+                font-size: 18px;
+                font-weight: 600;
+                margin-bottom: 24px;
+                color: #111827;
+            }}
+            
+            .transaction-details {{
+                background-color: #f8fafc;
+                border-radius: 8px;
+                padding: 24px;
+                margin-bottom: 24px;
+                border-left: 4px solid #10B981;
+            }}
+            
+            .detail-row {{
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 0;
+                border-bottom: 1px solid #e5e7eb;
+            }}
+            
+            .detail-row:last-child {{
+                border-bottom: none;
+            }}
+            
+            .detail-label {{
+                font-weight: 600;
+                color: #6b7280;
+            }}
+            
+            .detail-value {{
+                font-weight: 500;
+                color: #111827;
+            }}
+            
+            .amount {{
+                font-size: 24px;
+                font-weight: 700;
+                color: #10B981;
+            }}
+            
+            .tx-hash {{
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                background-color: #f3f4f6;
+                padding: 8px 12px;
+                border-radius: 6px;
+                word-break: break-all;
+                color: #374151;
+            }}
+            
+            .balance-info {{
+                background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+                border-radius: 8px;
+                padding: 20px;
+                margin-bottom: 24px;
+                border: 1px solid #bae6fd;
+            }}
+            
+            .balance-label {{
+                font-size: 14px;
+                color: #0369a1;
+                margin-bottom: 8px;
+            }}
+            
+            .balance-amount {{
+                font-size: 20px;
+                font-weight: 700;
+                color: #0369a1;
+            }}
+            
+            .sender-info {{
+                background: linear-gradient(135deg, #fef3c7, #fde68a);
+                border-radius: 8px;
+                padding: 20px;
+                margin-bottom: 24px;
+                border: 1px solid #f59e0b;
+            }}
+            
+            .sender-label {{
+                font-size: 14px;
+                color: #92400e;
+                margin-bottom: 8px;
+            }}
+            
+            .sender-name {{
+                font-size: 18px;
+                font-weight: 700;
+                color: #92400e;
+            }}
+            
+            .footer {{
+                background-color: #f9fafb;
+                padding: 30px;
+                text-align: center;
+                border-top: 1px solid #e5e7eb;
+            }}
+            
+            .footer-text {{
+                font-size: 14px;
+                color: #6b7280;
+                margin-bottom: 16px;
+            }}
+            
+            .footer-links {{
+                display: flex;
+                justify-content: center;
+                gap: 20px;
+            }}
+            
+            .footer-link {{
+                color: #10B981;
+                text-decoration: none;
+                font-weight: 500;
+            }}
+            
+            .footer-link:hover {{
+                text-decoration: underline;
+            }}
+            
+            .security-note {{
+                background-color: #fef3c7;
+                border: 1px solid #f59e0b;
+                border-radius: 8px;
+                padding: 16px;
+                margin-top: 24px;
+            }}
+            
+            .security-note-title {{
+                font-weight: 600;
+                color: #92400e;
+                margin-bottom: 8px;
+            }}
+            
+            .security-note-text {{
+                font-size: 14px;
+                color: #92400e;
+            }}
+            
+            @media (max-width: 600px) {{
+                .container {{
+                    margin: 0;
+                    border-radius: 0;
+                }}
+                
+                .header, .content, .footer {{
+                    padding: 20px;
+                }}
+                
+                .header-title {{
+                    font-size: 24px;
+                }}
+                
+                .detail-row {{
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 4px;
+                }}
+                
+                .footer-links {{
+                    flex-direction: column;
+                    gap: 12px;
+                }}
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <span class="header-icon">💰</span>
+                <h1 class="header-title">Money Received!</h1>
+                <p class="header-subtitle">Surakshya Pay Transfer Notification</p>
+            </div>
+            
+            <div class="content">
+                <p class="greeting">Hello {user_name},</p>
+                
+                <p style="margin-bottom: 24px; font-size: 16px;">
+                    Great news! You have received <strong>NPR {amount}</strong> in your wallet. The transaction has been successfully processed and confirmed on the blockchain.
+                </p>
+                
+                <div class="sender-info">
+                    <div class="sender-label">Sent by:</div>
+                    <div class="sender-name">{from_username}</div>
+                </div>
+                
+                <div class="transaction-details">
+                    <div class="detail-row">
+                        <span class="detail-label">Transaction Type:</span>
+                        <span class="detail-value">Transfer Received</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Amount Received:</span>
+                        <span class="detail-value amount">NPR {amount}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Transaction Hash:</span>
+                        <span class="detail-value tx-hash">{tx_hash}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Sender:</span>
+                        <span class="detail-value">{from_username}</span>
+                    </div>
+                </div>
+                
+                {f'''
+                <div class="balance-info">
+                    <div class="balance-label">Updated Wallet Balance</div>
+                    <div class="balance-amount">NPR {new_balance}</div>
+                </div>
+                ''' if new_balance else ''}
+                
+                <div class="security-note">
+                    <div class="security-note-title">🔒 Security Reminder</div>
+                    <div class="security-note-text">
+                        This transaction was processed securely on the blockchain. Your funds are now available in your wallet.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <p class="footer-text">
+                    Thank you for using Surakshya Pay - Your Secure Digital Wallet
+                </p>
+                <div class="footer-links">
+                    <a href="#" class="footer-link">View Transaction</a>
+                    <a href="#" class="footer-link">Support</a>
+                    <a href="#" class="footer-link">Privacy Policy</a>
+                </div>
+                <p style="font-size: 12px; color: #9ca3af; margin-top: 16px;">
                     This is an automated message. Please do not reply to this email.
                 </p>
             </div>

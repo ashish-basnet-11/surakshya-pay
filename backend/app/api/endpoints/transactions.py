@@ -22,7 +22,7 @@ from app.utils.blockchain import (
 )
 from app.core.security import settings
 from app.core.security import decrypt_private_key
-from app.services.notification_service import send_transaction_notification
+from app.services.notification_service import send_transaction_notification, send_transfer_received_notification
 import datetime
 
 router = APIRouter()
@@ -66,7 +66,31 @@ def create_transaction_notification(
         db=db,
         notification=notification_data,
         user_id=user_id,
-        send_email_notification=False  # We'll send email separately with modern template
+        send_email_notification=False  # We'll send email separately with template
+    )
+
+def create_transfer_received_notification(
+    db: Session,
+    user_id: int,
+    amount: float,
+    tx_hash: str,
+    from_username: str
+):
+    """Create notification for transfer received"""
+    title = "Money Received"
+    message = f"You have received {amount} NPR from {from_username}. Transaction hash: {tx_hash}"
+    
+    notification_data = NotificationCreate(
+        title=title,
+        message=message,
+        notification_type="transaction"
+    )
+    
+    return crud_notification.create_notification(
+        db=db,
+        notification=notification_data,
+        user_id=user_id,
+        send_email_notification=False  # We'll send email separately with template
     )
 
 async def send_transaction_email(
@@ -78,7 +102,7 @@ async def send_transaction_email(
     to_username: str = None,
     new_balance: float = None
 ):
-    """Send modern transaction notification email"""
+    """Send transaction notification email"""
     try:
         # Get user details
         user = db.query(User).filter(User.id == user_id).first()
@@ -187,7 +211,7 @@ async def topup(
         
         db.commit()
         
-        # Send modern email notification
+        # Send email notification
         await send_transaction_email(
             db=db,
             user_id=current_user.id,
@@ -270,7 +294,7 @@ async def withdraw(
         
         db.commit()
         
-        # Send modern email notification
+        # Send email notification
         await send_transaction_email(
             db=db,
             user_id=current_user.id,
@@ -323,6 +347,11 @@ async def transfer(
     if not to_wallet_address:
         raise HTTPException(status_code=404, detail="Recipient user not found or does not have a wallet.")
     
+    # Get recipient user object
+    recipient_user = crud_user.get_user_by_wallet_address(db, to_wallet_address)
+    if not recipient_user:
+        raise HTTPException(status_code=404, detail="Recipient user not found.")
+    
     # Prevent self-transfer
     if to_wallet_address == current_user.wallet_address:
         raise HTTPException(status_code=400, detail="Cannot transfer to yourself.")
@@ -333,15 +362,22 @@ async def transfer(
         # Execute blockchain transaction
         tx_hash = transfer_onchain(current_user.wallet_address, to_wallet_address, amount, private_key)
         
-        # Get updated blockchain balance
-        blockchain_balance = get_user_balance_onchain(current_user.wallet_address)
+        # Get updated blockchain balance for sender
+        sender_blockchain_balance = get_user_balance_onchain(current_user.wallet_address)
         
-        # Update local database
-        current_user.balance = str(blockchain_balance)
+        # Get updated blockchain balance for recipient
+        recipient_blockchain_balance = get_user_balance_onchain(to_wallet_address)
+        
+        # Update sender's balance in local database
+        current_user.balance = str(sender_blockchain_balance)
         db.add(current_user)
         
-        # Create local transaction record
-        transaction_data = TransactionCreate(
+        # Update recipient's balance in local database
+        recipient_user.balance = str(recipient_blockchain_balance)
+        db.add(recipient_user)
+        
+        # Create local transaction record for sender
+        sender_transaction_data = TransactionCreate(
             amount=amount,
             category="transfer",
             description=f"Transfer of {amount} NPR to {to_username}",
@@ -353,10 +389,25 @@ async def transfer(
             is_completed=True
         )
         
-        local_transaction = crud_transaction.create_transaction(db, transaction_data, current_user.id)
+        sender_transaction = crud_transaction.create_transaction(db, sender_transaction_data, current_user.id)
         
-        # Create notification
-        notification = create_transaction_notification(
+        # Create local transaction record for recipient
+        recipient_transaction_data = TransactionCreate(
+            amount=amount,
+            category="transfer",
+            description=f"Received {amount} NPR from {current_user.username}",
+            transaction_type="TRANSFER",
+            blockchain_hash=tx_hash,
+            from_address=current_user.wallet_address,
+            to_address=to_wallet_address,
+            blockchain_timestamp=int(datetime.datetime.now().timestamp()),
+            is_completed=True
+        )
+        
+        recipient_transaction = crud_transaction.create_transaction(db, recipient_transaction_data, recipient_user.id)
+        
+        # Create notification for sender
+        sender_notification = create_transaction_notification(
             db=db,
             user_id=current_user.id,
             transaction_type="TRANSFER",
@@ -365,9 +416,18 @@ async def transfer(
             to_username=to_username
         )
         
+        # Create notification for recipient
+        recipient_notification = create_transfer_received_notification(
+            db=db,
+            user_id=recipient_user.id,
+            amount=amount,
+            tx_hash=tx_hash,
+            from_username=current_user.username
+        )
+        
         db.commit()
         
-        # Send modern email notification
+        # Send email notification to sender
         await send_transaction_email(
             db=db,
             user_id=current_user.id,
@@ -375,7 +435,17 @@ async def transfer(
             amount=amount,
             tx_hash=tx_hash,
             to_username=to_username,
-            new_balance=blockchain_balance
+            new_balance=sender_blockchain_balance
+        )
+        
+        # Send email notification to recipient
+        await send_transfer_received_notification(
+            email=recipient_user.email,
+            user_name=recipient_user.full_name or "User",
+            amount=amount,
+            tx_hash=tx_hash,
+            from_username=current_user.username,
+            new_balance=recipient_blockchain_balance
         )
         
         return CommonResponse(
@@ -386,9 +456,12 @@ async def transfer(
                 "amount": amount,
                 "to_username": to_username,
                 "to_address": to_wallet_address,
-                "new_balance": blockchain_balance,
-                "local_transaction_id": local_transaction.id,
-                "notification_id": notification.id
+                "sender_new_balance": sender_blockchain_balance,
+                "recipient_new_balance": recipient_blockchain_balance,
+                "sender_transaction_id": sender_transaction.id,
+                "recipient_transaction_id": recipient_transaction.id,
+                "sender_notification_id": sender_notification.id,
+                "recipient_notification_id": recipient_notification.id
             }
         )
     except Exception as e:
