@@ -9,8 +9,8 @@ base.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-@app.get("/")
-def root():
-    return {"message": "Backend running ✅"}
+# @app.get("/")
+# def root():
+#     return {"message": "Backend running"}
 
 app.include_router(api_router, prefix="/api/v1")

@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.crud import kyc as crud_kyc
+from app.crud import user as crud_user
 from app.schemas.kyc import KYC, KYCCreate, KYCAdminUpdate
+from app.schemas.user import User as UserSchema
 from app.schemas.response import CommonResponse
 from app.utils.dependencies import get_db, get_current_user, get_current_active_superuser
 from app.utils.file_upload import save_upload_file
@@ -11,7 +13,7 @@ import json
 
 router = APIRouter()
 
-@router.post("/", response_model=CommonResponse[KYC])
+@router.post("/", response_model=CommonResponse[UserSchema])
 async def submit_kyc(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -30,7 +32,9 @@ async def submit_kyc(
     doc_back_url = await save_upload_file(document_back) if document_back else None
 
     kyc = crud_kyc.create_kyc(db, kyc_in, current_user.id, doc_front_url, doc_back_url, selfie_url)
-    return CommonResponse(success=True, message="KYC submitted successfully", data=kyc)
+    # Fetch and return updated user with KYC info
+    updated_user = crud_user.get_user(db, user_id=current_user.id)
+    return CommonResponse(success=True, message="KYC submitted successfully", data=updated_user)
 
 @router.get("/me", response_model=CommonResponse[KYC])
 def get_my_kyc(
@@ -52,7 +56,7 @@ def get_all_kyc_submissions(
     kyc_list = crud_kyc.get_all_kyc(db, skip=skip, limit=limit)
     return CommonResponse(success=True, message="All KYC submissions fetched", data=kyc_list)
 
-@router.put("/admin/{user_id}", response_model=CommonResponse[KYC], dependencies=[Depends(get_current_active_superuser)])
+@router.put("/admin/{user_id}", response_model=CommonResponse[UserSchema], dependencies=[Depends(get_current_active_superuser)])
 def verify_kyc(
     user_id: int,
     kyc_in: KYCAdminUpdate,
@@ -64,4 +68,16 @@ def verify_kyc(
         raise HTTPException(status_code=404, detail="KYC submission not found for this user")
     
     updated_kyc = crud_kyc.admin_update_kyc(db, kyc, kyc_in, admin_user.id)
-    return CommonResponse(success=True, message="KYC status updated successfully", data=updated_kyc) 
+    # Fetch and return updated user with KYC info
+    updated_user = crud_user.get_user(db, user_id=user_id)
+    return CommonResponse(success=True, message="KYC status updated successfully", data=updated_user) 
+
+@router.get("/admin/status/{status}", response_model=CommonResponse[List[KYC]], dependencies=[Depends(get_current_active_superuser)])
+def get_kyc_by_status(
+    status: str,
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100
+):
+    kyc_list = crud_kyc.get_kyc_by_status(db, status=status, skip=skip, limit=limit)
+    return CommonResponse(success=True, message=f"KYC submissions with status '{status}' fetched", data=kyc_list) 

@@ -7,7 +7,7 @@ from app.crud.user import get_user_by_email, set_reset_password_otp, reset_passw
 from app.schemas.token import Token
 from app.schemas.password import ForgotPasswordRequest, VerifyOTPRequest, ResetPasswordRequest
 from app.schemas.response import CommonResponse
-from app.services.notification_service import send_email
+from app.services.notification_service import send_otp_email
 from app.utils.dependencies import get_db
 from datetime import datetime
 from app.utils.zkp_helper import generate_proof_and_verify
@@ -63,10 +63,13 @@ async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(
     
     user = set_reset_password_otp(db, user)
     
-    await send_email(
+    # Send modern OTP email
+    await send_otp_email(
         email=user.email,
-        subject="Password Reset OTP",
-        body=f"Your OTP for password reset is: {user.reset_password_otp}"
+        user_name=user.full_name or "User",
+        otp_code=user.reset_password_otp,
+        purpose="password_reset",
+        expiry_minutes=10
     )
     
     return CommonResponse(success=True, message="OTP sent to your email")
