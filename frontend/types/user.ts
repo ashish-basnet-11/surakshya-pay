@@ -5,6 +5,7 @@ export interface UserBase {
   is_active?: boolean;
   is_superuser?: boolean;
   wallet_address?: string;
+  username?: string;
   public_key?: string;
   private_key_encrypted?: string;
   balance?: string;
@@ -15,6 +16,9 @@ export interface UserBase {
   zkp_nullifier?: string;
   zkp_salt?: string;
   guid?: string;
+  kyc_status?: string;
+  kyc_submitted_at?: string;
+  kyc_reviewed_at?: string;
 }
 
 export interface UserCreate extends UserBase {

@@ -148,7 +148,7 @@ const Login = () => {
                     </Text>
                   </View>
                   <View style={styles.welcomeContainer}>
-                    <Text style={styles.welcomeTitle}>Welcome Back</Text>
+                  
                     <Text style={styles.welcomeSubtitle}>
                       Sign in to access your secure digital wallet
                     </Text>
@@ -346,11 +346,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     alignItems: "center",
     minHeight: SCREEN_HEIGHT * 0.4,
-    // no backgroundColor here anymore
+    
+   
   },
   logoContainer: {
     alignItems: "center",
     marginBottom: 32,
+    marginTop:25
   },
   logoWrapper: {
     marginBottom: 16,

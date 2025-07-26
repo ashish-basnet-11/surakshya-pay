@@ -248,7 +248,7 @@ export default Verify;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
   },
   scrollViewContentContainer: {
     flexGrow: 1,

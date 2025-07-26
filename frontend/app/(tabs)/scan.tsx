@@ -241,55 +241,13 @@ export default function ScanScreen() {
 
     setScanned(true);
     setScanResult(data);
-    Vibration.vibrate(100);
-
-    if (data.includes("pay") || data.includes("amount")) {
-      Alert.alert(
-        "Payment QR Code Detected",
-        `Amount: $45.00\nMerchant: Digital Store\n\nProceed with payment?`,
-        [
-          {
-            text: "Cancel",
-            onPress: () => {
-              setScanned(false);
-              setScanResult(null);
-            },
-            style: "cancel",
-          },
-          {
-            text: "Pay Now",
-            onPress: () => {
-              router.push("/send");
-            },
-          },
-        ]
-      );
-    } else if (data.startsWith("http")) {
-      Alert.alert("Website Link Detected", data, [
-        {
-          text: "Cancel",
-          onPress: () => {
-            setScanned(false);
-            setScanResult(null);
-          },
-          style: "cancel",
-        },
-        {
-          text: "Open Link",
-          onPress: () => Linking.openURL(data),
-        },
-      ]);
-    } else {
-      Alert.alert("QR Code Scanned", data, [
-        {
-          text: "OK",
-          onPress: () => {
-            setScanned(false);
-            setScanResult(null);
-          },
-        },
-      ]);
-    }
+    
+    router.push({
+      pathname: "/(tabs)/(index)/sendMoney",
+      params: {
+        qrData: data
+      }
+    });
   };
 
   const sampleContainerHeight = panY.interpolate({
@@ -350,69 +308,71 @@ export default function ScanScreen() {
 
       {/* Camera Container */}
       <View style={styles.cameraContainer}>
+        {/* Camera View only */}
         <CameraView
-          style={styles.camera}
+          style={StyleSheet.absoluteFill}
           onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
           barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
           facing={cameraType}
-        >
-          <View style={styles.overlay}>
-            {/* Gallery Button */}
-            <Animated.View
-              style={[styles.galleryButtonContainer, { opacity: fadeAnim }]}
-            >
-              <TouchableOpacity
-                style={[
-                  styles.galleryButton,
-                  isScanning && styles.galleryButtonLoading,
-                ]}
-                onPress={pickImage}
-                disabled={isScanning}
-              >
-                {isScanning ? (
-                  <View style={styles.loadingSpinner}>
-                    <Ionicons name="hourglass" size={20} color="white" />
-                  </View>
-                ) : (
-                  <Ionicons name="images" size={20} color="white" />
-                )}
-                <Text style={styles.galleryButtonText}>
-                  {isScanning ? "Processing..." : "From Gallery"}
-                </Text>
-              </TouchableOpacity>
-            </Animated.View>
+        />
 
-            {/* Scan Frame */}
+        {/* Overlay */}
+        <View style={styles.overlay}>
+          {/* Gallery Button */}
+          <Animated.View
+            style={[styles.galleryButtonContainer, { opacity: fadeAnim }]}
+          >
+            <TouchableOpacity
+              style={[
+                styles.galleryButton,
+                isScanning && styles.galleryButtonLoading,
+              ]}
+              onPress={pickImage}
+              disabled={isScanning}
+            >
+              {isScanning ? (
+                <View style={styles.loadingSpinner}>
+                  <Ionicons name="hourglass" size={20} color="white" />
+                </View>
+              ) : (
+                <Ionicons name="images" size={20} color="white" />
+              )}
+              <Text style={styles.galleryButtonText}>
+                {isScanning ? "Processing..." : "From Gallery"}
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Scan Frame */}
+          <Animated.View
+            style={[
+              styles.scanFrame,
+              {
+                transform: [{ scale: pulseAnim }],
+                opacity: fadeAnim,
+              },
+            ]}
+          >
+            {/* Animated scan line */}
             <Animated.View
               style={[
-                styles.scanFrame,
+                styles.scanLine,
                 {
-                  transform: [{ scale: pulseAnim }],
-                  opacity: fadeAnim,
+                  transform: [{ translateY: scanLineTranslateY }],
                 },
               ]}
-            >
-              {/* Animated scan line */}
-              <Animated.View
-                style={[
-                  styles.scanLine,
-                  {
-                    transform: [{ translateY: scanLineTranslateY }],
-                  },
-                ]}
-              />
+            />
 
-              {/* Corner indicators */}
-              <View style={styles.cornerTopLeft} />
-              <View style={styles.cornerTopRight} />
-              <View style={styles.cornerBottomLeft} />
-              <View style={styles.cornerBottomRight} />
+            {/* Corner indicators */}
+            <View style={styles.cornerTopLeft} />
+            <View style={styles.cornerTopRight} />
+            <View style={styles.cornerBottomLeft} />
+            <View style={styles.cornerBottomRight} />
 
-              {/* Center dot */}
-              <View style={styles.centerDot} />
-            </Animated.View>
-          </View>
-        </CameraView>
+            {/* Center dot */}
+            <View style={styles.centerDot} />
+          </Animated.View>
+        </View>
       </View>
 
       {/* Rescan Button */}
@@ -458,7 +418,7 @@ export default function ScanScreen() {
           <View style={styles.qrCodeContainer}>
             <View style={styles.qrCodeWrapper}>
               <QRCode
-                value={useAuthStore.getState().user?.guid}
+                value={useAuthStore.getState().user?.username}
                 size={200}
                 color="black"
                 backgroundColor="white"
@@ -626,6 +586,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   overlay: {
+    ...StyleSheet.absoluteFillObject,
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",

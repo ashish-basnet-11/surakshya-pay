@@ -4,7 +4,7 @@ import { TopupInterface } from "@/types/transaction";
 import { useMutation } from "@tanstack/react-query";
 
 export async function topupMoney(props: TopupInterface): Promise<ApiResponse<null>> {
-  return apiPost<ApiResponse<null>>("/transactions/topup", props);
+  return apiPost<ApiResponse<null>>(`/transactions/topup?amount=${props.amount}`, {});
 }
 
 export function useTopupMoney() {

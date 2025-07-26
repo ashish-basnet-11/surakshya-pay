@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useCallback, useLayoutEffect, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,48 +13,60 @@ import {
   Animated,
   KeyboardAvoidingView,
   BackHandler,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import Colors from '@/constants/Colors';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import Colors from "@/constants/Colors";
+import { showMessage } from "react-native-flash-message";
+import { useTransferMoney } from "@/apis/transaction/transfer-money";
+import { TransferInterface } from "@/types/transaction";
 
 const QUICK_AMOUNTS = [20, 100, 250, 500];
 const KEYS = [
-  ['1', '2', '3'],
-  ['4', '5', '6'],
-  ['7', '8', '9'],
-  ['.', '0', '<'],
+  ["1", "2", "3"],
+  ["4", "5", "6"],
+  ["7", "8", "9"],
+  [".", "0", "<"],
 ];
 
 const SendMoney = () => {
+  const { qrData } = useLocalSearchParams();
   const router = useRouter();
   const navigation = useNavigation();
 
-  const [username, setUsername] = useState('');
-  const [amount, setAmount] = useState('');
-  const [note, setNote] = useState('');
+  const [username, setUsername] = useState("");
+  const [amount, setAmount] = useState("");
   const [isAmountVisible, setIsAmountVisible] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(1));
+  const {mutate: transferMoney, isPending: isProcessing} = useTransferMoney();
 
   const numAmount = Number(amount);
-  const isAmountValid = amount !== '' && !isNaN(numAmount) && numAmount > 0;
+  const isAmountValid = amount !== "" && !isNaN(numAmount) && numAmount > 0;
+
+  useEffect(() => {
+    if(qrData){
+      setUsername(qrData.toLocaleString());
+    }
+  }, [qrData])
 
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
-        router.replace('/(tabs)');
+        router.replace("/(tabs)");
         return true;
       };
-      const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      const backHandler = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress
+      );
       return () => backHandler.remove();
     }, [router])
   );
 
   useLayoutEffect(() => {
     const parent = navigation.getParent();
-    if (parent) parent.setOptions({ tabBarStyle: { display: 'none' } });
+    if (parent) parent.setOptions({ tabBarStyle: { display: "none" } });
     return () => {
       if (parent) parent.setOptions({ tabBarStyle: undefined });
     };
@@ -62,11 +74,11 @@ const SendMoney = () => {
 
   const onKeyPress = (key: string) => {
     if (isProcessing) return;
-    if (key === '<') {
+    if (key === "<") {
       setAmount((prev) => prev.slice(0, -1));
-    } else if (key === '.') {
-      if (!amount.includes('.') && amount.length > 0) {
-        setAmount((prev) => prev + '.');
+    } else if (key === ".") {
+      if (!amount.includes(".") && amount.length > 0) {
+        setAmount((prev) => prev + ".");
       }
     } else if (amount.length < 8) {
       setAmount((prev) => prev + key);
@@ -75,53 +87,63 @@ const SendMoney = () => {
 
   const formatAmount = (val: string) => {
     const n = parseFloat(val);
-    return isNaN(n) ? '0' : n.toLocaleString('en-US');
+    return isNaN(n) ? "0" : n.toLocaleString("en-US");
   };
 
   const setQuickAmount = (val: number) => setAmount(val.toString());
 
   const handleSend = async () => {
     if (!username.trim()) {
-      Alert.alert('Missing Username', 'Please enter a recipient username.');
+      showMessage({
+        message: "Please enter a recipient username..",
+        type: "warning",
+      });
       return;
     }
     if (!isAmountValid) {
-      Alert.alert('Invalid Amount', 'Please enter a valid amount.');
+      showMessage({
+        message: "Please enter a valid amount.",
+        type: "warning",
+      });
       return;
     }
-    setIsProcessing(true);
-    Animated.timing(fadeAnim, {
-      toValue: 0.6,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
 
     try {
-      await new Promise((res) => setTimeout(res, 2000));
-      Alert.alert(
-        'Money Sent',
-        `$${formatAmount(amount)} sent successfully to ${username}.${note ? `\n\nNote: ${note}` : ''}`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setUsername('');
-              setAmount('');
-              setNote('');
-              router.replace('/(tabs)');
-            },
-          },
-        ]
-      );
+      const props : TransferInterface = {
+        to_username: username,
+        amount: Number(amount)
+      }
+
+      console.log(props);
+
+      transferMoney(props, {
+        onSuccess: (data) => {
+          console.log(data);
+          if (data.success) {
+            showMessage({
+              message: data.message || "Money transfered successfully!",
+              type: "success",
+            });
+            router.push("/(tabs)");
+          } else {
+            showMessage({
+              message: data.message || "Failed to transfer Money!",
+              type: "danger",
+            });
+          }
+        },
+        onError: () => {
+          showMessage({
+            message: "Failed to transfer Money!",
+            type: "danger",
+          });
+        },
+      });
     } catch {
-      Alert.alert('Error', 'Failed to send money.');
-    } finally {
-      setIsProcessing(false);
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+      showMessage({
+        message: "Failed to transfer money!",
+        type: "danger",
+      });
     }
   };
 
@@ -131,16 +153,22 @@ const SendMoney = () => {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => router.replace('/(tabs)')}
+            onPress={() => router.replace("/(tabs)")}
             style={styles.backButton}
             activeOpacity={0.7}
             disabled={isProcessing}
           >
-            <Ionicons name="arrow-back" size={24} color={isProcessing ? '#B3C5D7' : '#fff'} />
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color={isProcessing ? "#B3C5D7" : "#fff"}
+            />
           </TouchableOpacity>
           <View style={styles.headerContent}>
             <Text style={styles.headerText}>Send Money</Text>
-            <Text style={styles.headerSubtext}>Transfer to another account</Text>
+            <Text style={styles.headerSubtext}>
+              Transfer to another account
+            </Text>
           </View>
         </View>
 
@@ -159,21 +187,25 @@ const SendMoney = () => {
         </View>
 
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.content}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
         >
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <Animated.View style={[styles.animatedContainer, { opacity: fadeAnim }]}>
+            <Animated.View
+              style={[styles.animatedContainer, { opacity: fadeAnim }]}
+            >
               <View style={styles.amountSection}>
                 <Text style={styles.currencySymbol}>NPR</Text>
                 <View style={styles.amountDisplayContainer}>
                   <Text style={styles.amountDisplay}>
-                    {isAmountVisible ? formatAmount(amount) : amount.replace(/./g, '•')}
+                    {isAmountVisible
+                      ? formatAmount(amount)
+                      : amount.replace(/./g, "•")}
                   </Text>
                   <TouchableOpacity
                     onPress={() => setIsAmountVisible((v) => !v)}
@@ -182,7 +214,7 @@ const SendMoney = () => {
                     disabled={isProcessing}
                   >
                     <Ionicons
-                      name={isAmountVisible ? 'eye-outline' : 'eye-off-outline'}
+                      name={isAmountVisible ? "eye-outline" : "eye-off-outline"}
                       size={20}
                       color="#B3C5D7"
                     />
@@ -198,7 +230,8 @@ const SendMoney = () => {
                       key={val}
                       style={[
                         styles.quickAmountButton,
-                        amount === val.toString() && styles.quickAmountButtonActive,
+                        amount === val.toString() &&
+                          styles.quickAmountButtonActive,
                       ]}
                       onPress={() => setQuickAmount(val)}
                       activeOpacity={0.7}
@@ -207,7 +240,8 @@ const SendMoney = () => {
                       <Text
                         style={[
                           styles.quickAmountText,
-                          amount === val.toString() && styles.quickAmountTextActive,
+                          amount === val.toString() &&
+                            styles.quickAmountTextActive,
                         ]}
                       >
                         {val}
@@ -226,13 +260,20 @@ const SendMoney = () => {
                     {row.map((k) => (
                       <TouchableOpacity
                         key={k}
-                        style={[styles.key, k === '<' ? styles.keySpecial : styles.keyNormal]}
+                        style={[
+                          styles.key,
+                          k === "<" ? styles.keySpecial : styles.keyNormal,
+                        ]}
                         onPress={() => onKeyPress(k)}
                         activeOpacity={0.7}
                         disabled={isProcessing}
                       >
-                        {k === '<' ? (
-                          <Ionicons name="backspace-outline" size={22} color="#ffffff" />
+                        {k === "<" ? (
+                          <Ionicons
+                            name="backspace-outline"
+                            size={22}
+                            color="#ffffff"
+                          />
                         ) : (
                           <Text style={styles.keyText}>{k}</Text>
                         )}
@@ -242,7 +283,7 @@ const SendMoney = () => {
                 ))}
               </View>
 
-              <View style={styles.noteSection}>
+              {/* <View style={styles.noteSection}>
                 <Text style={styles.noteLabel}>Add a note (optional)</Text>
                 <TextInput
                   style={styles.noteInput}
@@ -256,12 +297,13 @@ const SendMoney = () => {
                   textAlignVertical="top"
                 />
                 <Text style={styles.characterCount}>{note.length}/100</Text>
-              </View>
+              </View> */}
 
               <TouchableOpacity
                 style={[
                   styles.sendButton,
-                  (!isAmountValid || !username.trim() || isProcessing) && styles.sendButtonDisabled,
+                  (!isAmountValid || !username.trim() || isProcessing) &&
+                    styles.sendButtonDisabled,
                 ]}
                 onPress={handleSend}
                 disabled={!isAmountValid || !username.trim() || isProcessing}
@@ -269,21 +311,33 @@ const SendMoney = () => {
               >
                 {isProcessing ? (
                   <View style={styles.loadingContainer}>
-                    <Ionicons name="hourglass-outline" size={20} color="#ffffff" />
+                    <Ionicons
+                      name="hourglass-outline"
+                      size={20}
+                      color="#ffffff"
+                    />
                     <Text style={styles.loadingText}>Processing...</Text>
                   </View>
                 ) : (
                   <View style={styles.buttonContent}>
-                    <Ionicons name="arrow-up-circle-outline" size={20} color="#ffffff" />
+                    <Ionicons
+                      name="arrow-up-circle-outline"
+                      size={20}
+                      color="#ffffff"
+                    />
                     <Text style={styles.sendButtonText}>
-                      Send{amount ? ` ${formatAmount(amount)}` : ''}
+                      Send{amount ? ` ${formatAmount(amount)}` : ""}
                     </Text>
                   </View>
                 )}
               </TouchableOpacity>
 
               <View style={styles.securityNotice}>
-                <Ionicons name="shield-checkmark-outline" size={16} color="#8E8E93" />
+                <Ionicons
+                  name="shield-checkmark-outline"
+                  size={16}
+                  color="#8E8E93"
+                />
                 <Text style={styles.securityText}>
                   Your transaction is secured with bank-level encryption
                 </Text>
@@ -299,19 +353,19 @@ const SendMoney = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.primary },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 20,
-    marginTop: Platform.OS === 'ios' ? 50 : 40,
+    marginTop: Platform.OS === "ios" ? 50 : 40,
     marginBottom: 16,
   },
   backButton: {
     padding: 8,
     borderRadius: 25,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: "rgba(255,255,255,0.2)",
     marginRight: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerContent: {
     flex: 1,
@@ -319,54 +373,54 @@ const styles = StyleSheet.create({
   },
   headerText: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#ffffff',
+    fontWeight: "700",
+    color: "#ffffff",
     letterSpacing: -0.3,
   },
   headerSubtext: {
     fontSize: 14,
-    color: '#B3C5D7',
+    color: "#B3C5D7",
     marginTop: 4,
   },
   usernameSection: {
     paddingHorizontal: 20,
     marginBottom: 20,
-    marginTop: 10
+    marginTop: 10,
   },
   usernameInput: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 12,
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
   content: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   animatedContainer: { paddingHorizontal: 20 },
   amountSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 40,
     marginBottom: 20,
   },
   currencySymbol: {
     fontSize: 32,
-    fontWeight: '600',
-    color: '#B3C5D7',
+    fontWeight: "600",
+    color: "#B3C5D7",
     marginRight: 8,
   },
   amountDisplayContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
   },
   amountDisplay: {
     fontSize: 48,
-    fontWeight: '700',
-    color: '#ffffff',
+    fontWeight: "700",
+    color: "#ffffff",
     flex: 1,
-    textAlign: 'left',
+    textAlign: "left",
   },
   visibilityButton: {
     padding: 8,
@@ -377,39 +431,39 @@ const styles = StyleSheet.create({
   },
   quickAmountLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#B3C5D7',
+    fontWeight: "600",
+    color: "#B3C5D7",
     marginBottom: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
   quickAmountContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   quickAmountButton: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     borderRadius: 12,
     paddingVertical: 12,
     marginHorizontal: 4,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   quickAmountButtonActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderColor: '#ffffff',
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderColor: "#ffffff",
   },
   quickAmountText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#B3C5D7',
+    fontWeight: "600",
+    color: "#B3C5D7",
   },
   quickAmountTextActive: {
-    color: '#ffffff',
+    color: "#ffffff",
   },
   keyboardSection: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: 24,
@@ -421,8 +475,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   keyboardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 12,
   },
   key: {
@@ -430,18 +484,18 @@ const styles = StyleSheet.create({
     height: 56,
     marginHorizontal: 6,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   keyNormal: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: "#F8F9FA",
   },
   keySpecial: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: "#E3F2FD",
   },
   keyText: {
     fontSize: 24,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.primary,
   },
   noteSection: {
@@ -449,34 +503,34 @@ const styles = StyleSheet.create({
   },
   noteLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1C1C1E',
+    fontWeight: "600",
+    color: "#1C1C1E",
     marginBottom: 8,
   },
   noteInput: {
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: "#E5E5EA",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#F8F9FA',
-    color: '#1C1C1E',
+    backgroundColor: "#F8F9FA",
+    color: "#1C1C1E",
     fontSize: 16,
     minHeight: 80,
     maxHeight: 120,
   },
   characterCount: {
     fontSize: 12,
-    color: '#8E8E93',
-    textAlign: 'right',
+    color: "#8E8E93",
+    textAlign: "right",
     marginTop: 4,
   },
   sendButton: {
     backgroundColor: Colors.primary,
     borderRadius: 16,
     paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 16,
     shadowColor: Colors.primary,
     shadowOffset: {
@@ -488,41 +542,41 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   sendButtonDisabled: {
-    backgroundColor: '#B0BEC5',
+    backgroundColor: "#B0BEC5",
     shadowOpacity: 0,
     elevation: 0,
   },
   buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   sendButtonText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     marginLeft: 8,
   },
   loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   loadingText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 12,
   },
   securityNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 16,
   },
   securityText: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: "#8E8E93",
     marginLeft: 6,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });
 

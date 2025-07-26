@@ -20,24 +20,154 @@ import { useFocusEffect } from "@react-navigation/native"
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window")
 
-// Mock data
-const mockTransactions = [
-  { id: "1", name: "Coffee Shop", amount: -4.5, category: "Food", date: "2024-01-15", type: "expense" },
-  { id: "2", name: "Salary", amount: 3500.0, category: "Income", date: "2024-01-15", type: "income" },
-  { id: "3", name: "Grocery Store", amount: -85.2, category: "Food", date: "2024-01-14", type: "expense" },
-  { id: "4", name: "Gas Station", amount: -45.0, category: "Transport", date: "2024-01-14", type: "expense" },
-  { id: "5", name: "Netflix", amount: -15.99, category: "Entertainment", date: "2024-01-13", type: "expense" },
-  { id: "6", name: "Freelance Work", amount: 750.0, category: "Income", date: "2024-01-12", type: "income" },
-  { id: "7", name: "Restaurant", amount: -32.5, category: "Food", date: "2024-01-12", type: "expense" },
-  { id: "8", name: "Uber", amount: -18.75, category: "Transport", date: "2024-01-11", type: "expense" },
-]
+// Interfaces
+export interface TransactionSummary {
+  id: number
+  amount: number
+  category: string
+  description: string
+  timestamp: string // ISO format
+  transaction_type: "TRANSFER" | "WITHDRAWAL" | "DEPOSIT" | string
+}
+
+export interface SpendingSummary {
+  total_income: number
+  total_expense: number
+  balance: number
+  spending_by_category: Record<string, number> // e.g., { food: 200, transport: 100 }
+  transaction_count: number
+  average_transaction_amount: number
+  min_transaction_amount: number
+  max_transaction_amount: number
+  recent_transactions: TransactionSummary[]
+}
+
+// Mock data using the new interfaces
+const mockSpendingSummary: SpendingSummary = {
+  total_income: 4250.0,
+  total_expense: 348.44,
+  balance: 3901.56,
+  spending_by_category: {
+    food: 122.2,
+    transport: 63.75,
+    entertainment: 47.99,
+    shopping: 89.5,
+    bills: 25.0,
+  },
+  transaction_count: 8,
+  average_transaction_amount: 531.31,
+  min_transaction_amount: 4.5,
+  max_transaction_amount: 3500.0,
+  recent_transactions: [
+    {
+      id: 1,
+      description: "Coffee Shop",
+      amount: -4.5,
+      category: "food",
+      timestamp: "2024-01-15T10:30:00Z",
+      transaction_type: "WITHDRAWAL",
+    },
+    {
+      id: 2,
+      description: "Salary",
+      amount: 3500.0,
+      category: "income",
+      timestamp: "2024-01-15T09:00:00Z",
+      transaction_type: "DEPOSIT",
+    },
+    {
+      id: 3,
+      description: "Grocery Store",
+      amount: -85.2,
+      category: "food",
+      timestamp: "2024-01-14T18:45:00Z",
+      transaction_type: "WITHDRAWAL",
+    },
+    {
+      id: 4,
+      description: "Gas Station",
+      amount: -45.0,
+      category: "transport",
+      timestamp: "2024-01-14T16:20:00Z",
+      transaction_type: "WITHDRAWAL",
+    },
+    {
+      id: 5,
+      description: "Netflix",
+      amount: -15.99,
+      category: "entertainment",
+      timestamp: "2024-01-13T12:00:00Z",
+      transaction_type: "WITHDRAWAL",
+    },
+    {
+      id: 6,
+      description: "Freelance Work",
+      amount: 750.0,
+      category: "income",
+      timestamp: "2024-01-12T14:30:00Z",
+      transaction_type: "DEPOSIT",
+    },
+    {
+      id: 7,
+      description: "Restaurant",
+      amount: -32.5,
+      category: "food",
+      timestamp: "2024-01-12T19:15:00Z",
+      transaction_type: "WITHDRAWAL",
+    },
+    {
+      id: 8,
+      description: "Uber",
+      amount: -18.75,
+      category: "transport",
+      timestamp: "2024-01-11T08:45:00Z",
+      transaction_type: "WITHDRAWAL",
+    },
+  ],
+}
 
 const categoryData = [
-  { name: "Food", amount: 122.2, percentage: 35, color: "#FF6B6B", icon: "restaurant" },
-  { name: "Transport", amount: 63.75, percentage: 18, color: "#4ECDC4", icon: "car" },
-  { name: "Entertainment", amount: 47.99, percentage: 14, color: "#45B7D1", icon: "game-controller" },
-  { name: "Shopping", amount: 89.5, percentage: 26, color: "#96CEB4", icon: "bag" },
-  { name: "Bills", amount: 25.0, percentage: 7, color: "#FFEAA7", icon: "receipt" },
+  {
+    name: "food",
+    amount: mockSpendingSummary.spending_by_category.food,
+    percentage: Math.round((mockSpendingSummary.spending_by_category.food / mockSpendingSummary.total_expense) * 100),
+    color: "#FF6B6B",
+    icon: "restaurant",
+  },
+  {
+    name: "transport",
+    amount: mockSpendingSummary.spending_by_category.transport,
+    percentage: Math.round(
+      (mockSpendingSummary.spending_by_category.transport / mockSpendingSummary.total_expense) * 100,
+    ),
+    color: "#4ECDC4",
+    icon: "car",
+  },
+  {
+    name: "entertainment",
+    amount: mockSpendingSummary.spending_by_category.entertainment,
+    percentage: Math.round(
+      (mockSpendingSummary.spending_by_category.entertainment / mockSpendingSummary.total_expense) * 100,
+    ),
+    color: "#45B7D1",
+    icon: "game-controller",
+  },
+  {
+    name: "shopping",
+    amount: mockSpendingSummary.spending_by_category.shopping,
+    percentage: Math.round(
+      (mockSpendingSummary.spending_by_category.shopping / mockSpendingSummary.total_expense) * 100,
+    ),
+    color: "#96CEB4",
+    icon: "bag",
+  },
+  {
+    name: "bills",
+    amount: mockSpendingSummary.spending_by_category.bills,
+    percentage: Math.round((mockSpendingSummary.spending_by_category.bills / mockSpendingSummary.total_expense) * 100),
+    color: "#FFEAA7",
+    icon: "receipt",
+  },
 ]
 
 export default function StatisticsScreen() {
@@ -45,26 +175,22 @@ export default function StatisticsScreen() {
   const [selectedPeriod, setSelectedPeriod] = useState<"weekly" | "monthly">("monthly")
   const [selectedChart, setSelectedChart] = useState<"pie" | "line" | "bar">("pie")
   const [searchQuery, setSearchQuery] = useState("")
-  const [filteredTransactions, setFilteredTransactions] = useState(mockTransactions)
+  const [filteredTransactions, setFilteredTransactions] = useState(mockSpendingSummary.recent_transactions)
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(50)).current
 
-   useFocusEffect(
-         useCallback(() => {
-           const onBackPress = () => {
-             router.replace('/(tabs)'); 
-             return true;
-           };
-       
-           const backHandler = BackHandler.addEventListener(
-             'hardwareBackPress',
-             onBackPress
-           );
-       
-           return () => backHandler.remove();
-         }, [])
-       );
-  
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        router.replace("/(tabs)")
+        return true
+      }
+
+      const backHandler = BackHandler.addEventListener("hardwareBackPress", onBackPress)
+
+      return () => backHandler.remove()
+    }, []),
+  )
 
   useEffect(() => {
     Animated.parallel([
@@ -82,21 +208,18 @@ export default function StatisticsScreen() {
   }, [])
 
   useEffect(() => {
-    const filtered = mockTransactions.filter(
+    const filtered = mockSpendingSummary.recent_transactions.filter(
       (transaction) =>
-        transaction.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         transaction.category.toLowerCase().includes(searchQuery.toLowerCase()),
     )
     setFilteredTransactions(filtered)
   }, [searchQuery])
 
-  const totalIncome = mockTransactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0)
+  const totalIncome = mockSpendingSummary.total_income
+  const totalExpenses = mockSpendingSummary.total_expense
+  const netBalance = mockSpendingSummary.balance
 
-  const totalExpenses = mockTransactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + Math.abs(t.amount), 0)
-
-  const netBalance = totalIncome - totalExpenses
   const balanceChange = selectedPeriod === "weekly" ? 12.5 : 8.3
 
   const handleExport = () => {
@@ -113,6 +236,10 @@ export default function StatisticsScreen() {
 
   const clearSearch = () => {
     setSearchQuery("")
+  }
+
+  const formatDate = (timestamp: string) => {
+    return new Date(timestamp).toISOString().split("T")[0]
   }
 
   const renderPieChart = () => (
@@ -214,12 +341,10 @@ export default function StatisticsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#ffffff" />
         </TouchableOpacity>
-
         <Text style={styles.headerTitle}>Statistics</Text>
-
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={handleExport} style={styles.headerButton}>
-            <Ionicons name="download" size={20} color="#ffffff"/>
+            <Ionicons name="download" size={20} color="#ffffff" />
           </TouchableOpacity>
           <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
             <Ionicons name="share" size={20} color="#ffffff" />
@@ -279,11 +404,9 @@ export default function StatisticsScreen() {
               </Text>
             </View>
           </View>
-
           <Text style={styles.balanceAmount}>
             ${Math.abs(netBalance).toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </Text>
-
           <View style={styles.balanceStats}>
             <View style={styles.balanceStat}>
               <Text style={styles.balanceStatLabel}>Income</Text>
@@ -316,7 +439,6 @@ export default function StatisticsScreen() {
               Weekly
             </Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             style={[styles.filterButton, selectedPeriod === "monthly" && styles.filterButtonActive]}
             onPress={() => setSelectedPeriod("monthly")}
@@ -394,7 +516,6 @@ export default function StatisticsScreen() {
             <Ionicons name="bulb" size={24} color={Colors.primary} />
             <Text style={styles.insightsTitle}>Financial Insights</Text>
           </View>
-
           <View style={styles.insightsList}>
             <View style={styles.insightItem}>
               <View style={[styles.insightIcon, { backgroundColor: "#4CAF5015" }]}>
@@ -405,23 +526,29 @@ export default function StatisticsScreen() {
                 <Text style={styles.insightSubtext}>Great job on budgeting!</Text>
               </View>
             </View>
-
             <View style={styles.insightItem}>
               <View style={[styles.insightIcon, { backgroundColor: "#FF980015" }]}>
                 <Ionicons name="restaurant" size={16} color="#FF9800" />
               </View>
               <View style={styles.insightContent}>
-                <Text style={styles.insightText}>Food expenses are 35% of your total spending</Text>
+                <Text style={styles.insightText}>
+                  Food expenses are{" "}
+                  {Math.round(
+                    (mockSpendingSummary.spending_by_category.food / mockSpendingSummary.total_expense) * 100,
+                  )}
+                  % of your total spending
+                </Text>
                 <Text style={styles.insightSubtext}>Consider meal planning to save more</Text>
               </View>
             </View>
-
             <View style={styles.insightItem}>
               <View style={[styles.insightIcon, { backgroundColor: "#2196F315" }]}>
                 <Ionicons name="card" size={16} color="#2196F3" />
               </View>
               <View style={styles.insightContent}>
-                <Text style={styles.insightText}>You're on track to save $500 this month</Text>
+                <Text style={styles.insightText}>
+                  You're on track to save ${(mockSpendingSummary.balance * 0.1).toFixed(0)} this month
+                </Text>
                 <Text style={styles.insightSubtext}>Keep up the excellent work!</Text>
               </View>
             </View>
@@ -444,33 +571,30 @@ export default function StatisticsScreen() {
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
-
           <View style={styles.transactionsList}>
             {filteredTransactions.slice(0, 5).map((transaction) => (
               <View key={transaction.id} style={styles.transactionItem}>
                 <View style={styles.transactionIcon}>
                   <Ionicons
-                    name={transaction.type === "income" ? "arrow-down" : "arrow-up"}
+                    name={transaction.transaction_type === "DEPOSIT" ? "arrow-down" : "arrow-up"}
                     size={16}
-                    color={transaction.type === "income" ? "#4CAF50" : "#F44336"}
+                    color={transaction.transaction_type === "DEPOSIT" ? "#4CAF50" : "#F44336"}
                   />
                 </View>
-
                 <View style={styles.transactionDetails}>
-                  <Text style={styles.transactionName}>{transaction.name}</Text>
+                  <Text style={styles.transactionName}>{transaction.description}</Text>
                   <Text style={styles.transactionCategory}>{transaction.category}</Text>
                 </View>
-
                 <View style={styles.transactionAmount}>
                   <Text
                     style={[
                       styles.transactionAmountText,
-                      { color: transaction.type === "income" ? "#4CAF50" : "#F44336" },
+                      { color: transaction.transaction_type === "DEPOSIT" ? "#4CAF50" : "#F44336" },
                     ]}
                   >
-                    {transaction.type === "income" ? "+" : "-"}${Math.abs(transaction.amount).toFixed(2)}
+                    {transaction.transaction_type === "DEPOSIT" ? "+" : "-"}${Math.abs(transaction.amount).toFixed(2)}
                   </Text>
-                  <Text style={styles.transactionDate}>{transaction.date}</Text>
+                  <Text style={styles.transactionDate}>{formatDate(transaction.timestamp)}</Text>
                 </View>
               </View>
             ))}

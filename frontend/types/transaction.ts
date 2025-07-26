@@ -1,5 +1,5 @@
 export interface TransferInterface {
-  to_address: string,
+  to_username: string,
   amount: number,
 }
 

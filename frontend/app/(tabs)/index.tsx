@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,6 @@ import {
   SafeAreaView,
   StatusBar,
   TouchableOpacity,
-  Dimensions,
   Platform,
   Animated,
   RefreshControl,
@@ -21,15 +20,29 @@ import Colors from "@/constants/Colors";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuthStore } from "@/store/use-auth-store";
-import { BadgeCheck, BanknoteArrowDown, BanknoteArrowUp, Send } from "lucide-react-native";
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+import {
+  BadgeCheck,
+  BanknoteArrowDown,
+  BanknoteArrowUp,
+  Send,
+} from "lucide-react-native";
+import { useCurrentUserDetail } from "@/apis/users/get-user-detail";
+import Loader from "@/components/Loader";
 
 const BankingWalletUI = () => {
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
   const scrollY = useRef(new Animated.Value(0)).current;
+  const { data, isLoading } = useCurrentUserDetail({
+    refetchInterval: 3000,
+  });
+
+  useEffect(() => {
+    if (data?.data) {
+      useAuthStore.getState().setUser(data?.data);
+    }
+  }, [data]);
 
   useFocusEffect(
     useCallback(() => {
@@ -104,28 +117,27 @@ const BankingWalletUI = () => {
   const actionButtons = [
     {
       name: "Send Money",
-      icon: <Send size={22} color={Colors.textInverse}/>,
+      icon: <Send size={22} color={Colors.textInverse} />,
       gradient: [Colors.neutral900, Colors.neutral600],
       route: "/sendMoney",
       description: "Transfer money to others",
     },
     {
       name: "Add Money",
-      icon: <BanknoteArrowUp size={22} color={Colors.textInverse}/>,
+      icon: <BanknoteArrowUp size={22} color={Colors.textInverse} />,
       gradient: [Colors.success, Colors.accentLight],
       route: "/(tabs)/(index)/topup",
       description: "Top up wallet",
     },
     {
       name: "Withdraw",
-      icon: <BanknoteArrowDown size={22} color={Colors.textInverse}/>,
+      icon: <BanknoteArrowDown size={22} color={Colors.textInverse} />,
       gradient: [Colors.secondary, Colors.secondaryLight],
       route: "/(tabs)/(index)/withdraw",
       description: "Transfer funds",
     },
   ];
 
-  
   const headerOpacity = scrollY.interpolate({
     inputRange: [0, 100],
     outputRange: [1, 0.8],
@@ -137,6 +149,10 @@ const BankingWalletUI = () => {
     outputRange: [0, 0],
     extrapolate: "clamp",
   });
+
+  if (isLoading) {
+    return <Loader />;
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -296,18 +312,28 @@ const BankingWalletUI = () => {
                     display: "flex",
                     flexDirection: "row",
                     alignItems: "flex-end",
+                    gap: 2
                   }}
                 >
                   {isBalanceVisible ? (
-                    <>
+                    <View
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    alignItems: "flex-end",
+                    gap: 2
+                  }}
+                >
                       <Text style={styles.balanceCurrency}>
                         NPR
                         {/* {isBalanceVisible ? "NPR 124,580.50" : "$•••,•••.••"} */}
                       </Text>
                       <Text style={styles.balance}>
-                        124.53.00
+                        {` ${parseFloat(
+                          useAuthStore.getState().user?.balance || "0"
+                        ).toFixed(2)}`}
                       </Text>
-                    </>
+                    </View>
                   ) : (
                     <Text style={styles.balance}>XXX.XX</Text>
                   )}
