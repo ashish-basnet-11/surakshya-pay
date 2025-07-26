@@ -12,11 +12,14 @@ import {
   Animated,
   TextInput,
   BackHandler,
+  RefreshControl,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useRouter } from "expo-router"
 import Colors from "@/constants/Colors"
 import { useFocusEffect } from "@react-navigation/native"
+import { useGetSpendingStatistics } from "@/apis/statistics/get-spending-statistics"
+import Loader from "@/components/Loader"
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window")
 
@@ -42,142 +45,27 @@ export interface SpendingSummary {
   recent_transactions: TransactionSummary[]
 }
 
-// Mock data using the new interfaces
-const mockSpendingSummary: SpendingSummary = {
-  total_income: 4250.0,
-  total_expense: 348.44,
-  balance: 3901.56,
-  spending_by_category: {
-    food: 122.2,
-    transport: 63.75,
-    entertainment: 47.99,
-    shopping: 89.5,
-    bills: 25.0,
-  },
-  transaction_count: 8,
-  average_transaction_amount: 531.31,
-  min_transaction_amount: 4.5,
-  max_transaction_amount: 3500.0,
-  recent_transactions: [
-    {
-      id: 1,
-      description: "Coffee Shop",
-      amount: -4.5,
-      category: "food",
-      timestamp: "2024-01-15T10:30:00Z",
-      transaction_type: "WITHDRAWAL",
-    },
-    {
-      id: 2,
-      description: "Salary",
-      amount: 3500.0,
-      category: "income",
-      timestamp: "2024-01-15T09:00:00Z",
-      transaction_type: "DEPOSIT",
-    },
-    {
-      id: 3,
-      description: "Grocery Store",
-      amount: -85.2,
-      category: "food",
-      timestamp: "2024-01-14T18:45:00Z",
-      transaction_type: "WITHDRAWAL",
-    },
-    {
-      id: 4,
-      description: "Gas Station",
-      amount: -45.0,
-      category: "transport",
-      timestamp: "2024-01-14T16:20:00Z",
-      transaction_type: "WITHDRAWAL",
-    },
-    {
-      id: 5,
-      description: "Netflix",
-      amount: -15.99,
-      category: "entertainment",
-      timestamp: "2024-01-13T12:00:00Z",
-      transaction_type: "WITHDRAWAL",
-    },
-    {
-      id: 6,
-      description: "Freelance Work",
-      amount: 750.0,
-      category: "income",
-      timestamp: "2024-01-12T14:30:00Z",
-      transaction_type: "DEPOSIT",
-    },
-    {
-      id: 7,
-      description: "Restaurant",
-      amount: -32.5,
-      category: "food",
-      timestamp: "2024-01-12T19:15:00Z",
-      transaction_type: "WITHDRAWAL",
-    },
-    {
-      id: 8,
-      description: "Uber",
-      amount: -18.75,
-      category: "transport",
-      timestamp: "2024-01-11T08:45:00Z",
-      transaction_type: "WITHDRAWAL",
-    },
-  ],
-}
-
-const categoryData = [
-  {
-    name: "food",
-    amount: mockSpendingSummary.spending_by_category.food,
-    percentage: Math.round((mockSpendingSummary.spending_by_category.food / mockSpendingSummary.total_expense) * 100),
-    color: "#FF6B6B",
-    icon: "restaurant",
-  },
-  {
-    name: "transport",
-    amount: mockSpendingSummary.spending_by_category.transport,
-    percentage: Math.round(
-      (mockSpendingSummary.spending_by_category.transport / mockSpendingSummary.total_expense) * 100,
-    ),
-    color: "#4ECDC4",
-    icon: "car",
-  },
-  {
-    name: "entertainment",
-    amount: mockSpendingSummary.spending_by_category.entertainment,
-    percentage: Math.round(
-      (mockSpendingSummary.spending_by_category.entertainment / mockSpendingSummary.total_expense) * 100,
-    ),
-    color: "#45B7D1",
-    icon: "game-controller",
-  },
-  {
-    name: "shopping",
-    amount: mockSpendingSummary.spending_by_category.shopping,
-    percentage: Math.round(
-      (mockSpendingSummary.spending_by_category.shopping / mockSpendingSummary.total_expense) * 100,
-    ),
-    color: "#96CEB4",
-    icon: "bag",
-  },
-  {
-    name: "bills",
-    amount: mockSpendingSummary.spending_by_category.bills,
-    percentage: Math.round((mockSpendingSummary.spending_by_category.bills / mockSpendingSummary.total_expense) * 100),
-    color: "#FFEAA7",
-    icon: "receipt",
-  },
-]
-
 export default function StatisticsScreen() {
   const router = useRouter()
   const [selectedPeriod, setSelectedPeriod] = useState<"weekly" | "monthly">("monthly")
   const [selectedChart, setSelectedChart] = useState<"pie" | "line" | "bar">("pie")
   const [searchQuery, setSearchQuery] = useState("")
-  const [filteredTransactions, setFilteredTransactions] = useState(mockSpendingSummary.recent_transactions)
+  const [filteredTransactions, setFilteredTransactions] = useState<TransactionSummary[]>([])
+  const [refreshing, setRefreshing] = useState(false)
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(50)).current
+
+  // Fetch statistics data
+  const { 
+    data: statisticsData, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useGetSpendingStatistics({
+    refetchInterval: 30000, // Refetch every 30 seconds
+  })
+
+  const spendingSummary = statisticsData?.data
 
   useFocusEffect(
     useCallback(() => {
@@ -208,19 +96,70 @@ export default function StatisticsScreen() {
   }, [])
 
   useEffect(() => {
-    const filtered = mockSpendingSummary.recent_transactions.filter(
-      (transaction) =>
-        transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        transaction.category.toLowerCase().includes(searchQuery.toLowerCase()),
-    )
-    setFilteredTransactions(filtered)
-  }, [searchQuery])
+    if (spendingSummary?.recent_transactions) {
+      const filtered = spendingSummary.recent_transactions.filter(
+        (transaction) =>
+          transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          transaction.category.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+      setFilteredTransactions(filtered)
+    }
+  }, [searchQuery, spendingSummary])
 
-  const totalIncome = mockSpendingSummary.total_income
-  const totalExpenses = mockSpendingSummary.total_expense
-  const netBalance = mockSpendingSummary.balance
+  // Handle refresh
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    try {
+      await refetch()
+      // Add a small delay to show the refresh animation
+      setTimeout(() => {
+        setRefreshing(false)
+      }, 1000)
+    } catch (error) {
+      console.error("Refresh error:", error)
+      setRefreshing(false)
+    }
+  }, [refetch])
+
+  // Show loader while data is loading
+  if (isLoading && !refreshing) {
+    return <Loader />
+  }
+
+  // Show error state if there's an error
+  if (error || !spendingSummary) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Statistics</Text>
+          <View style={styles.headerActions} />
+        </View>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle" size={48} color={Colors.error} />
+          <Text style={styles.errorText}>Failed to load statistics</Text>
+          <Text style={styles.errorSubtext}>Please try again later</Text>
+        </View>
+      </View>
+    )
+  }
+
+  const totalIncome = spendingSummary.total_income
+  const totalExpenses = spendingSummary.total_expense
+  const netBalance = spendingSummary.balance
 
   const balanceChange = selectedPeriod === "weekly" ? 12.5 : 8.3
+
+  // Generate category data from API
+  const categoryData = Object.entries(spendingSummary.spending_by_category).map(([category, amount]) => ({
+    name: category,
+    amount: amount,
+    percentage: totalExpenses > 0 ? Math.round((amount / totalExpenses) * 100) : 0,
+    color: getCategoryColor(category),
+    icon: getCategoryIcon(category),
+  }))
 
   const handleExport = () => {
     Alert.alert("Export Data", "Choose export format:", [
@@ -242,6 +181,35 @@ export default function StatisticsScreen() {
     return new Date(timestamp).toISOString().split("T")[0]
   }
 
+  // Helper functions for category styling
+  function getCategoryColor(category: string): string {
+    const colors: Record<string, string> = {
+      deposit: "#4CAF50",
+      withdrawal: "#F44336",
+      transfer: "#2196F3",
+      food: "#FF6B6B",
+      transport: "#4ECDC4",
+      entertainment: "#45B7D1",
+      shopping: "#96CEB4",
+      bills: "#FFEAA7",
+    }
+    return colors[category.toLowerCase()] || "#9E9E9E"
+  }
+
+  function getCategoryIcon(category: string): string {
+    const icons: Record<string, string> = {
+      deposit: "add-circle",
+      withdrawal: "remove-circle",
+      transfer: "swap-horizontal",
+      food: "restaurant",
+      transport: "car",
+      entertainment: "game-controller",
+      shopping: "bag",
+      bills: "receipt",
+    }
+    return icons[category.toLowerCase()] || "help-circle"
+  }
+
   const renderPieChart = () => (
     <View style={styles.chartContainer}>
       <View style={styles.pieChartContainer}>
@@ -260,7 +228,7 @@ export default function StatisticsScreen() {
           ))}
           <View style={styles.pieCenter}>
             <Text style={styles.pieCenterText}>Total</Text>
-            <Text style={styles.pieCenterAmount}>${totalExpenses.toFixed(0)}</Text>
+            <Text style={styles.pieCenterAmount}>NPR {totalExpenses.toFixed(0)}</Text>
           </View>
         </View>
       </View>
@@ -269,7 +237,7 @@ export default function StatisticsScreen() {
           <View key={category.name} style={styles.legendItem}>
             <View style={[styles.legendColor, { backgroundColor: category.color }]} />
             <Text style={styles.legendText}>{category.name}</Text>
-            <Text style={styles.legendAmount}>${category.amount}</Text>
+            <Text style={styles.legendAmount}>NPR {category.amount}</Text>
           </View>
         ))}
       </View>
@@ -300,8 +268,10 @@ export default function StatisticsScreen() {
           <View key={category.name} style={styles.barChartItem}>
             <View style={styles.barChartInfo}>
               <Ionicons name={category.icon as any} size={20} color={category.color} />
-              <Text style={styles.barChartLabel}>{category.name}</Text>
-              <Text style={styles.barChartAmount}>${category.amount}</Text>
+              <View>
+                <Text style={styles.barChartLabel}>{category.name}</Text>
+                <Text style={styles.barChartAmount}>NPR {category.amount}</Text>
+              </View>
             </View>
             <View style={styles.barChartBarContainer}>
               <View
@@ -343,6 +313,17 @@ export default function StatisticsScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Statistics</Text>
         <View style={styles.headerActions}>
+          <TouchableOpacity 
+            onPress={onRefresh} 
+            style={[styles.headerButton, refreshing && styles.headerButtonDisabled]}
+            disabled={refreshing}
+          >
+            <Ionicons 
+              name={refreshing ? "sync" : "refresh"} 
+              size={20} 
+              color="#ffffff" 
+            />
+          </TouchableOpacity>
           <TouchableOpacity onPress={handleExport} style={styles.headerButton}>
             <Ionicons name="download" size={20} color="#ffffff" />
           </TouchableOpacity>
@@ -352,7 +333,16 @@ export default function StatisticsScreen() {
         </View>
       </Animated.View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+          />
+        }
+      >
         {/* Search Bar */}
         <Animated.View
           style={[
@@ -405,17 +395,17 @@ export default function StatisticsScreen() {
             </View>
           </View>
           <Text style={styles.balanceAmount}>
-            ${Math.abs(netBalance).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            NPR {Math.abs(netBalance).toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </Text>
           <View style={styles.balanceStats}>
             <View style={styles.balanceStat}>
               <Text style={styles.balanceStatLabel}>Income</Text>
-              <Text style={[styles.balanceStatAmount, { color: "#4CAF50" }]}>+${totalIncome.toLocaleString()}</Text>
+              <Text style={[styles.balanceStatAmount, { color: "#4CAF50" }]}>NPR {totalIncome.toLocaleString()}</Text>
             </View>
             <View style={styles.balanceStatDivider} />
             <View style={styles.balanceStat}>
               <Text style={styles.balanceStatLabel}>Expenses</Text>
-              <Text style={[styles.balanceStatAmount, { color: "#F44336" }]}>-${totalExpenses.toLocaleString()}</Text>
+              <Text style={[styles.balanceStatAmount, { color: "#F44336" }]}>NPR {totalExpenses.toLocaleString()}</Text>
             </View>
           </View>
         </Animated.View>
@@ -503,7 +493,7 @@ export default function StatisticsScreen() {
         </Animated.View>
 
         {/* Financial Insights */}
-        <Animated.View
+        {/* <Animated.View
           style={[
             styles.insightsCard,
             {
@@ -534,7 +524,7 @@ export default function StatisticsScreen() {
                 <Text style={styles.insightText}>
                   Food expenses are{" "}
                   {Math.round(
-                    (mockSpendingSummary.spending_by_category.food / mockSpendingSummary.total_expense) * 100,
+                    (spendingSummary.spending_by_category.food / spendingSummary.total_expense) * 100,
                   )}
                   % of your total spending
                 </Text>
@@ -547,13 +537,13 @@ export default function StatisticsScreen() {
               </View>
               <View style={styles.insightContent}>
                 <Text style={styles.insightText}>
-                  You're on track to save ${(mockSpendingSummary.balance * 0.1).toFixed(0)} this month
+                  You're on track to save NPR {(spendingSummary.balance * 0.1).toFixed(0)} this month
                 </Text>
                 <Text style={styles.insightSubtext}>Keep up the excellent work!</Text>
               </View>
             </View>
           </View>
-        </Animated.View>
+        </Animated.View> */}
 
         {/* Recent Transactions */}
         <Animated.View
@@ -567,7 +557,7 @@ export default function StatisticsScreen() {
         >
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent Transactions ({filteredTransactions.length})</Text>
-            <TouchableOpacity onPress={() => router.push("/(tabs)/wallet")}>
+            <TouchableOpacity onPress={() => router.push("/(tabs)/(index)/details")}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
@@ -592,7 +582,7 @@ export default function StatisticsScreen() {
                       { color: transaction.transaction_type === "DEPOSIT" ? "#4CAF50" : "#F44336" },
                     ]}
                   >
-                    {transaction.transaction_type === "DEPOSIT" ? "+" : "-"}${Math.abs(transaction.amount).toFixed(2)}
+                    {transaction.transaction_type === "DEPOSIT" ? "+" : "-"}NPR {Math.abs(transaction.amount).toFixed(2)}
                   </Text>
                   <Text style={styles.transactionDate}>{formatDate(transaction.timestamp)}</Text>
                 </View>
@@ -616,7 +606,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 50,
+    paddingTop: 20,
     paddingBottom: 20,
     backgroundColor: Colors.primary,
     shadowColor: "#000",
@@ -649,6 +639,9 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.1)",
     justifyContent: "center",
     alignItems: "center",
+  },
+  headerButtonDisabled: {
+    opacity: 0.5,
   },
   content: {
     flex: 1,
@@ -1082,5 +1075,24 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 120,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 18,
+    color: "#333",
+    marginTop: 10,
+    textAlign: "center",
+    fontWeight: "600",
+  },
+  errorSubtext: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 5,
+    textAlign: "center",
   },
 })

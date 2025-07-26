@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
-    marginTop: Platform.OS === "ios" ? 50 : 40,
+    marginTop: Platform.OS === "ios" ? 20 : 20,
     marginBottom: 16,
   },
   backButton: {

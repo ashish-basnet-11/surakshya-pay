@@ -22,6 +22,7 @@ import Colors from "@/constants/Colors";
 import { useCallback, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { showMessage } from "react-native-flash-message";
+import { useAuthStore } from "@/store/use-auth-store";
 
 const Settings = () => {
   const router = useRouter();
@@ -47,14 +48,6 @@ const Settings = () => {
       return () => backHandler.remove();
     }, [])
   );
-
-  const userInfo = {
-    name: "Eleanor Pena",
-    email: "eleanor.pena@email.com",
-    membershipTier: "Premium",
-    joinDate: "Member since July 2024",
-    avatar: "EP",
-  };
 
   const quickToggles = [
     {
@@ -390,27 +383,16 @@ const Settings = () => {
                           style={styles.avatarGradient}
                         >
                           <Text style={styles.avatarText}>
-                            {userInfo.avatar}
+                            {useAuthStore.getState().user?.full_name?.split(" ")[0][0]}
                           </Text>
                         </LinearGradient>
                         <View style={styles.onlineIndicator} />
                       </View>
                       <View style={styles.profileInfo}>
-                        <Text style={styles.profileName}>{userInfo.name}</Text>
+                        <Text style={styles.profileName}>{useAuthStore.getState().user?.full_name}</Text>
                         <Text style={styles.profileEmail}>
-                          {userInfo.email}
+                          {useAuthStore.getState().user?.email}
                         </Text>
-                        <View style={styles.membershipContainer}>
-                          <View style={styles.membershipBadge}>
-                            <Ionicons name="star" size={12} color="#FFD700" />
-                            <Text style={styles.membershipText}>
-                              {userInfo.membershipTier}
-                            </Text>
-                          </View>
-                          <Text style={styles.joinDate}>
-                            {userInfo.joinDate}
-                          </Text>
-                        </View>
                         <View style={styles.kycContainer}>
                           <TouchableOpacity
                             style={styles.kycContainer}
@@ -606,7 +588,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 24,
-    paddingTop: 50,
+    paddingTop: 20,
     paddingBottom: 20,
   },
   backButton: {
@@ -695,8 +677,8 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   avatarGradient: {
-    width: 60,
-    height: 60,
+    width: 50,
+    height: 50,
     borderRadius: 30,
     alignItems: "center",
     justifyContent: "center",
@@ -725,16 +707,17 @@ const styles = StyleSheet.create({
   },
   profileInfo: {
     flex: 1,
+    justifyContent: "center"
   },
   profileName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "700",
     color: Colors.textInverse,
     marginBottom: 4,
     letterSpacing: -0.3,
   },
   profileEmail: {
-    fontSize: 14,
+    fontSize: 10,
     color: Colors.neutral200,
     marginBottom: 8,
     fontWeight: "500",

@@ -6,7 +6,9 @@ from app.utils.blockchain import (
     TransactionType
 )
 from typing import List, Optional, Dict, Any
-from sqlalchemy import func
+from sqlalchemy import func, or_
+from app.crud import budget as crud_budget
+import datetime
 
 def get_transaction(db: Session, transaction_id: int, user_id: int):
     return db.query(Transaction).filter(Transaction.id == transaction_id, Transaction.user_id == user_id).first()
@@ -14,14 +16,36 @@ def get_transaction(db: Session, transaction_id: int, user_id: int):
 def get_transaction_by_blockchain_id(db: Session, blockchain_id: int, user_id: int):
     return db.query(Transaction).filter(Transaction.blockchain_id == blockchain_id, Transaction.user_id == user_id).first()
 
-def get_transactions(db: Session, user_id: int, skip: int = 0, limit: int = 100):
-    return db.query(Transaction).filter(Transaction.user_id == user_id).offset(skip).limit(limit).all()
+def get_transactions(db: Session, user_id: int, skip: int = 0, limit: int = 100, order_by: str = "latest"):
+    """
+    Get transactions for a user with ordering options
+    
+    Args:
+        db: Database session
+        user_id: User ID
+        skip: Number of records to skip
+        limit: Maximum number of records to return
+        order_by: Ordering preference - "latest" (default) or "oldest"
+    """
+    query = db.query(Transaction).filter(Transaction.user_id == user_id)
+    
+    if order_by == "oldest":
+        query = query.order_by(Transaction.timestamp.asc())
+    else:  # default to latest first
+        query = query.order_by(Transaction.timestamp.desc())
+    
+    return query.offset(skip).limit(limit).all()
 
 def create_transaction(db: Session, transaction: TransactionCreate, user_id: int):
     db_transaction = Transaction(**transaction.dict(), user_id=user_id)
     db.add(db_transaction)
     db.commit()
     db.refresh(db_transaction)
+    
+    # Update budget if this is an expense transaction
+    if transaction.transaction_type in ['WITHDRAWAL', 'TRANSFER'] and transaction.amount > 0:
+        update_budgets_from_transaction(db, user_id, transaction.category, transaction.amount)
+    
     return db_transaction
 
 def update_transaction(db: Session, db_transaction: Transaction, transaction_in: TransactionUpdate):
@@ -99,7 +123,7 @@ def get_transactions_by_type(db: Session, user_id: int, transaction_type: str, s
     return db.query(Transaction).filter(
         Transaction.user_id == user_id,
         Transaction.transaction_type == transaction_type
-    ).offset(skip).limit(limit).all()
+    ).order_by(Transaction.timestamp.desc()).offset(skip).limit(limit).all()
 
 def get_recent_transactions(db: Session, user_id: int, limit: int = 10):
     """Get recent transactions for a user"""
@@ -111,4 +135,31 @@ def count_total_transactions(db: Session) -> int:
     return db.query(Transaction).count()
 
 def sum_transaction_amount_by_type(db: Session, transaction_type: str) -> float:
-    return db.query(func.sum(Transaction.amount)).filter(Transaction.transaction_type == transaction_type).scalar() or 0.0 
+    return db.query(func.sum(Transaction.amount)).filter(Transaction.transaction_type == transaction_type).scalar() or 0.0
+
+def update_budgets_from_transaction(db: Session, user_id: int, category: str, amount: float):
+    """Update budget spent amounts when a transaction occurs"""
+    from app.models.budget import Budget, BudgetStatus
+    
+    # Find active budgets for this category
+    current_date = datetime.date.today()
+    budgets = db.query(Budget).filter(
+        Budget.user_id == user_id,
+        Budget.category == category,
+        Budget.status.in_([BudgetStatus.ACTIVE, BudgetStatus.WARNING]),
+        Budget.start_date <= current_date,
+        or_(Budget.end_date >= current_date, Budget.end_date.is_(None))
+    ).all()
+    
+    for budget in budgets:
+        budget.spent_amount += amount
+        
+        # Update status based on spent amount
+        if budget.spent_amount >= budget.budget_amount:
+            budget.status = BudgetStatus.COMPLETED
+        elif budget.spent_amount >= budget.budget_amount * 0.9:
+            budget.status = BudgetStatus.WARNING
+        
+        db.add(budget)
+    
+    db.commit() 

@@ -188,4 +188,22 @@ def count_total_users(db: Session) -> int:
 
 def count_total_admins(db: Session) -> int:
     from app.models.user import User
-    return db.query(User).filter(User.is_superuser == True).count() 
+    return db.query(User).filter(User.is_superuser == True).count()
+
+def count_active_users(db: Session) -> int:
+    from app.models.user import User
+    return db.query(User).filter(User.is_active == True).count()
+
+def count_new_users_this_week(db: Session) -> int:
+    from app.models.user import User
+    # Since User model doesn't have created_at field, we'll count users with KYC submitted this week
+    # This gives us an approximation of recent activity
+    from app.models.kyc import KYC
+    from datetime import datetime, timedelta
+    week_ago = datetime.utcnow() - timedelta(days=7)
+    return db.query(KYC).filter(KYC.submitted_at >= week_ago).count()
+
+def count_kyc_verified_users(db: Session) -> int:
+    from app.models.user import User
+    from app.models.kyc import KYCStatus
+    return db.query(User).join(User.kyc).filter(User.kyc.has(status=KYCStatus.APPROVED)).count() 

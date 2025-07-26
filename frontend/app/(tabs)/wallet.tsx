@@ -12,140 +12,73 @@ import {
   Animated,
   TextInput,
   BackHandler,
+  RefreshControl,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useRouter } from "expo-router"
 import Colors from "@/constants/Colors"
 import { useFocusEffect } from "@react-navigation/native"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { budgetApi } from "@/apis/budget/budget-api"
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window")
 
-// Mock budget data
-const mockBudgetData = [
-  {
-    id: "1",
-    name: "Food & Dining",
-    budgetAmount: 500.0,
-    spentAmount: 342.5,
-    category: "Food",
-    date: "2024-01-15",
-    time: "09:30 AM",
-    type: "expense",
-    status: "active",
-    description: "Monthly food budget",
-    color: "#FF6B6B",
-    icon: "restaurant",
-  },
-  {
-    id: "2",
-    name: "Transportation",
-    budgetAmount: 200.0,
-    spentAmount: 145.75,
-    category: "Transport",
-    date: "2024-01-15",
-    time: "12:00 PM",
-    type: "expense",
-    status: "active",
-    description: "Gas, public transport, parking",
-    color: "#4ECDC4",
-    icon: "car",
-  },
-  {
-    id: "3",
-    name: "Entertainment",
-    budgetAmount: 150.0,
-    spentAmount: 89.99,
-    category: "Entertainment",
-    date: "2024-01-14",
-    time: "06:45 PM",
-    type: "expense",
-    status: "active",
-    description: "Movies, games, subscriptions",
-    color: "#45B7D1",
-    icon: "game-controller",
-  },
-  {
-    id: "4",
-    name: "Shopping",
-    budgetAmount: 300.0,
-    spentAmount: 275.0,
-    category: "Shopping",
-    date: "2024-01-14",
-    time: "08:15 AM",
-    type: "expense",
-    status: "warning",
-    description: "Clothes, electronics, misc",
-    color: "#96CEB4",
-    icon: "bag",
-  },
-  {
-    id: "5",
-    name: "Bills & Utilities",
-    budgetAmount: 400.0,
-    spentAmount: 385.99,
-    category: "Bills",
-    date: "2024-01-13",
-    time: "11:30 PM",
-    type: "expense",
-    status: "active",
-    description: "Electricity, water, internet",
-    color: "#FFEAA7",
-    icon: "receipt",
-  },
-  {
-    id: "6",
-    name: "Healthcare",
-    budgetAmount: 200.0,
-    spentAmount: 125.0,
-    category: "Healthcare",
-    date: "2024-01-12",
-    time: "03:20 PM",
-    type: "expense",
-    status: "active",
-    description: "Medical, pharmacy, insurance",
-    color: "#FD79A8",
-    icon: "medical",
-  },
-  {
-    id: "7",
-    name: "Savings Goal",
-    budgetAmount: 800.0,
-    spentAmount: 600.0,
-    category: "Savings",
-    date: "2024-01-12",
-    time: "07:45 PM",
-    type: "savings",
-    status: "active",
-    description: "Emergency fund contribution",
-    color: "#00B894",
-    icon: "wallet",
-  },
-  {
-    id: "8",
-    name: "Investment",
-    budgetAmount: 500.0,
-    spentAmount: 500.0,
-    category: "Investment",
-    date: "2024-01-11",
-    time: "05:30 PM",
-    type: "investment",
-    status: "completed",
-    description: "Monthly investment portfolio",
-    color: "#6C5CE7",
-    icon: "trending-up",
-  },
-]
-
 export default function BudgetScreen() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [selectedFilter, setSelectedFilter] = useState<"all" | "active" | "warning" | "completed">("all")
   const [sortBy, setSortBy] = useState<"date" | "amount" | "name" | "category">("date")
   const [searchQuery, setSearchQuery] = useState("")
   const [showBalance, setShowBalance] = useState(true)
   const [chartType, setChartType] = useState<"line" | "category">("category")
+  const [refreshing, setRefreshing] = useState(false)
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(50)).current
   const balanceAnim = useRef(new Animated.Value(0)).current
+
+  // API Queries
+  const { data: budgetSummary, isLoading: summaryLoading } = useQuery({
+    queryKey: ["budget-summary"],
+    queryFn: budgetApi.getBudgetSummary,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  })
+
+  const { data: budgetAnalytics, isLoading: analyticsLoading } = useQuery({
+    queryKey: ["budget-analytics"],
+    queryFn: budgetApi.getBudgetAnalytics,
+    refetchInterval: 30000,
+  })
+
+  const { data: budgetsData, isLoading: budgetsLoading } = useQuery({
+    queryKey: ["budgets", selectedFilter, sortBy],
+    queryFn: () => budgetApi.getBudgets({
+      status: selectedFilter === "all" ? undefined : selectedFilter,
+      sort_by: sortBy === "date" ? "created_at" : sortBy,
+      sort_order: "desc",
+      limit: 100
+    }),
+    refetchInterval: 30000,
+  })
+
+  const { data: searchResults, isLoading: searchLoading } = useQuery({
+    queryKey: ["budget-search", searchQuery],
+    queryFn: () => budgetApi.searchBudgets(searchQuery),
+    enabled: searchQuery.length > 0,
+  })
+
+  // Mutations
+  const deleteBudgetMutation = useMutation({
+    mutationFn: budgetApi.deleteBudget,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["budgets"] })
+      queryClient.invalidateQueries({ queryKey: ["budget-summary"] })
+      queryClient.invalidateQueries({ queryKey: ["budget-analytics"] })
+      Alert.alert("Success", "Budget deleted successfully!")
+    },
+    onError: (error) => {
+      Alert.alert("Error", "Failed to delete budget")
+    },
+  })
 
   useFocusEffect(
     useCallback(() => {
@@ -181,34 +114,31 @@ export default function BudgetScreen() {
     ]).start()
   }, [])
 
-  const filteredBudgets = mockBudgetData.filter((budget) => {
-    const matchesFilter = selectedFilter === "all" || budget.status === selectedFilter
-    const matchesSearch =
-      budget.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      budget.category.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesFilter && matchesSearch
-  })
-
-  const sortedBudgets = [...filteredBudgets].sort((a, b) => {
-    switch (sortBy) {
-      case "date":
-        return new Date(b.date).getTime() - new Date(a.date).getTime()
-      case "amount":
-        return b.budgetAmount - a.budgetAmount
-      case "name":
-        return a.name.localeCompare(b.name)
-      case "category":
-        return a.category.localeCompare(b.category)
-      default:
-        return 0
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    try {
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["budget-summary"] }),
+        queryClient.refetchQueries({ queryKey: ["budget-analytics"] }),
+        queryClient.refetchQueries({ queryKey: ["budgets"] }),
+      ])
+    } catch (error) {
+      console.error("Refresh failed:", error)
+    } finally {
+      setRefreshing(false)
     }
-  })
+  }, [queryClient])
 
-  const totalBudget = mockBudgetData.reduce((sum, b) => sum + b.budgetAmount, 0)
-  const totalSpent = mockBudgetData.reduce((sum, b) => sum + b.spentAmount, 0)
-  const totalRemaining = totalBudget - totalSpent
-  const activeBudgets = mockBudgetData.filter((b) => b.status === "active").length
-  const warningBudgets = mockBudgetData.filter((b) => b.status === "warning").length
+  // Data processing
+  const budgets = budgetsData?.data || []
+  const summary = budgetSummary?.data
+  const analytics = budgetAnalytics?.data
+  const categoryProgress = analytics?.category_progress || []
+  const trendData = analytics?.trend_data || []
+
+  const filteredBudgets = searchQuery.length > 0 
+    ? (searchResults?.data || [])
+    : budgets
 
   const handleExport = () => {
     Alert.alert("Export Budget Report", "Choose export format:", [
@@ -219,7 +149,7 @@ export default function BudgetScreen() {
   }
 
   const handleRefresh = () => {
-    Alert.alert("Success", "Budget data refreshed!")
+    onRefresh()
   }
 
   const clearSearch = () => {
@@ -260,15 +190,7 @@ export default function BudgetScreen() {
     <View style={styles.chartContainer}>
       <Text style={styles.chartTitle}>Budget vs Spending (Last 7 Days)</Text>
       <View style={styles.lineChart}>
-        {[
-          { budget: 180, spent: 120 },
-          { budget: 180, spent: 85 },
-          { budget: 180, spent: 150 },
-          { budget: 180, spent: 95 },
-          { budget: 180, spent: 180 },
-          { budget: 180, spent: 110 },
-          { budget: 180, spent: 140 },
-        ].map((data, index) => (
+        {trendData.slice(0, 7).map((data, index) => (
           <View key={index} style={styles.lineChartBar}>
             <View
               style={[styles.lineChartBarFill, { height: `${(data.budget / 200) * 100}%`, backgroundColor: "#E3F2FD" }]}
@@ -279,52 +201,52 @@ export default function BudgetScreen() {
                 { height: `${(data.spent / 200) * 100}%`, position: "absolute", bottom: 0 },
               ]}
             />
-            <Text style={styles.lineChartLabel}>{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][index]}</Text>
+            <Text style={styles.lineChartLabel}>
+              {new Date(data.date).toLocaleDateString('en-US', { weekday: 'short' })}
+            </Text>
           </View>
         ))}
       </View>
     </View>
   )
 
-  const renderCategoryChart = () => {
-    const categories = mockBudgetData.slice(0, 5).map((budget) => ({
-      name: budget.category,
-      budgetAmount: budget.budgetAmount,
-      spentAmount: budget.spentAmount,
-      color: budget.color,
-      progress: getBudgetProgress(budget.spentAmount, budget.budgetAmount),
-    }))
-
-    return (
-      <View style={styles.chartContainer}>
-        <Text style={styles.chartTitle}>Budget Progress by Category</Text>
-        <View style={styles.categoryChart}>
-          {categories.map((category) => (
-            <View key={category.name} style={styles.categoryItem}>
-              <View style={styles.categoryInfo}>
-                <View style={[styles.categoryColor, { backgroundColor: category.color }]} />
-                <Text style={styles.categoryName}>{category.name}</Text>
-              </View>
-              <View style={styles.categoryProgress}>
-                <View style={styles.categoryProgressBar}>
-                  <View
-                    style={[
-                      styles.categoryProgressFill,
-                      {
-                        width: `${category.progress}%`,
-                        backgroundColor:
-                          category.progress > 90 ? "#F44336" : category.progress > 75 ? "#FF9800" : "#4CAF50",
-                      },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.categoryAmount}>
-                  ${category.spentAmount}/${category.budgetAmount}
-                </Text>
-              </View>
+  const renderCategoryChart = () => (
+    <View style={styles.chartContainer}>
+      <Text style={styles.chartTitle}>Budget Progress by Category</Text>
+      <View style={styles.categoryChart}>
+        {categoryProgress.map((category) => (
+          <View key={category.category} style={styles.categoryItem}>
+            <View style={styles.categoryInfo}>
+              <View style={[styles.categoryColor, { backgroundColor: category.color }]} />
+              <Text style={styles.categoryName}>{category.category}</Text>
             </View>
-          ))}
-        </View>
+            <View style={styles.categoryProgress}>
+              <View style={styles.categoryProgressBar}>
+                <View
+                  style={[
+                    styles.categoryProgressFill,
+                    {
+                      width: `${category.progress_percentage}%`,
+                      backgroundColor:
+                        category.progress_percentage > 90 ? "#F44336" : category.progress_percentage > 75 ? "#FF9800" : "#4CAF50",
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={styles.categoryAmount}>
+                NPR {category.spent_amount.toFixed(2)}/{category.budget_amount.toFixed(2)}
+              </Text>
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  )
+
+  if (summaryLoading || analyticsLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading budget data...</Text>
       </View>
     )
   }
@@ -347,7 +269,18 @@ export default function BudgetScreen() {
         </View>
       </Animated.View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
+          />
+        }
+      >
         {/* Budget Overview Card */}
         <Animated.View
           style={[
@@ -363,7 +296,7 @@ export default function BudgetScreen() {
               <Text style={styles.balanceLabel}>Monthly Budget</Text>
               <View style={styles.balanceRow}>
                 <Text style={styles.balanceAmount}>
-                  {showBalance ? `$${totalBudget.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "••••••"}
+                  {showBalance ? `NPR ${summary?.monthly_budget?.toLocaleString("en-US", { minimumFractionDigits: 2 }) || "0.00"}` : "••••••"}
                 </Text>
                 <TouchableOpacity onPress={() => setShowBalance(!showBalance)} style={styles.eyeButton}>
                   <Ionicons name={showBalance ? "eye" : "eye-off"} size={20} color="#666" />
@@ -380,7 +313,9 @@ export default function BudgetScreen() {
                 <Ionicons name="trending-down" size={16} color="#F44336" />
                 <Text style={styles.balanceStatLabel}>Spent</Text>
               </View>
-              <Text style={[styles.balanceStatAmount, { color: "#F44336" }]}>${totalSpent.toLocaleString()}</Text>
+              <Text style={[styles.balanceStatAmount, { color: "#F44336" }]}>
+                NPR {summary?.monthly_spent?.toLocaleString() || "0"}
+              </Text>
             </View>
             <View style={styles.balanceStatDivider} />
             <View style={styles.balanceStat}>
@@ -388,7 +323,9 @@ export default function BudgetScreen() {
                 <Ionicons name="trending-up" size={16} color="#4CAF50" />
                 <Text style={styles.balanceStatLabel}>Remaining</Text>
               </View>
-              <Text style={[styles.balanceStatAmount, { color: "#4CAF50" }]}>${totalRemaining.toLocaleString()}</Text>
+              <Text style={[styles.balanceStatAmount, { color: "#4CAF50" }]}>
+                NPR {summary?.monthly_remaining?.toLocaleString() || "0"}
+              </Text>
             </View>
             <View style={styles.balanceStatDivider} />
             <View style={styles.balanceStat}>
@@ -396,7 +333,9 @@ export default function BudgetScreen() {
                 <Ionicons name="warning" size={16} color="#FF9800" />
                 <Text style={styles.balanceStatLabel}>Alerts</Text>
               </View>
-              <Text style={[styles.balanceStatAmount, { color: "#FF9800" }]}>{warningBudgets}</Text>
+              <Text style={[styles.balanceStatAmount, { color: "#FF9800" }]}>
+                {summary?.warning_count || 0}
+              </Text>
             </View>
           </View>
         </Animated.View>
@@ -541,21 +480,21 @@ export default function BudgetScreen() {
         >
           <Text style={styles.sectionTitle}>Budget Actions</Text>
           <View style={styles.quickActions}>
-            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/create-budget")}>
+            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/(tabs)/create-budget")}>
               <View style={[styles.quickActionIcon, { backgroundColor: "#4CAF5015" }]}>
                 <Ionicons name="add-circle" size={24} color="#4CAF50" />
               </View>
               <Text style={styles.quickActionTitle}>Create Budget</Text>
               <Text style={styles.quickActionSubtitle}>Set new spending limits</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/budget-goals")}>
+            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/(tabs)/budget-goals")}>
               <View style={[styles.quickActionIcon, { backgroundColor: "#2196F315" }]}>
                 <Ionicons name="flag" size={24} color="#2196F3" />
               </View>
               <Text style={styles.quickActionTitle}>Set Goals</Text>
               <Text style={styles.quickActionSubtitle}>Define savings targets</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/budget-alerts")}>
+            {/* <TouchableOpacity style={styles.quickAction} onPress={() => router.push("/budget-alerts")}>
               <View style={[styles.quickActionIcon, { backgroundColor: "#FF980015" }]}>
                 <Ionicons name="notifications" size={24} color="#FF9800" />
               </View>
@@ -568,7 +507,7 @@ export default function BudgetScreen() {
               </View>
               <Text style={styles.quickActionTitle}>Analysis</Text>
               <Text style={styles.quickActionSubtitle}>Detailed insights</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
         </Animated.View>
 
@@ -584,31 +523,29 @@ export default function BudgetScreen() {
         >
           <View style={styles.summaryHeader}>
             <Ionicons name="analytics" size={24} color={Colors.primary} />
-            <Text style={styles.summaryTitle}>January Budget Summary</Text>
+            <Text style={styles.summaryTitle}>Budget Summary</Text>
           </View>
           <View style={styles.summaryStats}>
             <View style={styles.summaryStatItem}>
-              <Text style={styles.summaryStatValue}>{mockBudgetData.length}</Text>
-              <Text style={styles.summaryStatLabel}>Active Budgets</Text>
+              <Text style={styles.summaryStatValue}>{summary?.statistics?.total_budgets || 0}</Text>
+              <Text style={styles.summaryStatLabel}>Total Budgets</Text>
             </View>
             <View style={styles.summaryStatItem}>
-              <Text style={styles.summaryStatValue}>{Math.round((totalSpent / totalBudget) * 100)}%</Text>
+              <Text style={styles.summaryStatValue}>
+                {Math.round(summary?.statistics?.budget_usage_percentage || 0)}%
+              </Text>
               <Text style={styles.summaryStatLabel}>Budget Used</Text>
             </View>
             <View style={styles.summaryStatItem}>
               <Text style={styles.summaryStatValue}>
-                {Math.round(
-                  (mockBudgetData.filter((b) => getBudgetProgress(b.spentAmount, b.budgetAmount) <= 80).length /
-                    mockBudgetData.length) *
-                    100,
-                )}
-                %
+                {Math.round(summary?.statistics?.on_track_percentage || 0)}%
               </Text>
               <Text style={styles.summaryStatLabel}>On Track</Text>
             </View>
           </View>
           <Text style={styles.summaryInsight}>
-            💡 You're staying within budget for 75% of categories. Consider adjusting your shopping budget!
+            💡 You&apos;re staying within budget for {Math.round(summary?.statistics?.on_track_percentage || 0)}% of categories. 
+            {summary?.warning_count > 0 ? ` ${summary.warning_count} budget(s) need attention!` : " Keep up the good work!"}
           </Text>
         </Animated.View>
 
@@ -623,16 +560,16 @@ export default function BudgetScreen() {
           ]}
         >
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Budget Categories ({sortedBudgets.length})</Text>
+            <Text style={styles.sectionTitle}>Budget Categories ({filteredBudgets.length})</Text>
           </View>
           <View style={styles.transactionsList}>
-            {sortedBudgets.slice(0, 6).map((budget) => {
-              const progress = getBudgetProgress(budget.spentAmount, budget.budgetAmount)
+            {filteredBudgets.slice(0, 6).map((budget) => {
+              const progress = getBudgetProgress(budget.spent_amount, budget.budget_amount)
               return (
                 <TouchableOpacity
                   key={budget.id}
                   style={styles.transactionItem}
-                  onPress={() => router.push(`/budget/${budget.id}`)}
+                  onPress={() => router.push(`/(tabs)/budget-detail?budgetId=${budget.id}`)}
                 >
                   <View style={styles.transactionLeft}>
                     <View style={[styles.transactionIcon, { backgroundColor: `${budget.color}15` }]}>
@@ -667,18 +604,20 @@ export default function BudgetScreen() {
                     </View>
                   </View>
                   <View style={styles.transactionRight}>
-                    <Text style={[styles.transactionAmount, { color: "#333" }]}>${budget.spentAmount.toFixed(2)}</Text>
-                    <Text style={styles.transactionCategory}>of ${budget.budgetAmount.toFixed(2)}</Text>
+                    <Text style={[styles.transactionAmount, { color: "#333" }]}>
+                      NPR {budget.spent_amount.toFixed(2)}
+                    </Text>
+                    <Text style={styles.transactionCategory}>of NPR {budget.budget_amount.toFixed(2)}</Text>
                     <Text
                       style={[
                         styles.transactionRemaining,
                         {
-                          color: budget.budgetAmount - budget.spentAmount > 0 ? "#4CAF50" : "#F44336",
+                          color: budget.remaining > 0 ? "#4CAF50" : "#F44336",
                         },
                       ]}
                     >
-                      ${Math.abs(budget.budgetAmount - budget.spentAmount).toFixed(2)}{" "}
-                      {budget.budgetAmount - budget.spentAmount > 0 ? "left" : "over"}
+                      NPR {Math.abs(budget.remaining).toFixed(2)}{" "}
+                      {budget.remaining > 0 ? "left" : "over"}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -702,7 +641,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 50,
+    paddingTop: 20,
     paddingBottom: 20,
     backgroundColor: Colors.primary,
     shadowColor: "#000",
@@ -1193,5 +1132,16 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 120,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f8f9fa",
+  },
+  loadingText: {
+    fontSize: 18,
+    color: "#666",
+    fontStyle: "italic",
   },
 })

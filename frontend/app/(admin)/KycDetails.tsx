@@ -9,49 +9,57 @@ import {
   Alert,
   BackHandler
 } from 'react-native';
-import React, { useCallback } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '@/constants/Colors';
+import { getKYCByUserId, updateKYCStatus, KYCSubmission } from '@/apis/admin/admin-api';
+import Loader from '@/components/Loader';
 
 const KycDetails = () => {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const [userDetails, setUserDetails] = useState<KYCSubmission | null>(null);
+  const [loading, setLoading] = useState(true);
   
-  const userDetails = {
-    id: id || 'KYC20230715',
-    name: 'Rahul Sharma',
-    dob: '15/07/1990',
-    pan: 'ABCDE1234F',
-    aadhaar: 'XXXX-XXXX-7890',
-    status: 'pending',
-    submitted: '2023-07-15',
-    zkVerified: true,
-    confidence: 99.98,
-    address: '123, Main Street, Bengaluru, Karnataka - 560001',
-    phone: '+91 9876543210',
-    email: 'rahul.sharma@example.com',
-    documents: [
-      { type: 'PAN Card', verified: true },
-      { type: 'Aadhaar Card', verified: true },
-      { type: 'Passport', verified: false },
-    ],
-    riskScore: 12,
-  };
+  const fetchKYCDetails = useCallback(async () => {
+    try {
+      setLoading(true);
+      const userId = typeof id === 'string' ? parseInt(id) : parseInt(id as any);
+      const response = await getKYCByUserId(userId);
+      if (response.success) {
+        setUserDetails(response.data);
+      } else {
+        Alert.alert('Error', 'Failed to load KYC details');
+      }
+    } catch (error) {
+      console.error('Error fetching KYC details:', error);
+      Alert.alert('Error', 'Failed to load KYC details');
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      fetchKYCDetails();
+    }
+  }, [fetchKYCDetails, id]);
 
   const getStatusColor = () => {
-    return userDetails.status === 'approved' ? Colors.success : Colors.warning;
+    return userDetails?.status === 'approved' ? Colors.success : Colors.warning;
   };
 
   const getRiskLevel = () => {
-    if (userDetails.riskScore < 25) return 'Low Risk';
-    if (userDetails.riskScore < 50) return 'Medium Risk';
+    // For now, we'll use a simple risk assessment based on status
+    if (userDetails?.status === 'approved') return 'Low Risk';
+    if (userDetails?.status === 'pending') return 'Medium Risk';
     return 'High Risk';
   };
 
   const getRiskColor = () => {
-    if (userDetails.riskScore < 25) return Colors.success;
-    if (userDetails.riskScore < 50) return Colors.warning;
+    if (userDetails?.status === 'approved') return Colors.success;
+    if (userDetails?.status === 'pending') return Colors.warning;
     return Colors.error;
   };
 
@@ -59,12 +67,54 @@ const KycDetails = () => {
     router.push("/(admin)/dashboard");
   };
 
-  const handleApprove = () => {
-    Alert.alert("Approved", "KYC application has been approved");
+  const handleApprove = async () => {
+    Alert.alert("Approve KYC", "Are you sure you want to approve this KYC application?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Approve",
+        onPress: async () => {
+          try {
+            const response = await updateKYCStatus(userDetails.user_id, { status: 'approved' });
+            if (response.success) {
+              Alert.alert("Approved", "KYC application has been approved");
+              fetchKYCDetails(); // Refresh data
+            } else {
+              Alert.alert("Error", "Failed to approve KYC application");
+            }
+          } catch (error) {
+            console.error('Error approving KYC:', error);
+            Alert.alert("Error", "Failed to approve KYC application");
+          }
+        },
+      },
+    ]);
   };
 
-  const handleReject = () => {
-    Alert.alert("Rejected", "KYC application has been rejected");
+  const handleReject = async () => {
+    Alert.alert("Reject KYC", "Are you sure you want to reject this KYC application?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Reject",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const response = await updateKYCStatus(userDetails.user_id, { 
+              status: 'rejected',
+              rejection_reason: 'Application rejected by admin'
+            });
+            if (response.success) {
+              Alert.alert("Rejected", "KYC application has been rejected");
+              fetchKYCDetails(); // Refresh data
+            } else {
+              Alert.alert("Error", "Failed to reject KYC application");
+            }
+          } catch (error) {
+            console.error('Error rejecting KYC:', error);
+            Alert.alert("Error", "Failed to reject KYC application");
+          }
+        },
+      },
+    ]);
   };
 
     useFocusEffect(
@@ -82,6 +132,23 @@ const KycDetails = () => {
       return () => backHandler.remove();
     }, [])
   );
+
+  if (loading) {
+    return (
+      <Loader/>
+    );
+  }
+
+  if (!userDetails) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>KYC details not found</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -115,21 +182,20 @@ const KycDetails = () => {
               <Ionicons name="person" size={32} color={Colors.textInverse} />
             </View>
             <View style={styles.profileInfo}>
-              <Text style={styles.userName}>{userDetails.name}</Text>
+              <Text style={styles.userName}>{userDetails.full_name}</Text>
               <Text style={styles.userId}>#{userDetails.id}</Text>
             </View>
           </View>
 
           <DetailRow 
-            label="Submitted On" 
-            value={userDetails.submitted} 
-            icon="calendar"
+            label="Document Type" 
+            value={userDetails.document_type} 
+            icon="document-text"
           />
           <DetailRow 
-            label="ZK Verification" 
-            value={userDetails.zkVerified ? `Verified (${userDetails.confidence}%)` : "Pending"} 
-            icon={userDetails.zkVerified ? "shield-checkmark" : "shield"}
-            valueColor={userDetails.zkVerified ? Colors.success : Colors.warning}
+            label="Document Number" 
+            value={userDetails.document_number} 
+            icon="card"
           />
           <DetailRow 
             label="Risk Assessment" 
@@ -141,35 +207,29 @@ const KycDetails = () => {
 
         <View style={styles.section}>
           <SectionTitle title="Personal Details" icon="person-circle" />
-          <DetailRow label="Date of Birth" value={userDetails.dob} icon="time" />
-          <DetailRow label="Phone" value={userDetails.phone} icon="call" />
-          <DetailRow label="Email" value={userDetails.email} icon="mail" />
+          <DetailRow label="Date of Birth" value={userDetails.date_of_birth} icon="time" />
           <DetailRow 
             label="Address" 
             value={userDetails.address} 
             icon="location" 
             multiline
           />
+          {userDetails.user && (
+            <>
+              <DetailRow label="Email" value={userDetails.user.email} icon="mail" />
+              {userDetails.user.phone && (
+                <DetailRow label="Phone" value={userDetails.user.phone} icon="call" />
+              )}
+            </>
+          )}
         </View>
 
         <View style={styles.section}>
-          <SectionTitle title="Document Verification" icon="document-text" />
-          {userDetails.documents.map((doc, index) => (
-            <DocumentRow 
-              key={index}
-              type={doc.type} 
-              verified={doc.verified} 
-              lastItem={index === userDetails.documents.length - 1}
-            />
-          ))}
-        </View>
-
-        <View style={styles.section}>
-          <SectionTitle title="ID Numbers" icon="finger-print" />
-          <DetailRow label="PAN Number" value={userDetails.pan} icon="card" />
+          <SectionTitle title="Document Information" icon="document-text" />
+          <DetailRow label="Document Type" value={userDetails.document_type} icon="card" />
           <DetailRow 
-            label="Aadhaar Number" 
-            value={userDetails.aadhaar} 
+            label="Document Number" 
+            value={userDetails.document_number} 
             icon="id-card"
           />
         </View>
@@ -267,7 +327,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 50,
+    paddingTop: 20,
     paddingBottom: 20,
     backgroundColor: Colors.primary,
     shadowColor: "#000",
@@ -428,6 +488,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: Colors.textInverse,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.backgroundSecondary,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: Colors.textSecondary,
   },
 });
 

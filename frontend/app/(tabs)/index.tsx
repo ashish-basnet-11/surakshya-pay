@@ -21,6 +21,7 @@ import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuthStore } from "@/store/use-auth-store";
 import {
+  BadgeAlert,
   BadgeCheck,
   BanknoteArrowDown,
   BanknoteArrowUp,
@@ -28,15 +29,100 @@ import {
 } from "lucide-react-native";
 import { useCurrentUserDetail } from "@/apis/users/get-user-detail";
 import Loader from "@/components/Loader";
+import { useGetUserTransaction } from "@/apis/transaction/get-user-transaction";
+import { formatDateTime } from "@/utils/helpers";
+
+// Function to get transaction display properties based on type
+const getTransactionDisplayProps = (transaction: any) => {
+  const baseProps = {
+    icon: "help-circle-outline" as any,
+    color: Colors.textSecondary,
+    bgColor: Colors.textSecondary + "15",
+    amountPrefix: "",
+    amountColor: Colors.textPrimary,
+  };
+
+  switch (transaction.transaction_type?.toUpperCase()) {
+    case "DEPOSIT":
+      return {
+        ...baseProps,
+        icon: "add-circle-outline",
+        color: Colors.success,
+        bgColor: Colors.success + "15",
+        amountPrefix: "+",
+        amountColor: Colors.success,
+      };
+
+    case "WITHDRAWAL":
+      return {
+        ...baseProps,
+        icon: "remove-circle-outline",
+        color: Colors.error,
+        bgColor: Colors.error + "15",
+        amountPrefix: "-",
+        amountColor: Colors.error,
+      };
+
+    case "TRANSFER":
+      // For transfers, we need to determine if this is money sent or received
+      // Based on the transaction description and amount
+      const isOutgoing = transaction.description
+        ?.toLowerCase()
+        .includes("transfer");
+      const isIncoming = transaction.description
+        ?.toLowerCase()
+        .includes("received");
+
+      // If it's clearly outgoing, show as negative
+      if (isOutgoing && !isIncoming) {
+        return {
+          ...baseProps,
+          icon: "remove-circle-outline",
+          color: Colors.warning,
+          bgColor: Colors.warning + "15",
+          amountPrefix: "-",
+          amountColor: Colors.warning,
+        };
+      }
+      // If it's clearly incoming, show as positive
+      else if (isIncoming && !isOutgoing) {
+        return {
+          ...baseProps,
+          icon: "arrow-up-circle-outline",
+          color: Colors.success,
+          bgColor: Colors.success + "15",
+          amountPrefix: "+",
+          amountColor: Colors.success,
+        };
+      }
+      // Default: use amount sign to determine
+      else {
+        const isPositive = transaction.amount > 0;
+        return {
+          ...baseProps,
+          icon: isPositive
+            ? "arrow-down-circle-outline"
+            : "arrow-up-circle-outline",
+          color: isPositive ? Colors.success : Colors.info,
+          bgColor: isPositive ? Colors.success + "15" : Colors.info + "15",
+          amountPrefix: isPositive ? "+" : "-",
+          amountColor: isPositive ? Colors.success : Colors.info,
+        };
+      }
+
+    default:
+      return baseProps;
+  }
+};
 
 const BankingWalletUI = () => {
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
   const scrollY = useRef(new Animated.Value(0)).current;
-  const { data, isLoading } = useCurrentUserDetail({
-    refetchInterval: 3000,
-  });
+  const { data, isLoading, refetch: refetchUser } = useCurrentUserDetail({});
+  const { data: transactions, isLoading: isTransactionsLoading, refetch: refetchTransactions } =
+    useGetUserTransaction({});
 
   useEffect(() => {
     if (data?.data) {
@@ -64,76 +150,40 @@ const BankingWalletUI = () => {
     setIsBalanceVisible(!isBalanceVisible);
   };
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => {
+    try {
+      await Promise.all([
+        refetchUser(),
+        refetchTransactions()
+      ]);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
       setRefreshing(false);
-    }, 2000);
+    }
   };
-
-  const transactions = [
-    {
-      id: 1,
-      name: "Adobe Creative Suite",
-      date: "Today • 2:30 PM",
-      amount: -59.99,
-      status: "completed",
-      icon: "brush-outline",
-      color: Colors.error,
-      bgColor: Colors.error + "15",
-    },
-    {
-      id: 2,
-      name: "Freelance Payment",
-      date: "Yesterday • 4:15 PM",
-      amount: 2850.0,
-      status: "completed",
-      icon: "briefcase-outline",
-      color: Colors.success,
-      bgColor: Colors.success + "15",
-    },
-    {
-      id: 3,
-      name: "Microsoft 365",
-      date: "Dec 18 • 9:00 AM",
-      amount: -12.99,
-      status: "completed",
-      icon: "laptop-outline",
-      color: Colors.warning,
-      bgColor: Colors.warning + "15",
-    },
-    {
-      id: 4,
-      name: "Investment Return",
-      date: "Dec 17 • 11:30 AM",
-      amount: 450.75,
-      status: "pending",
-      icon: "trending-up-outline",
-      color: Colors.info,
-      bgColor: Colors.info + "15",
-    },
-  ];
 
   const actionButtons = [
     {
       name: "Send Money",
       icon: <Send size={22} color={Colors.textInverse} />,
-      gradient: [Colors.neutral900, Colors.neutral600],
-      route: "/sendMoney",
+      gradient: [Colors.neutral900, Colors.neutral600] as const,
+      route: "/(tabs)/(index)/sendMoney" as any,
       description: "Transfer money to others",
     },
     {
       name: "Add Money",
       icon: <BanknoteArrowUp size={22} color={Colors.textInverse} />,
-      gradient: [Colors.success, Colors.accentLight],
-      route: "/(tabs)/(index)/topup",
+      gradient: [Colors.success, Colors.accentLight] as const,
+      route: "/(tabs)/(index)/topup" as any,
       description: "Top up wallet",
     },
     {
       name: "Withdraw",
       icon: <BanknoteArrowDown size={22} color={Colors.textInverse} />,
-      gradient: [Colors.secondary, Colors.secondaryLight],
-      route: "/(tabs)/(index)/withdraw",
+      gradient: [Colors.secondary, Colors.secondaryLight] as const,
+      route: "/(tabs)/(index)/withdraw" as any,
       description: "Transfer funds",
     },
   ];
@@ -150,7 +200,7 @@ const BankingWalletUI = () => {
     extrapolate: "clamp",
   });
 
-  if (isLoading) {
+  if (isLoading || isTransactionsLoading) {
     return <Loader />;
   }
 
@@ -189,7 +239,7 @@ const BankingWalletUI = () => {
                   colors={[Colors.secondary, Colors.secondaryLight]}
                   style={styles.avatarGradient}
                 >
-                  <Text style={styles.avatarText}>EP</Text>
+                  <Text style={styles.avatarText}>AB</Text>
                 </LinearGradient>
                 <View style={styles.onlineIndicator} />
               </TouchableOpacity>
@@ -198,10 +248,17 @@ const BankingWalletUI = () => {
                 <Text style={styles.userName}>
                   {useAuthStore.getState().user?.full_name}
                 </Text>
-                <View style={styles.premiumBadge}>
-                  <BadgeCheck size={12} color={Colors.success} />
-                  <Text style={styles.premiumText}>Verified</Text>
-                </View>
+                {useAuthStore.getState().user?.kyc_status === "approved" ? (
+                  <View style={styles.premiumBadge}>
+                    <BadgeCheck size={12} color={Colors.success} />
+                    <Text style={styles.premiumText}>Verified</Text>
+                  </View>
+                ) : (
+                  <View style={styles.premiumBadge1}>
+                    <BadgeAlert size={12} color={Colors.warning} />
+                    <Text style={styles.premiumText1}>Pending</Text>
+                  </View>
+                )}
               </View>
             </View>
 
@@ -312,18 +369,18 @@ const BankingWalletUI = () => {
                     display: "flex",
                     flexDirection: "row",
                     alignItems: "flex-end",
-                    gap: 2
+                    gap: 2,
                   }}
                 >
                   {isBalanceVisible ? (
                     <View
-                  style={{
-                    display: "flex",
-                    flexDirection: "row",
-                    alignItems: "flex-end",
-                    gap: 2
-                  }}
-                >
+                      style={{
+                        display: "flex",
+                        flexDirection: "row",
+                        alignItems: "flex-end",
+                        gap: 2,
+                      }}
+                    >
                       <Text style={styles.balanceCurrency}>
                         NPR
                         {/* {isBalanceVisible ? "NPR 124,580.50" : "$•••,•••.••"} */}
@@ -435,113 +492,108 @@ const BankingWalletUI = () => {
         {/* Enhanced Transactions */}
         <View style={styles.transactionsSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Activity</Text>
-            <TouchableOpacity onPress={() => router.push("/(tabs)/wallet")}>
+            <Text style={styles.sectionTitle}>Recent Transactions</Text>
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/(index)/details")}
+            >
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.transactionsContainer}>
-            {transactions.map((transaction, index) => (
-              <TouchableOpacity
-                key={transaction.id}
-                style={[
-                  styles.transactionItem,
-                  index === transactions.length - 1 &&
-                    styles.lastTransactionItem,
-                ]}
-                activeOpacity={0.7}
-              >
-                <View style={styles.transactionLeft}>
-                  <View style={styles.transactionIconContainer}>
-                    <View
-                      style={[
-                        styles.transactionIconBg,
-                        { backgroundColor: transaction.bgColor },
-                      ]}
-                    >
-                      <Ionicons
-                        name={transaction.icon}
-                        size={20}
-                        color={transaction.color}
-                      />
+            {transactions.data?.slice(0, 5).map((transaction, index) => {
+              const { icon, color, bgColor, amountPrefix, amountColor } =
+                getTransactionDisplayProps(transaction);
+              return (
+                <TouchableOpacity
+                  key={transaction.id}
+                  style={[
+                    styles.transactionItem,
+                    index === (transactions.data?.length ?? 1) - 1 &&
+                      styles.lastTransactionItem,
+                  ]}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.transactionLeft}>
+                    <View style={styles.transactionIconContainer}>
+                      <View
+                        style={[
+                          styles.transactionIconBg,
+                          { backgroundColor: bgColor },
+                        ]}
+                      >
+                        <Ionicons name={icon} size={20} color={color} />
+                      </View>
+                      {/* <View
+                        style={[
+                          styles.transactionStatusIndicator,
+                          {
+                            backgroundColor:
+                              transaction.is_completed
+                                ? Colors.success
+                                : Colors.warning,
+                          },
+                        ]}
+                      /> */}
                     </View>
-                    <View
-                      style={[
-                        styles.transactionStatusIndicator,
-                        {
-                          backgroundColor:
-                            transaction.status === "completed"
-                              ? Colors.success
-                              : Colors.warning,
-                        },
-                      ]}
-                    />
-                  </View>
 
-                  <View style={styles.transactionDetails}>
-                    <Text style={styles.transactionName}>
-                      {transaction.name}
-                    </Text>
-                    <View style={styles.transactionMeta}>
-                      <View style={styles.categoryBadge}>
-                        <Text style={styles.transactionCategory}>
-                          {transaction.category}
+                    <View style={styles.transactionDetails}>
+                      <Text style={styles.transactionName}>
+                        {transaction.transaction_type.toUpperCase()}
+                      </Text>
+                      <View style={styles.transactionMeta}>
+                        <Text style={styles.transactionDate}>
+                          {transaction.description}
+                        </Text>
+                        <View style={styles.transactionDot} />
+                        <Text style={styles.transactionDate}>
+                          {formatDateTime(transaction.timestamp)}
                         </Text>
                       </View>
-                      <View style={styles.transactionDot} />
-                      <Text style={styles.transactionDate}>
-                        {transaction.date}
+                    </View>
+                  </View>
+
+                  <View style={styles.transactionRight}>
+                    <Text
+                      style={[
+                        styles.transactionAmount,
+                        {
+                          color: amountColor,
+                        },
+                      ]}
+                    >
+                      {amountPrefix}NPR{" "}
+                      {Math.abs(transaction.amount).toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                      })}
+                    </Text>
+                    <View
+                      style={[
+                        styles.transactionStatusBadge,
+                        {
+                          backgroundColor: transaction.is_completed
+                            ? Colors.success + "20"
+                            : Colors.warning + "20",
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.transactionStatusText,
+                          {
+                            color: transaction.is_completed
+                              ? Colors.success
+                              : Colors.warning,
+                          },
+                        ]}
+                      >
+                        {transaction.is_completed ? "Completed" : "Pending"}
                       </Text>
                     </View>
                   </View>
-                </View>
-
-                <View style={styles.transactionRight}>
-                  <Text
-                    style={[
-                      styles.transactionAmount,
-                      {
-                        color:
-                          transaction.amount > 0
-                            ? Colors.success
-                            : Colors.textPrimary,
-                      },
-                    ]}
-                  >
-                    {transaction.amount > 0 ? "+" : ""}$
-                    {Math.abs(transaction.amount).toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                    })}
-                  </Text>
-                  <View
-                    style={[
-                      styles.transactionStatusBadge,
-                      {
-                        backgroundColor:
-                          transaction.status === "completed"
-                            ? Colors.success + "20"
-                            : Colors.warning + "20",
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.transactionStatusText,
-                        {
-                          color:
-                            transaction.status === "completed"
-                              ? Colors.success
-                              : Colors.warning,
-                        },
-                      ]}
-                    >
-                      {transaction.status}
-                    </Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -559,8 +611,8 @@ const BankingWalletUI = () => {
                 </View>
                 <Text style={styles.insightTitle}>Smart Saving Tip</Text>
                 <Text style={styles.insightText}>
-                  You're spending 15% less on subscriptions this month. Great
-                  job!
+                  You&apos;re spending 15% less on subscriptions this month.
+                  Great job!
                 </Text>
               </LinearGradient>
             </View>
@@ -590,7 +642,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === "ios" ? 20 : 40,
+    paddingTop: Platform.OS === "ios" ? 20 : 20,
   },
   headerLeft: {
     flexDirection: "row",
@@ -657,6 +709,21 @@ const styles = StyleSheet.create({
   },
   premiumText: {
     color: Colors.success,
+    fontSize: 10,
+    fontWeight: "600",
+    marginLeft: 4,
+  },
+  premiumBadge1: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(245, 158, 11, 0.2)",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    alignSelf: "flex-start",
+  },
+  premiumText1: {
+    color: Colors.warning,
     fontSize: 10,
     fontWeight: "600",
     marginLeft: 4,
@@ -980,8 +1047,8 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   transactionMeta: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "column",
+    alignItems: "flex-start",
   },
   transactionDot: {
     width: 3,

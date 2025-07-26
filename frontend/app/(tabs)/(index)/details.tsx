@@ -15,108 +15,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Colors from '@/constants/Colors';
-
-const weeklyTransactions = [
-  {
-    id: 'TXN1001',
-    type: 'received',
-    amount: 250,
-    from: 'John Doe',
-    date: 'July 18, 2025',
-    time: '10:24 AM',
-    status: 'completed',
-    note: 'Thanks for your help!',
-    category: 'Personal',
-    avatar: 'J',
-  },
-  {
-    id: 'TXN1002',
-    type: 'sent',
-    amount: 120,
-    to: 'Alice Brown',
-    date: 'July 17, 2025',
-    time: '2:00 PM',
-    status: 'completed',
-    note: 'Coffee payment',
-    category: 'Food & Dining',
-    avatar: 'A',
-  },
-  {
-    id: 'TXN1003',
-    type: 'received',
-    amount: 300,
-    from: 'Michael Lee',
-    date: 'July 16, 2025',
-    time: '11:15 AM',
-    status: 'pending',
-    note: 'Freelance project payment',
-    category: 'Work',
-    avatar: 'M',
-  },
-  {
-    id: 'TXN1004',
-    type: 'sent',
-    amount: 85,
-    to: 'Uber Technologies',
-    date: 'July 15, 2025',
-    time: '9:30 PM',
-    status: 'completed',
-    note: '',
-    category: 'Transportation',
-    avatar: 'U',
-  },
-];
-
-const monthlyTransactions = [
-  {
-    id: 'TXN2001',
-    type: 'sent',
-    amount: 500,
-    to: 'Netflix Inc.',
-    date: 'July 12, 2025',
-    time: '3:15 PM',
-    status: 'completed',
-    note: 'Monthly subscription payment',
-    category: 'Entertainment',
-    avatar: 'N',
-  },
-  {
-    id: 'TXN2002',
-    type: 'received',
-    amount: 1450,
-    from: 'Acme Corp',
-    date: 'July 10, 2025',
-    time: '10:00 AM',
-    status: 'completed',
-    note: 'Salary payment',
-    category: 'Income',
-    avatar: 'A',
-  },
-  {
-    id: 'TXN2003',
-    type: 'sent',
-    amount: 100,
-    to: 'Sophia Green',
-    date: 'July 5, 2025',
-    time: '6:30 PM',
-    status: 'completed',
-    note: 'Birthday gift',
-    category: 'Personal',
-    avatar: 'S',
-  },
-  {
-    id: 'TXN2004',
-    type: 'received',
-    amount: 350,
-    from: 'Emma Watson',
-    date: 'July 1, 2025',
-    time: '9:20 AM',
-    status: 'pending',
-    note: 'Shared expense refund',
-    category: 'Personal',
-    avatar: 'E',
-  },
-];
+import { useGetUserTransaction } from '@/apis/transaction/get-user-transaction';
+import Loader from '@/components/Loader';
+import { formatDateTime } from '@/utils/helpers';
 
 const Details = () => {
   const router = useRouter();
@@ -124,21 +25,28 @@ const Details = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<'weekly' | 'monthly'>('weekly');
   const [refreshing, setRefreshing] = useState(false);
 
-   useFocusEffect(
-           useCallback(() => {
-             const onBackPress = () => {
-               router.replace('/(tabs)'); 
-               return true;
-             };
-         
-             const backHandler = BackHandler.addEventListener(
-               'hardwareBackPress',
-               onBackPress
-             );
-         
-             return () => backHandler.remove();
-           }, [])
-         );
+  // Fetch transaction data
+  const { data: transactionsData, isLoading, error, refetch } = useGetUserTransaction({
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
+  const transactions = transactionsData?.data || [];
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        router.replace('/(tabs)'); 
+        return true;
+      };
+  
+      const backHandler = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress
+      );
+  
+      return () => backHandler.remove();
+    }, [])
+  );
 
   useLayoutEffect(() => {
     const parent = navigation.getParent();
@@ -152,14 +60,43 @@ const Details = () => {
     };
   }, [navigation]);
 
-  const transactions = selectedPeriod === 'weekly' ? weeklyTransactions : monthlyTransactions;
-
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    setTimeout(() => {
+    refetch().finally(() => {
       setRefreshing(false);
-    }, 2000);
-  }, []);
+    });
+  }, [refetch]);
+
+  // Show loader while data is loading
+  if (isLoading) {
+    return <Loader />;
+  }
+
+  // Show error state if there's an error
+  if (error || !transactionsData) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)')}
+            style={styles.backButton}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <Text style={styles.headerText}>Transaction History</Text>
+            <Text style={styles.headerSubtext}>Failed to load transactions</Text>
+          </View>
+        </View>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle" size={48} color="#FF5722" />
+          <Text style={styles.errorText}>Failed to load transactions</Text>
+          <Text style={styles.errorSubtext}>Please try again later</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <>
@@ -233,15 +170,23 @@ const Details = () => {
             />
           }
         >
-          <View style={styles.transactionList}>
-            {transactions.map((txn, index) => (
-              <TransactionCard 
-                key={txn.id} 
-                transaction={txn} 
-                isLast={index === transactions.length - 1}
-              />
-            ))}
-          </View>
+          {transactions.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="receipt-outline" size={48} color="#8E8E93" />
+              <Text style={styles.emptyText}>No transactions yet</Text>
+              <Text style={styles.emptySubtext}>Your transaction history will appear here</Text>
+            </View>
+          ) : (
+            <View style={styles.transactionList}>
+              {transactions.map((txn, index) => (
+                <TransactionCard 
+                  key={txn.id} 
+                  transaction={txn} 
+                  isLast={index === transactions.length - 1}
+                />
+              ))}
+            </View>
+          )}
         </ScrollView>
       </SafeAreaView>
     </>
@@ -269,26 +214,80 @@ const TransactionCard = ({
   };
 
   const getTransactionIcon = (type: string) => {
-    return type === 'received' ? 'arrow-down-circle' : 'arrow-up-circle';
+    switch (type?.toUpperCase()) {
+      case 'DEPOSIT':
+        return 'arrow-down-circle';
+      case 'WITHDRAWAL':
+        return 'arrow-up-circle';
+      case 'TRANSFER':
+        // Determine if it's incoming or outgoing based on amount
+        return transaction.amount > 0 ? 'arrow-down-circle' : 'arrow-up-circle';
+      default:
+        return 'help-circle';
+    }
   };
 
-  const getTransactionColor = (type: string) => {
-    return type === 'received' ? '#4CAF50' : '#FF5722';
+  const getTransactionColor = (type: string, amount: number) => {
+    switch (type?.toUpperCase()) {
+      case 'DEPOSIT':
+        return '#4CAF50';
+      case 'WITHDRAWAL':
+        return '#FF5722';
+      case 'TRANSFER':
+        return amount > 0 ? '#4CAF50' : '#FF5722';
+      default:
+        return '#9E9E9E';
+    }
   };
+
+  const getTransactionType = (type: string, amount: number) => {
+    switch (type?.toUpperCase()) {
+      case 'DEPOSIT':
+        return 'received';
+      case 'WITHDRAWAL':
+        return 'sent';
+      case 'TRANSFER':
+        return amount > 0 ? 'received' : 'sent';
+      default:
+        return 'unknown';
+    }
+  };
+
+  const getTransactionName = (transaction: any) => {
+    if (transaction.transaction_type?.toUpperCase() === 'DEPOSIT') {
+      return 'Deposit';
+    } else if (transaction.transaction_type?.toUpperCase() === 'WITHDRAWAL') {
+      return 'Withdrawal';
+    } else if (transaction.transaction_type?.toUpperCase() === 'TRANSFER') {
+      return transaction.amount > 0 ? 'Received' : 'Sent';
+    }
+    return transaction.description || 'Transaction';
+  };
+
+  const getAvatar = (transaction: any) => {
+    const name = getTransactionName(transaction);
+    return name.charAt(0).toUpperCase();
+  };
+
+  const transactionType = getTransactionType(transaction.transaction_type, transaction.amount);
+  const transactionColor = getTransactionColor(transaction.transaction_type, transaction.amount);
+  const transactionIcon = getTransactionIcon(transaction.transaction_type);
+  const transactionName = getTransactionName(transaction);
+  const avatar = getAvatar(transaction);
 
   return (
     <TouchableOpacity style={[styles.card, isLast && styles.cardLast]} activeOpacity={0.7}>
       <View style={styles.cardContent}>
         <View style={styles.avatarContainer}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{transaction.avatar}</Text>
+            <Text style={styles.avatarText}>{avatar}</Text>
           </View>
           <View style={[
             styles.transactionIcon,
-            { backgroundColor: getTransactionColor(transaction.type) }
+            { backgroundColor: transactionColor }
           ]}>
             <Ionicons 
-              name={getTransactionIcon(transaction.type)} 
+              name={transactionIcon} 
               size={12} 
               color="#ffffff" 
             />
@@ -298,39 +297,39 @@ const TransactionCard = ({
         <View style={styles.transactionDetails}>
           <View style={styles.transactionHeader}>
             <Text style={styles.transactionName} numberOfLines={1}>
-              {transaction.from || transaction.to}
+              {transactionName}
             </Text>
             <Text style={[
               styles.amount,
-              { color: getTransactionColor(transaction.type) }
+              { color: transactionColor }
             ]}>
-              {transaction.type === 'received' ? '+' : '-'}₹{transaction.amount.toLocaleString()}
+              {transaction.amount > 0 ? '+' : '-'}NPR {Math.abs(transaction.amount).toLocaleString()}
             </Text>
           </View>
           
           <View style={styles.transactionMeta}>
-            <Text style={styles.category}>{transaction.category}</Text>
+            <Text style={styles.category}>{transaction.category || 'General'}</Text>
             <View style={styles.statusContainer}>
               <View style={[
                 styles.statusDot,
-                { backgroundColor: getStatusColor(transaction.status) }
+                { backgroundColor: getStatusColor(transaction.is_completed ? 'completed' : 'pending') }
               ]} />
               <Text style={[
                 styles.status,
-                { color: getStatusColor(transaction.status) }
+                { color: getStatusColor(transaction.is_completed ? 'completed' : 'pending') }
               ]}>
-                {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                {transaction.is_completed ? 'Completed' : 'Pending'}
               </Text>
             </View>
           </View>
 
           <Text style={styles.dateTime}>
-            {transaction.date} • {transaction.time}
+            {formatDateTime(transaction.timestamp)}
           </Text>
 
-          {transaction.note ? (
+          {transaction.description ? (
             <Text style={styles.note} numberOfLines={2}>
-              {transaction.note}
+              {transaction.description}
             </Text>
           ) : null}
         </View>
@@ -350,7 +349,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    marginTop: Platform.OS === 'ios' ? 50 : 40,
+    marginTop: Platform.OS === 'ios' ? 20 : 20,
     marginBottom: 16,
   },
   backButton: {
@@ -528,5 +527,39 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
     fontStyle: 'italic',
     lineHeight: 18,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FF5722',
+    marginTop: 10,
+  },
+  errorSubtext: {
+    fontSize: 16,
+    color: '#B3C5D7',
+    marginTop: 5,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#8E8E93',
+    marginTop: 10,
+  },
+  emptySubtext: {
+    fontSize: 16,
+    color: '#B3C5D7',
+    marginTop: 5,
   },
 });

@@ -9,7 +9,7 @@ async function getCurrentUserDetail(): Promise<ApiResponse<User>> {
 }
 
 export function useCurrentUserDetail(options : any) {
-  return useQuery({
+  return useQuery<ApiResponse<User>>({
     queryKey: ["user-detail"],
     queryFn: getCurrentUserDetail,
     ...options,

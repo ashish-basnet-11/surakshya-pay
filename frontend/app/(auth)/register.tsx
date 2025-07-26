@@ -196,7 +196,7 @@ const Register = () => {
                             />
                           </View>
                           <TextInput
-                            placeholder="First Name"
+                            placeholder="First"
                             placeholderTextColor={Colors.textTertiary}
                             style={styles.input}
                             autoCapitalize="words"
@@ -218,7 +218,7 @@ const Register = () => {
                             />
                           </View>
                           <TextInput
-                            placeholder="Last Name"
+                            placeholder="Last"
                             placeholderTextColor={Colors.textTertiary}
                             style={styles.input}
                             autoCapitalize="words"

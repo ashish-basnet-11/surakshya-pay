@@ -22,19 +22,34 @@ async def submit_kyc(
     document_back: Optional[UploadFile] = File(None),
     kyc_data: str = Form(...)
 ):
-    kyc_in = KYCCreate(**json.loads(kyc_data))
-    existing_kyc = crud_kyc.get_kyc_by_user_id(db, user_id=current_user.id)
-    if existing_kyc:
-        raise HTTPException(status_code=400, detail="KYC details already submitted")
+    try:
+        print(f"Received KYC data: {kyc_data}")
+        print(f"Document front: {document_front.filename}, {document_front.content_type}")
+        print(f"Selfie: {selfie.filename}, {selfie.content_type}")
+        if document_back:
+            print(f"Document back: {document_back.filename}, {document_back.content_type}")
+        
+        kyc_in = KYCCreate(**json.loads(kyc_data))
+        print(f"Parsed KYC data: {kyc_in}")
+        
+        existing_kyc = crud_kyc.get_kyc_by_user_id(db, user_id=current_user.id)
+        if existing_kyc:
+            raise HTTPException(status_code=400, detail="KYC details already submitted")
 
-    doc_front_url = await save_upload_file(document_front)
-    selfie_url = await save_upload_file(selfie)
-    doc_back_url = await save_upload_file(document_back) if document_back else None
+        doc_front_url = await save_upload_file(document_front)
+        selfie_url = await save_upload_file(selfie)
+        doc_back_url = await save_upload_file(document_back) if document_back else None
 
-    kyc = crud_kyc.create_kyc(db, kyc_in, current_user.id, doc_front_url, doc_back_url, selfie_url)
-    # Fetch and return updated user with KYC info
-    updated_user = crud_user.get_user(db, user_id=current_user.id)
-    return CommonResponse(success=True, message="KYC submitted successfully", data=updated_user)
+        kyc = crud_kyc.create_kyc(db, kyc_in, current_user.id, doc_front_url, doc_back_url, selfie_url)
+        # Fetch and return updated user with KYC info
+        updated_user = crud_user.get_user(db, user_id=current_user.id)
+        return CommonResponse(success=True, message="KYC submitted successfully", data=updated_user)
+    except json.JSONDecodeError as e:
+        print(f"JSON decode error: {e}")
+        raise HTTPException(status_code=422, detail=f"Invalid JSON format: {str(e)}")
+    except Exception as e:
+        print(f"KYC submission error: {e}")
+        raise HTTPException(status_code=422, detail=f"Validation error: {str(e)}")
 
 @router.get("/me", response_model=CommonResponse[KYC])
 def get_my_kyc(
@@ -80,4 +95,14 @@ def get_kyc_by_status(
     limit: int = 100
 ):
     kyc_list = crud_kyc.get_kyc_by_status(db, status=status, skip=skip, limit=limit)
-    return CommonResponse(success=True, message=f"KYC submissions with status '{status}' fetched", data=kyc_list) 
+    return CommonResponse(success=True, message=f"KYC submissions with status '{status}' fetched", data=kyc_list)
+
+@router.get("/admin/user/{user_id}", response_model=CommonResponse[KYC], dependencies=[Depends(get_current_active_superuser)])
+def get_kyc_by_user_id_admin(
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    kyc = crud_kyc.get_kyc_by_user_id(db, user_id=user_id)
+    if not kyc:
+        raise HTTPException(status_code=404, detail="KYC submission not found for this user")
+    return CommonResponse(success=True, message="KYC details fetched successfully", data=kyc) 

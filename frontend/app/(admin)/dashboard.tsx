@@ -15,9 +15,20 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { useRouter } from "expo-router";
+import { 
+  getAdminDashboardStats, 
+  getAllKYCSubmissions, 
+  updateKYCStatus,
+  getAllUsers,
+  getUserStats,
+  updateUserStatus,
+  AdminDashboardStats,
+  KYCSubmission,
+  User,
+  UserStats
+} from "@/apis/admin/admin-api";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const router = useRouter();
 
 const MOCK_DATA = {
   stats: {
@@ -77,14 +88,14 @@ const MOCK_DATA = {
   ],
 };
 
-const KycUserCard = ({ user, status, onApprove, onReject }: any) => (
+const KycUserCard = ({ user, status, onApprove, onReject, router }: any) => (
   <View style={[styles.kycUserCard, status === 'approved' && styles.approvedCard]}>
     <View style={styles.kycUserHeader}>
       <View style={styles.kycUserAvatar}>
         <Ionicons name="person" size={24} color={Colors.textInverse} />
       </View>
       <View style={styles.kycUserInfo}>
-        <Text style={styles.kycUserName}>{user.name}</Text>
+        <Text style={styles.kycUserName}>{user.full_name}</Text>
         <Text style={styles.kycUserId}>#{user.id}</Text>
       </View>
       {status === 'approved' ? (
@@ -101,27 +112,16 @@ const KycUserCard = ({ user, status, onApprove, onReject }: any) => (
 
     <View style={styles.kycUserDetails}>
       <View style={styles.kycDetailRow}>
-        <Text style={styles.kycDetailLabel}>Submitted:</Text>
-        <Text style={styles.kycDetailValue}>{user.submitted}</Text>
+        <Text style={styles.kycDetailLabel}>Document:</Text>
+        <Text style={styles.kycDetailValue}>{user.document_type}</Text>
       </View>
-      {status === 'approved' && (
-        <View style={styles.kycDetailRow}>
-          <Text style={styles.kycDetailLabel}>Approved:</Text>
-          <Text style={styles.kycDetailValue}>{user.approved}</Text>
-        </View>
-      )}
       <View style={styles.kycDetailRow}>
-        <Text style={styles.kycDetailLabel}>ZK Verification:</Text>
-        <View style={styles.zkVerificationStatus}>
-          <Ionicons 
-            name={user.zkVerified ? "shield-checkmark" : "alert-circle"} 
-            size={16} 
-            color={user.zkVerified ? Colors.success : Colors.warning} 
-          />
-          <Text style={[styles.kycDetailValue, { color: user.zkVerified ? Colors.success : Colors.warning }]}>
-            {user.zkVerified ? `Verified (${user.confidence}%)` : "Needs Review"}
-          </Text>
-        </View>
+        <Text style={styles.kycDetailLabel}>Document Number:</Text>
+        <Text style={styles.kycDetailValue}>{user.document_number}</Text>
+      </View>
+      <View style={styles.kycDetailRow}>
+        <Text style={styles.kycDetailLabel}>Date of Birth:</Text>
+        <Text style={styles.kycDetailValue}>{user.date_of_birth}</Text>
       </View>
     </View>
 
@@ -139,7 +139,15 @@ const KycUserCard = ({ user, status, onApprove, onReject }: any) => (
         >
           <Text style={styles.kycButtonText}>Approve</Text>
         </TouchableOpacity>
-        <TouchableOpacity style ={styles.eyeIcon}  onPress={() => router.replace("/(admin)/KycDetails")}>
+        <TouchableOpacity style ={styles.eyeIcon}  onPress={() => {
+          console.log(user)
+          router.push({
+            pathname: "/(admin)/KycDetails",
+            params: {
+              id: user.user_id
+            }
+          })
+        }}>
           <Ionicons 
             name="eye-outline"
             size={20}
@@ -152,27 +160,75 @@ const KycUserCard = ({ user, status, onApprove, onReject }: any) => (
 );
 
 const AdminDashboard = () => {
+  const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTab, setSelectedTab] = useState("overview");
   const [selectedKycTab, setSelectedKycTab] = useState("pending");
-  const [stats, setStats] = useState(MOCK_DATA.stats);
-  const [kycUsers, setKycUsers] = useState(MOCK_DATA.kycUsers);
+  const [stats, setStats] = useState<AdminDashboardStats>({
+    total_users: 0,
+    total_admins: 0,
+    total_kyc_submitted: 0,
+    total_kyc_approved: 0,
+    total_kyc_pending: 0,
+    total_kyc_rejected: 0,
+    total_transactions: 0,
+    total_deposit_amount: 0,
+    total_withdrawal_amount: 0,
+    total_transfer_amount: 0,
+  });
+  const [kycUsers, setKycUsers] = useState<KYCSubmission[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [userStats, setUserStats] = useState<UserStats>({
+    total_users: 0,
+    active_users: 0,
+    new_users_this_week: 0,
+    kyc_verified_users: 0,
+  });
+  const [loading, setLoading] = useState(true);
 
   const pendingUsers = kycUsers.filter(user => user.status === 'pending');
   const approvedUsers = kycUsers.filter(user => user.status === 'approved');
 
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const [statsResponse, kycResponse, usersResponse, userStatsResponse] = await Promise.all([
+        getAdminDashboardStats(),
+        getAllKYCSubmissions(),
+        getAllUsers(),
+        getUserStats()
+      ]);
+      
+      if (statsResponse.success) {
+        setStats(statsResponse.data);
+      }
+      
+      if (kycResponse.success) {
+        setKycUsers(kycResponse.data);
+      }
+
+      if (usersResponse.success) {
+        setUsers(usersResponse.data);
+      }
+
+      if (userStatsResponse.success) {
+        setUserStats(userStatsResponse.data);
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      Alert.alert('Error', 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    // Simulate API call
-    setTimeout(() => {
-      setRefreshing(false);
-      setStats((prev) => ({
-        ...prev,
-        activeTransactions: Math.floor(Math.random() * 500) + 200,
-        zkProofVerifications:
-          prev.zkProofVerifications + Math.floor(Math.random() * 10),
-      }));
-    }, 2000);
+    fetchDashboardData().finally(() => setRefreshing(false));
+  }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
   }, []);
 
   const handleLogout = () => {
@@ -188,34 +244,77 @@ const AdminDashboard = () => {
     ]);
   };
 
-  const handleApproveUser = (userId: string) => {
+  const handleApproveUser = async (userId: number) => {
     Alert.alert("Approve User", "Are you sure you want to approve this KYC application?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Approve",
-        onPress: () => {
-          setKycUsers(prevUsers => 
-            prevUsers.map(user => 
-              user.id === userId 
-                ? { ...user, status: 'approved', approved: new Date().toISOString().split('T')[0] } 
-                : user
-            )
-          );
-          Alert.alert("Approved", "KYC application has been approved");
+        onPress: async () => {
+          try {
+            const response = await updateKYCStatus(userId, { status: 'approved' });
+            if (response.success) {
+              Alert.alert("Approved", "KYC application has been approved");
+              fetchDashboardData(); // Refresh data
+            } else {
+              Alert.alert("Error", "Failed to approve KYC application");
+            }
+          } catch (error) {
+            console.error('Error approving KYC:', error);
+            Alert.alert("Error", "Failed to approve KYC application");
+          }
         },
       },
     ]);
   };
 
-  const handleRejectUser = (userId: string) => {
+  const handleRejectUser = async (userId: number) => {
     Alert.alert("Reject User", "Are you sure you want to reject this KYC application?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Reject",
         style: "destructive",
-        onPress: () => {
-          setKycUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
-          Alert.alert("Rejected", "KYC application has been rejected");
+        onPress: async () => {
+          try {
+            const response = await updateKYCStatus(userId, { 
+              status: 'rejected',
+              rejection_reason: 'Application rejected by admin'
+            });
+            if (response.success) {
+              Alert.alert("Rejected", "KYC application has been rejected");
+              fetchDashboardData(); // Refresh data
+            } else {
+              Alert.alert("Error", "Failed to reject KYC application");
+            }
+          } catch (error) {
+            console.error('Error rejecting KYC:', error);
+            Alert.alert("Error", "Failed to reject KYC application");
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleToggleUserStatus = async (userId: number, currentStatus: boolean) => {
+    const action = currentStatus ? 'deactivate' : 'activate';
+    Alert.alert(`${action.charAt(0).toUpperCase() + action.slice(1)} User`, 
+      `Are you sure you want to ${action} this user?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: action.charAt(0).toUpperCase() + action.slice(1),
+        style: currentStatus ? "destructive" : "default",
+        onPress: async () => {
+          try {
+            const response = await updateUserStatus(userId, !currentStatus);
+            if (response.success) {
+              Alert.alert("Success", `User ${action}d successfully`);
+              fetchDashboardData(); // Refresh data
+            } else {
+              Alert.alert("Error", `Failed to ${action} user`);
+            }
+          } catch (error) {
+            console.error(`Error ${action}ing user:`, error);
+            Alert.alert("Error", `Failed to ${action} user`);
+          }
         },
       },
     ]);
@@ -310,6 +409,84 @@ const AdminDashboard = () => {
     </View>
   );
 
+  const UserCard = ({ user, onToggleStatus }: any) => (
+    <View style={[styles.userCard, !user.is_active && styles.inactiveUserCard]}>
+      <View style={styles.userHeader}>
+        <View style={styles.userAvatar}>
+          <Ionicons name="person" size={24} color={Colors.textInverse} />
+        </View>
+        <View style={styles.userInfo}>
+          <Text style={styles.userName}>{user.full_name || user.username}</Text>
+          <Text style={styles.userEmail}>{user.email}</Text>
+        </View>
+        <View style={styles.userStatus}>
+          <View style={[
+            styles.statusBadge,
+            { backgroundColor: user.is_active ? Colors.success : Colors.error }
+          ]}>
+            <Text style={styles.statusText}>
+              {user.is_active ? 'Active' : 'Inactive'}
+            </Text>
+          </View>
+          {user.is_superuser && (
+            <View style={styles.adminBadge}>
+              <Ionicons name="shield" size={12} color={Colors.textInverse} />
+              <Text style={styles.adminBadgeText}>Admin</Text>
+            </View>
+          )}
+        </View>
+      </View>
+
+      <View style={styles.userDetails}>
+        <View style={styles.userDetailRow}>
+          <Text style={styles.userDetailLabel}>Username:</Text>
+          <Text style={styles.userDetailValue}>@{user.username}</Text>
+        </View>
+        {user.phone_number && (
+          <View style={styles.userDetailRow}>
+            <Text style={styles.userDetailLabel}>Phone:</Text>
+            <Text style={styles.userDetailValue}>{user.phone_number}</Text>
+          </View>
+        )}
+        <View style={styles.userDetailRow}>
+          <Text style={styles.userDetailLabel}>KYC Status:</Text>
+          <Text style={[
+            styles.userDetailValue,
+            { color: user.kyc_status === 'approved' ? Colors.success : 
+                     user.kyc_status === 'pending' ? Colors.warning : Colors.error }
+          ]}>
+            {user.kyc_status ? user.kyc_status.toUpperCase() : 'NOT SUBMITTED'}
+          </Text>
+        </View>
+        {user.balance && (
+          <View style={styles.userDetailRow}>
+            <Text style={styles.userDetailLabel}>Balance:</Text>
+            <Text style={styles.userDetailValue}>₹{parseFloat(user.balance).toFixed(2)}</Text>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.userActions}>
+        <TouchableOpacity 
+          style={[
+            styles.userActionButton,
+            { backgroundColor: user.is_active ? Colors.error : Colors.success }
+          ]}
+          onPress={() => onToggleStatus(user.id, user.is_active)}
+        >
+          <Ionicons 
+            name={user.is_active ? "pause-circle" : "play-circle"} 
+            size={16} 
+            color={Colors.textInverse} 
+          />
+          <Text style={styles.userActionButtonText}>
+            {user.is_active ? 'Deactivate' : 'Activate'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
@@ -388,29 +565,29 @@ const AdminDashboard = () => {
                 <View style={styles.statsGrid}>
                   <StatCard
                     title="Total Users"
-                    value={stats.totalUsers.toLocaleString()}
+                    value={stats.total_users.toLocaleString()}
                     icon="people"
                     color={Colors.primary}
                   />
                   <StatCard
-                    title="Active Transactions"
-                    value={stats.activeTransactions.toString()}
+                    title="Total Transactions"
+                    value={stats.total_transactions.toString()}
                     icon="swap-horizontal"
                     color={Colors.secondary}
                   />
                   <StatCard
                     title="Total Volume"
-                    value={`₹${(stats.totalVolume / 1000000).toFixed(1)}M`}
+                    value={`NPR ${((stats.total_deposit_amount + stats.total_withdrawal_amount + stats.total_transfer_amount) / 1000000).toFixed(1)}M`}
                     icon="trending-up"
                     color={Colors.success}
-                    subtitle="This month"
+                    subtitle="All time"
                   />
                   <StatCard
-                    title="ZK Proofs Verified"
-                    value={stats.zkProofVerifications.toLocaleString()}
+                    title="KYC Pending"
+                    value={stats.total_kyc_pending.toString()}
                     icon="shield-checkmark"
                     color={Colors.info}
-                    subtitle="Today"
+                    subtitle="Awaiting approval"
                   />
                 </View>
               </View>
@@ -434,10 +611,10 @@ const AdminDashboard = () => {
                       </Text>
                     </View>
                     <Text style={styles.healthUptime}>
-                      Uptime: {stats.systemUptime}%
+                      KYC Approved: {stats.total_kyc_approved}
                     </Text>
                     <Text style={styles.healthDescription}>
-                      All ZK proof verification nodes are running optimally
+                      All KYC verification processes are running optimally
                     </Text>
                   </LinearGradient>
                 </View>
@@ -483,9 +660,10 @@ const AdminDashboard = () => {
                       <KycUserCard 
                         key={user.id}
                         user={user}
-                        onApprove={() => handleApproveUser(user.id)}
-                        onReject={() => handleRejectUser(user.id)}
+                        onApprove={() => handleApproveUser(user.user_id)}
+                        onReject={() => handleRejectUser(user.user_id)}
                         status="pending"
+                        router={router}
                       />
                     ))
                   ) : (
@@ -503,6 +681,7 @@ const AdminDashboard = () => {
                         key={user.id}
                         user={user}
                         status="approved"
+                        router={router}
                       />
                     ))
                   ) : (
@@ -519,79 +698,191 @@ const AdminDashboard = () => {
 {selectedTab === "users" && (
   <View style={styles.section}>
     <Text style={styles.sectionTitle}>User Management</Text>
+    
+    {/* User Statistics */}
     <View style={styles.userStats}>
       <View style={styles.userStatsRow}>
         <TouchableOpacity style={styles.statCardWrapper}>
           <StatCard
-            title="Active Users"
-            value="14,234"
+            title="Total Users"
+            value={userStats.total_users.toLocaleString()}
             icon="people"
             color={Colors.primary}
-            subtitle="Total active users"
+            subtitle="All registered users"
           />
         </TouchableOpacity>
         <TouchableOpacity style={styles.statCardWrapper}>
           <StatCard
-            title="New Registrations"
-            value="156"
-            icon="person-add"
-            color={Colors.secondary}
-            subtitle="This week"
+            title="Active Users"
+            value={userStats.active_users.toLocaleString()}
+            icon="person-check"
+            color={Colors.success}
+            subtitle="Currently active"
           />
         </TouchableOpacity>
       </View>
       <View style={styles.userStatsRow}>
         <TouchableOpacity style={styles.statCardWrapper}>
           <StatCard
-            title="KYC Verified"
-            value="14,234"
-            icon="shield-checkmark"
-            color={Colors.success}
-            subtitle="Total KYC verified"
+            title="New This Week"
+            value={userStats.new_users_this_week.toString()}
+            icon="person-add"
+            color={Colors.secondary}
+            subtitle="Recent registrations"
           />
         </TouchableOpacity>
         <TouchableOpacity style={styles.statCardWrapper}>
           <StatCard
-            title="KYC Rejected"
-            value="1,245"
-            icon="close-circle"
-            color={Colors.error}
-            subtitle="Total KYC rejected"
+            title="KYC Verified"
+            value={userStats.kyc_verified_users.toLocaleString()}
+            icon="shield-checkmark"
+            color={Colors.info}
+            subtitle="Verified users"
           />
         </TouchableOpacity>
       </View>
     </View>
 
- 
+    {/* User List */}
+    <View style={styles.subSection}>
+      <Text style={styles.subSectionTitle}>All Users ({users.length})</Text>
+      <View style={styles.usersList}>
+        {users.length > 0 ? (
+          users.map(user => (
+            <UserCard 
+              key={user.id}
+              user={user}
+              onToggleStatus={handleToggleUserStatus}
+            />
+          ))
+        ) : (
+          <View style={styles.emptyState}>
+            <Ionicons name="people" size={48} color={Colors.textSecondary} />
+            <Text style={styles.emptyStateText}>No users found</Text>
+          </View>
+        )}
+      </View>
+    </View>
+
     {/* Reports Section */}
     <View style={styles.subSection}>
-      <Text style={styles.subSectionTitle}>Reports</Text>
+      <Text style={styles.subSectionTitle}>Reports & Analytics</Text>
       <View style={styles.reportsContainer}>
         <TouchableOpacity style={styles.reportCard}>
           <LinearGradient
-            colors={[Colors.info, Colors.infoLight]}
+            colors={[Colors.primary, Colors.primaryDark]}
             style={styles.reportGradient}
           >
-            <Ionicons name="document-text" size={24} color={Colors.textInverse} />
-            <Text style={styles.reportTitle}>Monthly Activity</Text>
-            <Text style={styles.reportSubtitle}>Generate user report</Text>
+            <View style={styles.reportIconContainer}>
+              <Ionicons name="document-text" size={28} color={Colors.textInverse} />
+            </View>
+            <View style={styles.reportContent}>
+              <Text style={styles.reportTitle}>Monthly Activity</Text>
+              <Text style={styles.reportSubtitle}>Generate comprehensive user report</Text>
+              <View style={styles.reportStats}>
+                <View style={styles.reportStat}>
+                  <Text style={styles.reportStatValue}>{userStats.total_users}</Text>
+                  <Text style={styles.reportStatLabel}>Total Users</Text>
+                </View>
+                <View style={styles.reportStat}>
+                  <Text style={styles.reportStatValue}>{userStats.active_users}</Text>
+                  <Text style={styles.reportStatLabel}>Active</Text>
+                </View>
+              </View>
+            </View>
+            <View style={styles.reportArrow}>
+              <Ionicons name="arrow-forward" size={20} color={Colors.textInverse} />
+            </View>
           </LinearGradient>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.reportCard}>
           <LinearGradient
-            colors={[Colors.success, Colors.successLight]}
+            colors={[Colors.secondary, Colors.secondaryDark]}
             style={styles.reportGradient}
           >
-            <Ionicons name="analytics" size={24} color={Colors.textInverse} />
-            <Text style={styles.reportTitle}>KYC Analytics</Text>
-            <Text style={styles.reportSubtitle}>View verification trends</Text>
+            <View style={styles.reportIconContainer}>
+              <Ionicons name="analytics" size={28} color={Colors.textInverse} />
+            </View>
+            <View style={styles.reportContent}>
+              <Text style={styles.reportTitle}>KYC Analytics</Text>
+              <Text style={styles.reportSubtitle}>View verification trends & insights</Text>
+              <View style={styles.reportStats}>
+                <View style={styles.reportStat}>
+                  <Text style={styles.reportStatValue}>{stats.total_kyc_approved}</Text>
+                  <Text style={styles.reportStatLabel}>Approved</Text>
+                </View>
+                <View style={styles.reportStat}>
+                  <Text style={styles.reportStatValue}>{stats.total_kyc_pending}</Text>
+                  <Text style={styles.reportStatLabel}>Pending</Text>
+                </View>
+              </View>
+            </View>
+            <View style={styles.reportArrow}>
+              <Ionicons name="arrow-forward" size={20} color={Colors.textInverse} />
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.reportCard}>
+          <LinearGradient
+            colors={[Colors.success, Colors.accentDark]}
+            style={styles.reportGradient}
+          >
+            <View style={styles.reportIconContainer}>
+              <Ionicons name="trending-up" size={28} color={Colors.textInverse} />
+            </View>
+            <View style={styles.reportContent}>
+              <Text style={styles.reportTitle}>Transaction Insights</Text>
+              <Text style={styles.reportSubtitle}>Financial performance overview</Text>
+              <View style={styles.reportStats}>
+                <View style={styles.reportStat}>
+                  <Text style={styles.reportStatValue}>NPR {((stats.total_deposit_amount + stats.total_withdrawal_amount + stats.total_transfer_amount) / 1000000).toFixed(1)}M</Text>
+                  <Text style={styles.reportStatLabel}>Total Volume</Text>
+                </View>
+                <View style={styles.reportStat}>
+                  <Text style={styles.reportStatValue}>{stats.total_transactions}</Text>
+                  <Text style={styles.reportStatLabel}>Transactions</Text>
+                </View>
+              </View>
+            </View>
+            <View style={styles.reportArrow}>
+              <Ionicons name="arrow-forward" size={20} color={Colors.textInverse} />
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.reportCard}>
+          <LinearGradient
+            colors={[Colors.warning, Colors.warning]}
+            style={styles.reportGradient}
+          >
+            <View style={styles.reportIconContainer}>
+              <Ionicons name="shield-checkmark" size={28} color={Colors.textInverse} />
+            </View>
+            <View style={styles.reportContent}>
+              <Text style={styles.reportTitle}>Security Report</Text>
+              <Text style={styles.reportSubtitle}>System security & compliance</Text>
+              <View style={styles.reportStats}>
+                <View style={styles.reportStat}>
+                  <Text style={styles.reportStatValue}>{userStats.kyc_verified_users}</Text>
+                  <Text style={styles.reportStatLabel}>Verified</Text>
+                </View>
+                <View style={styles.reportStat}>
+                  <Text style={styles.reportStatValue}>99.9%</Text>
+                  <Text style={styles.reportStatLabel}>Uptime</Text>
+                </View>
+              </View>
+            </View>
+            <View style={styles.reportArrow}>
+              <Ionicons name="arrow-forward" size={20} color={Colors.textInverse} />
+            </View>
           </LinearGradient>
         </TouchableOpacity>
       </View>
     </View>
     <View style={styles.bottomSpace} />
-  </View >
+  </View>
 )}
         </ScrollView>
       </SafeAreaView >
@@ -607,7 +898,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   header: {
-    paddingTop: 50,
+    paddingTop: 20,
     paddingBottom: 20,
     paddingHorizontal: 20,
   },
@@ -829,7 +1120,6 @@ const styles = StyleSheet.create({
     color: Colors.textInverse,
   },
   userStats: {
-    flexDirection: "row",
     gap: 12,
   },
   alertsList: {
@@ -989,9 +1279,6 @@ const styles = StyleSheet.create({
     borderRadius:12,
     padding:10,
   },
-   userStats: {
-    gap: 12,
-  },
   userStatsRow: {
     flexDirection: "row",
     gap: 12,
@@ -1010,16 +1297,59 @@ const styles = StyleSheet.create({
   },
   reportsContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
   },
   reportCard: {
-    flex: 1,
+    width: (SCREEN_WIDTH - 42),
     borderRadius: 12,
     overflow: 'hidden',
+    marginBottom: 12,
   },
   reportGradient: {
     padding: 16,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  reportIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  reportContent: {
+    flex: 1,
+  },
+  reportStats: {
+    flexDirection: 'row',
+    marginTop: 8,
+    gap: 16,
+  },
+  reportStat: {
+    alignItems: 'center',
+  },
+  reportStatValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.textInverse,
+  },
+  reportStatLabel: {
+    fontSize: 10,
+    color: Colors.textInverse,
+    opacity: 0.8,
+    marginTop: 2,
+  },
+  reportArrow: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   reportTitle: {
     fontSize: 14,
@@ -1037,5 +1367,100 @@ const styles = StyleSheet.create({
   },
   bottomSpace: {
     marginBottom:80
-  }
+  },
+  // User Management Styles
+  usersList: {
+    gap: 12,
+    marginTop: 8,
+  },
+  userCard: {
+    backgroundColor: Colors.backgroundTertiary,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  inactiveUserCard: {
+    opacity: 0.6,
+    borderColor: Colors.error,
+  },
+  userHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  userAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  userEmail: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  userStatus: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  adminBadge: {
+    backgroundColor: Colors.warning,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  adminBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: Colors.textInverse,
+  },
+  userDetails: {
+    gap: 6,
+    marginBottom: 12,
+  },
+  userDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  userDetailLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  userDetailValue: {
+    fontSize: 12,
+    color: Colors.textPrimary,
+    fontWeight: '500',
+  },
+  userActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  userActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  userActionButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textInverse,
+  },
 });

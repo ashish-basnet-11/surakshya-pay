@@ -5,6 +5,7 @@ from typing import List, Optional
 from app.crud import transaction as crud_transaction
 from app.crud import notification as crud_notification
 from app.crud import user as crud_user
+from app.crud import budget as crud_budget
 from app.schemas.transaction import (
     Transaction, 
     TransactionCreate, 
@@ -124,10 +125,11 @@ def get_all_transactions(
     db: Session = Depends(get_db),
     skip: int = 0,
     limit: int = 100,
+    order_by: str = Query("latest", description="Order by: 'latest' (default) or 'oldest'"),
     current_user: User = Depends(get_current_user)
 ):
     """Get all transactions for the current user"""
-    transactions = crud_transaction.get_transactions(db, user_id=current_user.id, skip=skip, limit=limit)
+    transactions = crud_transaction.get_transactions(db, user_id=current_user.id, skip=skip, limit=limit, order_by=order_by)
     return CommonResponse(success=True, message="Transactions fetched successfully", data=transactions)
 
 @router.get("/{transaction_id}", response_model=CommonResponse[Transaction])
@@ -150,12 +152,13 @@ def get_transactions_for_user(
     user_id: int,
     skip: int = 0,
     limit: int = 100,
+    order_by: str = Query("latest", description="Order by: 'latest' (default) or 'oldest'"),
     current_user: User = Depends(get_current_user)
 ):
     # """Get transactions for a specific user (admin only)"""
     # if not current_user.is_superuser:
     #     raise HTTPException(status_code=403, detail="Access denied. Admin privileges required.")
-    transactions = crud_transaction.get_transactions(db, user_id=user_id, skip=skip, limit=limit)
+    transactions = crud_transaction.get_transactions(db, user_id=user_id, skip=skip, limit=limit, order_by=order_by)
     return CommonResponse(success=True, message="User transactions fetched successfully", data=transactions)
 
 @router.post("/topup")
@@ -199,6 +202,15 @@ async def topup(
         )
         
         local_transaction = crud_transaction.create_transaction(db, transaction_data, current_user.id)
+        
+        # Update budget if category matches (for savings/investment goals)
+        if local_transaction.category:
+            crud_budget.update_budget_from_transaction(
+                db=db,
+                user_id=current_user.id,
+                category=local_transaction.category,
+                amount=amount  # Positive for income/deposit
+            )
         
         # Create notification
         notification = create_transaction_notification(
@@ -282,6 +294,15 @@ async def withdraw(
         )
         
         local_transaction = crud_transaction.create_transaction(db, transaction_data, current_user.id)
+        
+        # Update budget if category matches
+        if local_transaction.category:
+            crud_budget.update_budget_from_transaction(
+                db=db,
+                user_id=current_user.id,
+                category=local_transaction.category,
+                amount=-amount  # Negative for expense
+            )
         
         # Create notification
         notification = create_transaction_notification(
@@ -405,6 +426,15 @@ async def transfer(
         )
         
         recipient_transaction = crud_transaction.create_transaction(db, recipient_transaction_data, recipient_user.id)
+        
+        # Update budget for sender if category matches (outgoing transfer)
+        if sender_transaction.category:
+            crud_budget.update_budget_from_transaction(
+                db=db,
+                user_id=current_user.id,
+                category=sender_transaction.category,
+                amount=-amount  # Negative for expense
+            )
         
         # Create notification for sender
         sender_notification = create_transaction_notification(
