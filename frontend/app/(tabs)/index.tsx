@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,53 +8,68 @@ import {
   SafeAreaView,
   StatusBar,
   TouchableOpacity,
-  Dimensions,
   Platform,
   Animated,
   RefreshControl,
   BackHandler,
-} from "react-native"
-import { Ionicons } from "@expo/vector-icons"
-import { LinearGradient } from "expo-linear-gradient"
-import { BlurView } from "expo-blur"
-import Colors from "@/constants/Colors"
-import { useRouter } from "expo-router"
-import { useFocusEffect } from "@react-navigation/native"
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window")
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
+import Colors from "@/constants/Colors";
+import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
+import { useAuthStore } from "@/store/use-auth-store";
+import {
+  BadgeCheck,
+  BanknoteArrowDown,
+  BanknoteArrowUp,
+  Send,
+} from "lucide-react-native";
+import { useCurrentUserDetail } from "@/apis/users/get-user-detail";
+import Loader from "@/components/Loader";
 
 const BankingWalletUI = () => {
-  const [isBalanceVisible, setIsBalanceVisible] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  const router = useRouter()
-  const scrollY = useRef(new Animated.Value(0)).current
+  const [isBalanceVisible, setIsBalanceVisible] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const router = useRouter();
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const { data, isLoading } = useCurrentUserDetail({
+    refetchInterval: 3000,
+  });
 
-   useFocusEffect(
-           useCallback(() => {
-             const onBackPress = () => {
-               router.replace('/(tabs)'); 
-               return true;
-             };
-         
-             const backHandler = BackHandler.addEventListener(
-               'hardwareBackPress',
-               onBackPress
-             );
-         
-             return () => backHandler.remove();
-           }, [])
-         );
+  useEffect(() => {
+    if (data?.data) {
+      useAuthStore.getState().setUser(data?.data);
+    }
+  }, [data]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        router.replace("/(tabs)");
+        return true;
+      };
+
+      const backHandler = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress
+      );
+
+      return () => backHandler.remove();
+    }, [])
+  );
 
   const toggleBalanceVisibility = () => {
-    setIsBalanceVisible(!isBalanceVisible)
-  }
+    setIsBalanceVisible(!isBalanceVisible);
+  };
 
   const onRefresh = () => {
-    setRefreshing(true)
+    setRefreshing(true);
     setTimeout(() => {
-      setRefreshing(false)
-    }, 2000)
-  }
+      setRefreshing(false);
+    }, 2000);
+  };
 
   const transactions = [
     {
@@ -97,64 +112,54 @@ const BankingWalletUI = () => {
       color: Colors.info,
       bgColor: Colors.info + "15",
     },
-  ]
+  ];
 
   const actionButtons = [
     {
+      name: "Send Money",
+      icon: <Send size={22} color={Colors.textInverse} />,
+      gradient: [Colors.neutral900, Colors.neutral600],
+      route: "/sendMoney",
+      description: "Transfer money to others",
+    },
+    {
       name: "Add Money",
-      icon: "add-circle-outline",
+      icon: <BanknoteArrowUp size={22} color={Colors.textInverse} />,
       gradient: [Colors.success, Colors.accentLight],
       route: "/(tabs)/(index)/topup",
       description: "Top up wallet",
     },
     {
       name: "Withdraw",
-      icon: "arrow-up-circle-outline",
+      icon: <BanknoteArrowDown size={22} color={Colors.textInverse} />,
       gradient: [Colors.secondary, Colors.secondaryLight],
       route: "/(tabs)/(index)/withdraw",
       description: "Transfer funds",
     },
-    {
-      name: "Analytics",
-      icon: "analytics-outline",
-      gradient: [Colors.warning, "#FCD34D"],
-      route: "/(tabs)/(index)/details",
-      description: "View insights",
-    },
-  ]
-
-  const quickStats = [
-    {
-      label: "This Month",
-      value: "$12,450",
-      change: "+12.5%",
-      positive: true,
-      icon: "calendar-outline",
-    },
-    {
-      label: "Last 30 Days",
-      value: "$8,920",
-      change: "-3.2%",
-      positive: false,
-      icon: "time-outline",
-    },
-  ]
+  ];
 
   const headerOpacity = scrollY.interpolate({
     inputRange: [0, 100],
     outputRange: [1, 0.8],
     extrapolate: "clamp",
-  })
+  });
 
   const headerTranslateY = scrollY.interpolate({
     inputRange: [0, 100],
     outputRange: [0, 0],
     extrapolate: "clamp",
-  })
+  });
+
+  if (isLoading) {
+    return <Loader />;
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.primaryLight} />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryLight}
+      />
 
       {/* Animated Header */}
       <Animated.View
@@ -174,38 +179,68 @@ const BankingWalletUI = () => {
         >
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <TouchableOpacity style={styles.avatarContainer} onPress={() => router.push('/(tabs)/(settings)/profile-details')}>
-                <LinearGradient colors={[Colors.secondary, Colors.secondaryLight]} style={styles.avatarGradient}>
+              <TouchableOpacity
+                style={styles.avatarContainer}
+                onPress={() =>
+                  router.push("/(tabs)/(settings)/profile-details")
+                }
+              >
+                <LinearGradient
+                  colors={[Colors.secondary, Colors.secondaryLight]}
+                  style={styles.avatarGradient}
+                >
                   <Text style={styles.avatarText}>EP</Text>
                 </LinearGradient>
                 <View style={styles.onlineIndicator} />
               </TouchableOpacity>
               <View style={styles.welcomeContainer}>
                 <Text style={styles.welcomeText}>Good afternoon</Text>
-                <Text style={styles.userName}>Eleanor Pena</Text>
+                <Text style={styles.userName}>
+                  {useAuthStore.getState().user?.full_name}
+                </Text>
                 <View style={styles.premiumBadge}>
-                  <Ionicons name="star" size={10} color="#FFD700" />
-                  <Text style={styles.premiumText}>Premium</Text>
+                  <BadgeCheck size={12} color={Colors.success} />
+                  <Text style={styles.premiumText}>Verified</Text>
                 </View>
               </View>
             </View>
 
             <View style={styles.headerActions}>
-              <TouchableOpacity style={styles.headerButton} onPress={() => router.push("/scan")}>
+              <TouchableOpacity
+                style={styles.headerButton}
+                onPress={() => router.push("/scan")}
+              >
                 <LinearGradient
-                  colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.2)"]}
+                  colors={[
+                    "rgba(255, 255, 255, 0.1)",
+                    "rgba(255, 255, 255, 0.2)",
+                  ]}
                   style={styles.headerButtonGradient}
                 >
-                  <Ionicons name="qr-code-outline" size={20} color={Colors.textInverse} />
+                  <Ionicons
+                    name="qr-code-outline"
+                    size={20}
+                    color={Colors.textInverse}
+                  />
                 </LinearGradient>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.headerButton} onPress={() => router.push("/notification")}>
+              <TouchableOpacity
+                style={styles.headerButton}
+                onPress={() => router.push("/notification")}
+              >
                 <LinearGradient
-                  colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.2)"]}
+                  colors={[
+                    "rgba(255, 255, 255, 0.1)",
+                    "rgba(255, 255, 255, 0.2)",
+                  ]}
                   style={styles.headerButtonGradient}
                 >
-                  <Ionicons name="notifications-outline" size={20} color={Colors.textInverse} />
+                  <Ionicons
+                    name="notifications-outline"
+                    size={20}
+                    color={Colors.textInverse}
+                  />
                   <View style={styles.notificationBadge} />
                 </LinearGradient>
               </TouchableOpacity>
@@ -218,7 +253,10 @@ const BankingWalletUI = () => {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
         scrollEventThrottle={16}
         refreshControl={
           <RefreshControl
@@ -248,10 +286,19 @@ const BankingWalletUI = () => {
                   <Text style={styles.balanceLabel}>Available Balance</Text>
                   <View style={styles.balanceLabelUnderline} />
                 </View>
-                <TouchableOpacity style={styles.eyeButton} onPress={toggleBalanceVisibility}>
-                  <BlurView intensity={20} tint="light" style={styles.eyeButtonBlur}>
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={toggleBalanceVisibility}
+                >
+                  <BlurView
+                    intensity={20}
+                    tint="light"
+                    style={styles.eyeButtonBlur}
+                  >
                     <Ionicons
-                      name={isBalanceVisible ? "eye-outline" : "eye-off-outline"}
+                      name={
+                        isBalanceVisible ? "eye-outline" : "eye-off-outline"
+                      }
                       size={18}
                       color={Colors.textInverse}
                     />
@@ -260,9 +307,41 @@ const BankingWalletUI = () => {
               </View>
 
               <View style={styles.balanceContent}>
-                <Text style={styles.balance}>{isBalanceVisible ? "$124,580.50" : "$•••,•••.••"}</Text>
+                <View
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    alignItems: "flex-end",
+                    gap: 2
+                  }}
+                >
+                  {isBalanceVisible ? (
+                    <View
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    alignItems: "flex-end",
+                    gap: 2
+                  }}
+                >
+                      <Text style={styles.balanceCurrency}>
+                        NPR
+                        {/* {isBalanceVisible ? "NPR 124,580.50" : "$•••,•••.••"} */}
+                      </Text>
+                      <Text style={styles.balance}>
+                        {` ${parseFloat(
+                          useAuthStore.getState().user?.balance || "0"
+                        ).toFixed(2)}`}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.balance}>XXX.XX</Text>
+                  )}
+                </View>
                 <View style={styles.balanceChange}>
-                  <Text style={styles.balanceChangeText}>Your Transactions, Zero Exposure</Text>
+                  <Text style={styles.balanceChangeText}>
+                    Your Transactions, Zero Exposure
+                  </Text>
                 </View>
               </View>
 
@@ -307,29 +386,48 @@ const BankingWalletUI = () => {
           <View style={styles.actionsContainer}>
             {actionButtons.map((action, index) => {
               const handlePress = () => {
-                router.push(action.route)
-              }
+                router.push(action.route);
+              };
 
               return (
-                <TouchableOpacity key={index} style={styles.actionButton} onPress={handlePress} activeOpacity={0.8}>
+                <TouchableOpacity
+                  key={index}
+                  style={styles.actionButton}
+                  onPress={handlePress}
+                  activeOpacity={0.8}
+                >
                   <View style={styles.actionButtonCard}>
-                    <LinearGradient colors={action.gradient} style={styles.actionButtonGradient}>
+                    <LinearGradient
+                      colors={action.gradient}
+                      style={styles.actionButtonGradient}
+                    >
                       <View style={styles.actionIconContainer}>
-                        <Ionicons name={action.icon} size={22} color={Colors.textInverse} />
+                        {/* <Ionicons
+                          name={action.icon}
+                          size={22}
+                          color={Colors.textInverse}
+                        /> */}
+                        {action.icon}
                       </View>
                     </LinearGradient>
 
                     <View style={styles.actionTextContainer}>
                       <Text style={styles.actionText}>{action.name}</Text>
-                      <Text style={styles.actionDescription}>{action.description}</Text>
+                      <Text style={styles.actionDescription}>
+                        {action.description}
+                      </Text>
                     </View>
 
                     <View style={styles.actionArrow}>
-                      <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+                      <Ionicons
+                        name="chevron-forward"
+                        size={16}
+                        color={Colors.textSecondary}
+                      />
                     </View>
                   </View>
                 </TouchableOpacity>
-              )
+              );
             })}
           </View>
         </View>
@@ -347,32 +445,54 @@ const BankingWalletUI = () => {
             {transactions.map((transaction, index) => (
               <TouchableOpacity
                 key={transaction.id}
-                style={[styles.transactionItem, index === transactions.length - 1 && styles.lastTransactionItem]}
+                style={[
+                  styles.transactionItem,
+                  index === transactions.length - 1 &&
+                    styles.lastTransactionItem,
+                ]}
                 activeOpacity={0.7}
               >
                 <View style={styles.transactionLeft}>
                   <View style={styles.transactionIconContainer}>
-                    <View style={[styles.transactionIconBg, { backgroundColor: transaction.bgColor }]}>
-                      <Ionicons name={transaction.icon} size={20} color={transaction.color} />
+                    <View
+                      style={[
+                        styles.transactionIconBg,
+                        { backgroundColor: transaction.bgColor },
+                      ]}
+                    >
+                      <Ionicons
+                        name={transaction.icon}
+                        size={20}
+                        color={transaction.color}
+                      />
                     </View>
                     <View
                       style={[
                         styles.transactionStatusIndicator,
                         {
-                          backgroundColor: transaction.status === "completed" ? Colors.success : Colors.warning,
+                          backgroundColor:
+                            transaction.status === "completed"
+                              ? Colors.success
+                              : Colors.warning,
                         },
                       ]}
                     />
                   </View>
 
                   <View style={styles.transactionDetails}>
-                    <Text style={styles.transactionName}>{transaction.name}</Text>
+                    <Text style={styles.transactionName}>
+                      {transaction.name}
+                    </Text>
                     <View style={styles.transactionMeta}>
                       <View style={styles.categoryBadge}>
-                        <Text style={styles.transactionCategory}>{transaction.category}</Text>
+                        <Text style={styles.transactionCategory}>
+                          {transaction.category}
+                        </Text>
                       </View>
                       <View style={styles.transactionDot} />
-                      <Text style={styles.transactionDate}>{transaction.date}</Text>
+                      <Text style={styles.transactionDate}>
+                        {transaction.date}
+                      </Text>
                     </View>
                   </View>
                 </View>
@@ -382,19 +502,26 @@ const BankingWalletUI = () => {
                     style={[
                       styles.transactionAmount,
                       {
-                        color: transaction.amount > 0 ? Colors.success : Colors.textPrimary,
+                        color:
+                          transaction.amount > 0
+                            ? Colors.success
+                            : Colors.textPrimary,
                       },
                     ]}
                   >
                     {transaction.amount > 0 ? "+" : ""}$
-                    {Math.abs(transaction.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    {Math.abs(transaction.amount).toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                    })}
                   </Text>
                   <View
                     style={[
                       styles.transactionStatusBadge,
                       {
                         backgroundColor:
-                          transaction.status === "completed" ? Colors.success + "20" : Colors.warning + "20",
+                          transaction.status === "completed"
+                            ? Colors.success + "20"
+                            : Colors.warning + "20",
                       },
                     ]}
                   >
@@ -402,7 +529,10 @@ const BankingWalletUI = () => {
                       style={[
                         styles.transactionStatusText,
                         {
-                          color: transaction.status === "completed" ? Colors.success : Colors.warning,
+                          color:
+                            transaction.status === "completed"
+                              ? Colors.success
+                              : Colors.warning,
                         },
                       ]}
                     >
@@ -420,12 +550,18 @@ const BankingWalletUI = () => {
           <Text style={styles.sectionTitle}>Financial Insights</Text>
           <View style={styles.insightsContainer}>
             <View style={styles.insightCard}>
-              <LinearGradient colors={[Colors.info + "20", Colors.info + "10"]} style={styles.insightGradient}>
+              <LinearGradient
+                colors={[Colors.info + "20", Colors.info + "10"]}
+                style={styles.insightGradient}
+              >
                 <View style={styles.insightIcon}>
                   <Ionicons name="bulb-outline" size={20} color={Colors.info} />
                 </View>
                 <Text style={styles.insightTitle}>Smart Saving Tip</Text>
-                <Text style={styles.insightText}>You're spending 15% less on subscriptions this month. Great job!</Text>
+                <Text style={styles.insightText}>
+                  You're spending 15% less on subscriptions this month. Great
+                  job!
+                </Text>
               </LinearGradient>
             </View>
           </View>
@@ -435,8 +571,8 @@ const BankingWalletUI = () => {
         <View style={styles.bottomSpacing} />
       </Animated.ScrollView>
     </SafeAreaView>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -513,14 +649,14 @@ const styles = StyleSheet.create({
   premiumBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 215, 0, 0.2)",
+    backgroundColor: "rgba(16, 185, 129, 0.2)",
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
     alignSelf: "flex-start",
   },
   premiumText: {
-    color: "#FFD700",
+    color: Colors.success,
     fontSize: 10,
     fontWeight: "600",
     marginLeft: 4,
@@ -552,7 +688,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    marginTop: 10
+    marginTop: 10,
   },
   scrollContent: {
     paddingBottom: 120,
@@ -624,6 +760,13 @@ const styles = StyleSheet.create({
   },
   balanceContent: {
     // marginBottom: 28,
+  },
+  balanceCurrency: {
+    color: Colors.textInverse,
+    fontSize: 30,
+    fontWeight: "800",
+    letterSpacing: -1.5,
+    marginBottom: 12,
   },
   balance: {
     color: Colors.textInverse,
@@ -910,6 +1053,6 @@ const styles = StyleSheet.create({
   bottomSpacing: {
     height: 40,
   },
-})
+});
 
-export default BankingWalletUI
+export default BankingWalletUI;

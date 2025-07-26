@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   StyleSheet,
   View,
@@ -16,48 +16,49 @@ import {
   StatusBar,
   Vibration,
   BackHandler,
-} from "react-native"
-import { CameraView, useCameraPermissions } from "expo-camera"
-import * as ImagePicker from "expo-image-picker"
-import { Ionicons } from "@expo/vector-icons"
-import { useFocusEffect, useRouter } from "expo-router"
-import Colors from "@/constants/Colors"
+} from "react-native";
+import { CameraView, useCameraPermissions } from "expo-camera";
+import * as ImagePicker from "expo-image-picker";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect, useRouter } from "expo-router";
+import Colors from "@/constants/Colors";
+import QRCode from "react-native-qrcode-svg";
+import { useAuthStore } from "@/store/use-auth-store";
 
-const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get("window")
-const MAX_HEIGHT = SCREEN_HEIGHT * 0.7
-const MIN_HEIGHT = 200
+const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get("window");
+const MAX_HEIGHT = SCREEN_HEIGHT * 0.7;
+const MIN_HEIGHT = 200;
 
 export default function ScanScreen() {
-  const router = useRouter()
-  const [permission, requestPermission] = useCameraPermissions()
-  const [scanned, setScanned] = useState(false)
-  const [cameraType, setCameraType] = useState<"back" | "front">("back")
-  const [flashMode, setFlashMode] = useState<"off" | "on">("off")
-  const [isScanning, setIsScanning] = useState(false)
-  const [scanResult, setScanResult] = useState<string | null>(null)
+  const router = useRouter();
+  const [permission, requestPermission] = useCameraPermissions();
+  const [scanned, setScanned] = useState(false);
+  const [cameraType, setCameraType] = useState<"back" | "front">("back");
+  const [flashMode, setFlashMode] = useState<"off" | "on">("off");
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<string | null>(null);
 
-  
-  const panY = useRef(new Animated.Value(0)).current
-  const currentHeight = useRef(MIN_HEIGHT)
-  const scanLineAnim = useRef(new Animated.Value(0)).current
-  const pulseAnim = useRef(new Animated.Value(1)).current
-  const fadeAnim = useRef(new Animated.Value(0)).current
+  const panY = useRef(new Animated.Value(0)).current;
+  const currentHeight = useRef(MIN_HEIGHT);
+  const scanLineAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
-   useFocusEffect(
-       useCallback(() => {
-         const onBackPress = () => {
-           router.replace('/(tabs)'); 
-           return true;
-         };
-     
-         const backHandler = BackHandler.addEventListener(
-           'hardwareBackPress',
-           onBackPress
-         );
-     
-         return () => backHandler.remove();
-       }, [])
-     );
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        router.replace("/(tabs)");
+        return true;
+      };
+
+      const backHandler = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress
+      );
+
+      return () => backHandler.remove();
+    }, [])
+  );
 
   useEffect(() => {
     const scanAnimation = Animated.loop(
@@ -72,11 +73,10 @@ export default function ScanScreen() {
           duration: 0,
           useNativeDriver: true,
         }),
-      ]),
-    )
-    scanAnimation.start()
+      ])
+    );
+    scanAnimation.start();
 
- 
     const pulseAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -89,72 +89,75 @@ export default function ScanScreen() {
           duration: 1000,
           useNativeDriver: true,
         }),
-      ]),
-    )
-    pulseAnimation.start()
+      ])
+    );
+    pulseAnimation.start();
 
-  
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 500,
       useNativeDriver: true,
-    }).start()
+    }).start();
 
     return () => {
-      scanAnimation.stop()
-      pulseAnimation.stop()
-    }
-  }, [])
+      scanAnimation.stop();
+      pulseAnimation.stop();
+    };
+  }, []);
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gestureState) => {
-        if (currentHeight.current <= MIN_HEIGHT && gestureState.dy > 0) return
-        if (currentHeight.current >= MAX_HEIGHT && gestureState.dy < 0) return
+        if (currentHeight.current <= MIN_HEIGHT && gestureState.dy > 0) return;
+        if (currentHeight.current >= MAX_HEIGHT && gestureState.dy < 0) return;
 
-        panY.setValue(gestureState.dy)
+        panY.setValue(gestureState.dy);
       },
       onPanResponderRelease: (_, gestureState) => {
-        const gestureDistance = gestureState.dy
+        const gestureDistance = gestureState.dy;
 
         if (gestureDistance < -50) {
-          animateTo(MAX_HEIGHT)
+          animateTo(MAX_HEIGHT);
         } else if (gestureDistance > 50) {
-          animateTo(MIN_HEIGHT)
+          animateTo(MIN_HEIGHT);
         } else {
-          animateTo(currentHeight.current)
+          animateTo(currentHeight.current);
         }
       },
-    }),
-  ).current
+    })
+  ).current;
 
   const animateTo = (height: number) => {
-    currentHeight.current = height
+    currentHeight.current = height;
     Animated.spring(panY, {
       toValue: height - MIN_HEIGHT,
       useNativeDriver: false,
       tension: 100,
       friction: 8,
-    }).start()
-  }
+    }).start();
+  };
 
   const sampleQRData = {
     image: require("@/assets/images/sample-qr.png"),
-  }
+  };
 
   useEffect(() => {
-    ;(async () => {
+    (async () => {
       if (permission && !permission.granted) {
-        await requestPermission()
+        await requestPermission();
       }
 
-      const galleryStatus = await ImagePicker.requestMediaLibraryPermissionsAsync()
+      const galleryStatus =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (galleryStatus.status !== "granted") {
-        Alert.alert("Permission required", "We need access to your gallery to scan QR codes from images")
+        Alert.alert(
+          "Permission required",
+          "We need access to your gallery to scan QR codes from images"
+        );
       }
-    })()
-  }, [permission, requestPermission])
+    })();
+  }, [permission, requestPermission]);
 
   const pickImage = async () => {
     try {
@@ -163,25 +166,29 @@ export default function ScanScreen() {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 1,
-      })
+      });
 
       if (!result.canceled) {
-        setIsScanning(true)
-        
+        setIsScanning(true);
+
         setTimeout(() => {
-          setIsScanning(false)
-          Alert.alert("QR Code Found", "Payment request for $25.00 from John's Store", [
-            { text: "Cancel", style: "cancel" },
-            { text: "Pay Now", onPress: () => router.push("/send") },
-          ])
-        }, 2000)
+          setIsScanning(false);
+          Alert.alert(
+            "QR Code Found",
+            "Payment request for $25.00 from John's Store",
+            [
+              { text: "Cancel", style: "cancel" },
+              { text: "Pay Now", onPress: () => router.push("/send") },
+            ]
+          );
+        }, 2000);
       }
     } catch (error) {
-      console.error("Error picking image:", error)
-      Alert.alert("Error", "Failed to pick image from gallery")
-      setIsScanning(false)
+      console.error("Error picking image:", error);
+      Alert.alert("Error", "Failed to pick image from gallery");
+      setIsScanning(false);
     }
-  }
+  };
 
   if (!permission) {
     return (
@@ -193,104 +200,81 @@ export default function ScanScreen() {
           <Text style={styles.loadingText}>Initializing Camera...</Text>
         </Animated.View>
       </View>
-    )
+    );
   }
 
   if (!permission.granted) {
     return (
       <View style={styles.permissionContainer}>
         <StatusBar barStyle="dark-content" backgroundColor="white" />
-        <Animated.View style={[styles.permissionContent, { opacity: fadeAnim }]}>
+        <Animated.View
+          style={[styles.permissionContent, { opacity: fadeAnim }]}
+        >
           <View style={styles.permissionIcon}>
             <Ionicons name="camera" size={64} color={Colors.primary} />
           </View>
           <Text style={styles.permissionTitle}>Camera Access Required</Text>
           <Text style={styles.permissionSubtext}>
-            We need camera permission to scan QR codes for payments and transactions
+            We need camera permission to scan QR codes for payments and
+            transactions
           </Text>
-          <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
+          <TouchableOpacity
+            style={styles.permissionButton}
+            onPress={requestPermission}
+          >
             <Ionicons name="checkmark" size={20} color="white" />
             <Text style={styles.permissionButtonText}>Grant Permission</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.settingsButton} onPress={() => Linking.openSettings()}>
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => Linking.openSettings()}
+          >
             <Text style={styles.settingsButtonText}>Open Settings</Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
-    )
+    );
   }
 
   const handleBarCodeScanned = ({ data }: { data: string }) => {
-    if (scanned) return
+    if (scanned) return;
 
-    setScanned(true)
-    setScanResult(data)
-    Vibration.vibrate(100)
-
+    setScanned(true);
+    setScanResult(data);
     
-    if (data.includes("pay") || data.includes("amount")) {
-      Alert.alert("Payment QR Code Detected", `Amount: $45.00\nMerchant: Digital Store\n\nProceed with payment?`, [
-        {
-          text: "Cancel",
-          onPress: () => {
-            setScanned(false)
-            setScanResult(null)
-          },
-          style: "cancel",
-        },
-        {
-          text: "Pay Now",
-          onPress: () => {
-            router.push("/send")
-          },
-        },
-      ])
-    } else if (data.startsWith("http")) {
-      Alert.alert("Website Link Detected", data, [
-        {
-          text: "Cancel",
-          onPress: () => {
-            setScanned(false)
-            setScanResult(null)
-          },
-          style: "cancel",
-        },
-        {
-          text: "Open Link",
-          onPress: () => Linking.openURL(data),
-        },
-      ])
-    } else {
-      Alert.alert("QR Code Scanned", data, [
-        {
-          text: "OK",
-          onPress: () => {
-            setScanned(false)
-            setScanResult(null)
-          },
-        },
-      ])
-    }
-  }
+    router.push({
+      pathname: "/(tabs)/(index)/sendMoney",
+      params: {
+        qrData: data
+      }
+    });
+  };
 
   const sampleContainerHeight = panY.interpolate({
     inputRange: [0, MAX_HEIGHT - MIN_HEIGHT],
     outputRange: [MIN_HEIGHT, MAX_HEIGHT],
     extrapolate: "clamp",
-  })
+  });
 
   const scanLineTranslateY = scanLineAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [-125, 125],
-  })
+  });
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent
+      />
 
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.headerButton}
+        >
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
 
@@ -299,13 +283,22 @@ export default function ScanScreen() {
         <View style={styles.headerActions}>
           <TouchableOpacity
             onPress={() => setFlashMode(flashMode === "off" ? "on" : "off")}
-            style={[styles.headerButton, flashMode === "on" && styles.activeButton]}
+            style={[
+              styles.headerButton,
+              flashMode === "on" && styles.activeButton,
+            ]}
           >
-            <Ionicons name={flashMode === "on" ? "flash" : "flash-off"} size={20} color="white" />
+            <Ionicons
+              name={flashMode === "on" ? "flash" : "flash-off"}
+              size={20}
+              color="white"
+            />
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => setCameraType(cameraType === "back" ? "front" : "back")}
+            onPress={() =>
+              setCameraType(cameraType === "back" ? "front" : "back")
+            }
             style={styles.headerButton}
           >
             <Ionicons name="camera-reverse" size={20} color="white" />
@@ -315,68 +308,71 @@ export default function ScanScreen() {
 
       {/* Camera Container */}
       <View style={styles.cameraContainer}>
+        {/* Camera View only */}
         <CameraView
-          style={styles.camera}
+          style={StyleSheet.absoluteFill}
           onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
           barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
           facing={cameraType}
-        >
-          <View style={styles.overlay}>
-            {/* Gallery Button */}
-            <Animated.View style={[styles.galleryButtonContainer, { opacity: fadeAnim }]}>
-              <TouchableOpacity
-                style={[styles.galleryButton, isScanning && styles.galleryButtonLoading]}
-                onPress={pickImage}
-                disabled={isScanning}
-              >
-                {isScanning ? (
-                  <View style={styles.loadingSpinner}>
-                    <Ionicons name="hourglass" size={20} color="white" />
-                  </View>
-                ) : (
-                  <Ionicons name="images" size={20} color="white" />
-                )}
-                <Text style={styles.galleryButtonText}>{isScanning ? "Processing..." : "From Gallery"}</Text>
-              </TouchableOpacity>
-            </Animated.View>
+        />
 
-            {/* Scan Frame */}
+        {/* Overlay */}
+        <View style={styles.overlay}>
+          {/* Gallery Button */}
+          <Animated.View
+            style={[styles.galleryButtonContainer, { opacity: fadeAnim }]}
+          >
+            <TouchableOpacity
+              style={[
+                styles.galleryButton,
+                isScanning && styles.galleryButtonLoading,
+              ]}
+              onPress={pickImage}
+              disabled={isScanning}
+            >
+              {isScanning ? (
+                <View style={styles.loadingSpinner}>
+                  <Ionicons name="hourglass" size={20} color="white" />
+                </View>
+              ) : (
+                <Ionicons name="images" size={20} color="white" />
+              )}
+              <Text style={styles.galleryButtonText}>
+                {isScanning ? "Processing..." : "From Gallery"}
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Scan Frame */}
+          <Animated.View
+            style={[
+              styles.scanFrame,
+              {
+                transform: [{ scale: pulseAnim }],
+                opacity: fadeAnim,
+              },
+            ]}
+          >
+            {/* Animated scan line */}
             <Animated.View
               style={[
-                styles.scanFrame,
+                styles.scanLine,
                 {
-                  transform: [{ scale: pulseAnim }],
-                  opacity: fadeAnim,
+                  transform: [{ translateY: scanLineTranslateY }],
                 },
               ]}
-            >
-              {/* Animated scan line */}
-              <Animated.View
-                style={[
-                  styles.scanLine,
-                  {
-                    transform: [{ translateY: scanLineTranslateY }],
-                  },
-                ]}
-              />
+            />
 
-              {/* Corner indicators */}
-              <View style={styles.cornerTopLeft} />
-              <View style={styles.cornerTopRight} />
-              <View style={styles.cornerBottomLeft} />
-              <View style={styles.cornerBottomRight} />
+            {/* Corner indicators */}
+            <View style={styles.cornerTopLeft} />
+            <View style={styles.cornerTopRight} />
+            <View style={styles.cornerBottomLeft} />
+            <View style={styles.cornerBottomRight} />
 
-              {/* Center dot */}
-              <View style={styles.centerDot} />
-            </Animated.View>
-
-            {/* Instructions */}
-            <Animated.View style={[styles.instructionsContainer, { opacity: fadeAnim }]}>
-              <Text style={styles.scanText}>{scanned ? "QR Code Detected!" : "Position QR code within the frame"}</Text>
-              <Text style={styles.scanSubtext}>Make sure the code is clearly visible and well-lit</Text>
-            </Animated.View>
-          </View>
-        </CameraView>
+            {/* Center dot */}
+            <View style={styles.centerDot} />
+          </Animated.View>
+        </View>
       </View>
 
       {/* Rescan Button */}
@@ -385,8 +381,8 @@ export default function ScanScreen() {
           <TouchableOpacity
             style={styles.rescanButton}
             onPress={() => {
-              setScanned(false)
-              setScanResult(null)
+              setScanned(false);
+              setScanResult(null);
             }}
           >
             <Ionicons name="scan" size={20} color="white" />
@@ -396,23 +392,37 @@ export default function ScanScreen() {
       )}
 
       {/* Bottom Sheet */}
-      <Animated.View style={[styles.bottomSheet, { height: sampleContainerHeight }]} {...panResponder.panHandlers}>
+      <Animated.View
+        style={[styles.bottomSheet, { height: sampleContainerHeight }]}
+        {...panResponder.panHandlers}
+      >
         {/* Drag Handle */}
         <View style={styles.dragHandleContainer}>
           <View style={styles.dragHandle} />
         </View>
 
         {/* Content */}
-        <ScrollView style={styles.bottomSheetContent} showsVerticalScrollIndicator={false} bounces={false}>
+        <ScrollView
+          style={styles.bottomSheetContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
           <View style={styles.bottomSheetHeader}>
-            <Text style={styles.bottomSheetTitle}>My QR Code</Text>
-            <Text style={styles.bottomSheetSubtitle}>Share this code to receive payments</Text>
+            <Text style={styles.bottomSheetTitle}>QR Code</Text>
+            <Text style={styles.bottomSheetSubtitle}>
+              Share this code to receive payments
+            </Text>
           </View>
 
           {/* QR Code Display */}
           <View style={styles.qrCodeContainer}>
             <View style={styles.qrCodeWrapper}>
-              <Image source={sampleQRData.image} style={styles.qrCodeImage} resizeMode="contain" />
+              <QRCode
+                value={useAuthStore.getState().user?.username}
+                size={200}
+                color="black"
+                backgroundColor="white"
+              />
             </View>
           </View>
 
@@ -446,38 +456,11 @@ export default function ScanScreen() {
               <Text style={styles.actionButtonText}>Print</Text>
             </TouchableOpacity>
           </View>
-
-          {/* Quick Actions */}
-          <View style={styles.quickActions}>
-            <Text style={styles.quickActionsTitle}>Quick Actions</Text>
-
-            <TouchableOpacity style={styles.quickActionItem}>
-              <View style={styles.quickActionIcon}>
-                <Ionicons name="card" size={24} color={Colors.primary} />
-              </View>
-              <View style={styles.quickActionContent}>
-                <Text style={styles.quickActionTitle}>Request Payment</Text>
-                <Text style={styles.quickActionSubtitle}>Create a payment request QR</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#666" />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.quickActionItem}>
-              <View style={styles.quickActionIcon}>
-                <Ionicons name="business" size={24} color={Colors.primary} />
-              </View>
-              <View style={styles.quickActionContent}>
-                <Text style={styles.quickActionTitle}>Merchant Code</Text>
-                <Text style={styles.quickActionSubtitle}>Generate business QR code</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#666" />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.bottomSpacing}/>
+          <View style={styles.bottomSpacing} />
         </ScrollView>
       </Animated.View>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -603,6 +586,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   overlay: {
+    ...StyleSheet.absoluteFillObject,
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
@@ -778,8 +762,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   bottomSheetHeader: {
+    marginTop: 10,
     alignItems: "center",
-    marginBottom: 30,
+    marginBottom: 20,
   },
   bottomSheetTitle: {
     fontSize: 22,
@@ -895,6 +880,6 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   bottomSpacing: {
-    height:100,
-  }
-})
+    height: 100,
+  },
+});

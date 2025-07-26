@@ -6,3 +6,18 @@ export interface LoginResponse {
   token_type: string;
   user?: UserInDB;
 }
+
+export interface ForgotPasswordInterface {
+  email: string;
+}
+
+export interface VerifyOtpRequest {
+  email: string;
+  otp: string;
+}
+
+export interface ResetPasswordInterface {
+  email: string;
+  otp: string;
+  new_password: string;
+}
