@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     MAIL_SERVER: str
     MAIL_FROM_NAME: str
 
+    # Blockchain settings
+    BLOCKCHAIN_RPC_URL: str = "http://127.0.0.1:7545"
+    CONTRACT_ADDRESS: str = "0x07ff955262D068bE73c97D655A98cA55d68AA3d5"
+    FUNDER_PRIVATE_KEY: str = "0x7b26e4cfbc945af9034294e81769857afc698af763b0a61094f18046fd4ad602"  # Default Ganache account 0
+
     @model_validator(mode='after')
     def build_database_url(self) -> 'Settings':
         if not self.DATABASE_URL:

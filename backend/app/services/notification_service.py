@@ -1,5 +1,6 @@
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 from app.core.config import settings
+from .email_templates import get_transaction_email_template, get_welcome_email_template, get_otp_email_template
 
 conf = ConnectionConfig(
     MAIL_USERNAME=settings.MAIL_USERNAME,
@@ -15,6 +16,7 @@ conf = ConnectionConfig(
 )
 
 async def send_email(email: str, subject: str, body: str):
+    """Send a basic email with custom HTML body"""
     message = MessageSchema(
         subject=subject,
         recipients=[email],
@@ -23,4 +25,82 @@ async def send_email(email: str, subject: str, body: str):
     )
 
     fm = FastMail(conf)
-    await fm.send_message(message) 
+    await fm.send_message(message)
+
+async def send_transaction_notification(
+    email: str,
+    user_name: str,
+    transaction_type: str,
+    amount: float,
+    tx_hash: str,
+    to_username: str = None,
+    new_balance: float = None
+):
+    """Send a modern transaction notification email"""
+    
+    # Generate the appropriate subject line
+    if transaction_type == "DEPOSIT":
+        subject = f"Topup Successful - NPR {amount}"
+    elif transaction_type == "WITHDRAWAL":
+        subject = f"Withdrawal Successful - NPR {amount}"
+    elif transaction_type == "TRANSFER":
+        subject = f"Transfer Successful - NPR {amount} Sent"
+    else:
+        subject = f"Transaction Completed - NPR{amount}"
+    
+    # Generate the HTML email body
+    html_body = get_transaction_email_template(
+        transaction_type=transaction_type,
+        amount=amount,
+        tx_hash=tx_hash,
+        user_name=user_name,
+        to_username=to_username,
+        new_balance=new_balance
+    )
+    
+    # Send the email
+    await send_email(email=email, subject=subject, body=html_body)
+
+async def send_otp_email(
+    email: str,
+    user_name: str,
+    otp_code: str,
+    purpose: str = "verification",
+    expiry_minutes: int = 10
+):
+    """Send a modern OTP verification email"""
+    
+    # Generate the appropriate subject line based on purpose
+    if purpose.lower() == "login":
+        subject = f"🔐 Login Verification Code - {otp_code}"
+    elif purpose.lower() == "registration":
+        subject = f"📝 Account Verification Code - {otp_code}"
+    elif purpose.lower() == "password_reset":
+        subject = f"🔑 Password Reset Code - {otp_code}"
+    else:
+        subject = f"🔢 Verification Code - {otp_code}"
+    
+    # Generate the HTML email body
+    html_body = get_otp_email_template(
+        user_name=user_name,
+        otp_code=otp_code,
+        purpose=purpose,
+        expiry_minutes=expiry_minutes
+    )
+    
+    # Send the email
+    await send_email(email=email, subject=subject, body=html_body)
+
+async def send_welcome_email(email: str, user_name: str, generated_user_name: str):
+    """Send a welcome email to new users"""
+    
+    subject = "🎉 Welcome to Surakshya Pay - Your Wallet is Ready!"
+    
+    # Generate the HTML email body
+    html_body = get_welcome_email_template(
+        user_name=user_name,
+        generated_user_name=generated_user_name
+    )
+    
+    # Send the email
+    await send_email(email=email, subject=subject, body=html_body) 

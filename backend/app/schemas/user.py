@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime
 
 class UserBase(BaseModel):
     email: str
@@ -19,6 +20,10 @@ class UserBase(BaseModel):
     zkp_commitment: Optional[str] = None
     zkp_nullifier: Optional[str] = None
     zkp_salt: Optional[str] = None
+    # KYC fields
+    kyc_status: Optional[str] = None
+    kyc_submitted_at: Optional[datetime] = None
+    kyc_reviewed_at: Optional[datetime] = None
 
 class UserCreate(UserBase):
     password: str

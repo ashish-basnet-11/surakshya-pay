@@ -9,15 +9,42 @@ from datetime import datetime, timedelta
 from app.utils.blockchain import register_user_onchain, create_new_wallet
 import uuid
 from app.utils.zkp_helper import get_zkp_fields
+from app.services.notification_service import send_welcome_email
 
 def get_user(db: Session, user_id: int):
-    return db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
+    if user:
+        _add_kyc_info(user)
+    return user
 
 def get_user_by_email(db: Session, email: str):
-    return db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(User.email == email).first()
+    if user:
+        _add_kyc_info(user)
+    return user
+
+def get_user_by_username(db: Session, username: str):
+    user = db.query(User).filter(User.username == username).first()
+    if user:
+        _add_kyc_info(user)
+    return user
 
 def get_users(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(User).offset(skip).limit(limit).all()
+    users = db.query(User).offset(skip).limit(limit).all()
+    for user in users:
+        _add_kyc_info(user)
+    return users
+
+def _add_kyc_info(user: User):
+    """Add KYC information to user object"""
+    if hasattr(user, 'kyc') and user.kyc:
+        user.kyc_status = user.kyc.status.value
+        user.kyc_submitted_at = user.kyc.submitted_at
+        user.kyc_reviewed_at = user.kyc.reviewed_at
+    else:
+        user.kyc_status = None
+        user.kyc_submitted_at = None
+        user.kyc_reviewed_at = None
 
 async def create_user(db: Session, user: UserCreate):
     user_guid = str(uuid.uuid4())
@@ -58,8 +85,23 @@ async def create_user(db: Session, user: UserCreate):
     try:
         zk_hash = user_guid
         tx_hash = register_user_onchain(wallet_address, zk_hash, private_key)
+        print(tx_hash)
     except Exception as e:
         print(f"Onchain registration failed: {e}")
+    
+    # Send welcome email
+    try:
+        await send_welcome_email(
+            email=db_user.email,
+            user_name=db_user.full_name or "User",
+            generated_user_name=db_user.username
+        )
+        print(f"Welcome email sent to {db_user.email}")
+    except Exception as e:
+        print(f"Failed to send welcome email: {e}")
+    
+    # Add KYC info before returning
+    _add_kyc_info(db_user)
     return db_user
 
 def update_user(db: Session, db_user: User, user_in: UserUpdate):
@@ -100,6 +142,9 @@ def update_user(db: Session, db_user: User, user_in: UserUpdate):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+    
+    # Add KYC info before returning
+    _add_kyc_info(db_user)
     return db_user
 
 def delete_user(db: Session, user_id: int):
@@ -129,3 +174,11 @@ async def reset_password(db: Session, db_user: User, new_password: str):
     db.commit()
     db.refresh(db_user)
     return db_user 
+
+def count_total_users(db: Session) -> int:
+    from app.models.user import User
+    return db.query(User).count()
+
+def count_total_admins(db: Session) -> int:
+    from app.models.user import User
+    return db.query(User).filter(User.is_superuser == True).count() 
