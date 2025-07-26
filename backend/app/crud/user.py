@@ -29,6 +29,13 @@ def get_user_by_username(db: Session, username: str):
         _add_kyc_info(user)
     return user
 
+def get_user_by_wallet_address(db: Session, wallet_address: str):
+    """Get user by wallet address"""
+    user = db.query(User).filter(User.wallet_address == wallet_address).first()
+    if user:
+        _add_kyc_info(user)
+    return user
+
 def get_users(db: Session, skip: int = 0, limit: int = 100):
     users = db.query(User).offset(skip).limit(limit).all()
     for user in users:

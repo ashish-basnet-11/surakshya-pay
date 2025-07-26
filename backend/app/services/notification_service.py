@@ -1,6 +1,6 @@
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 from app.core.config import settings
-from .email_templates import get_transaction_email_template, get_welcome_email_template, get_otp_email_template
+from .email_templates import get_transaction_email_template, get_transfer_received_email_template, get_welcome_email_template, get_otp_email_template
 
 conf = ConnectionConfig(
     MAIL_USERNAME=settings.MAIL_USERNAME,
@@ -36,9 +36,8 @@ async def send_transaction_notification(
     to_username: str = None,
     new_balance: float = None
 ):
-    """Send a modern transaction notification email"""
+    """Send a transaction notification email"""
     
-    # Generate the appropriate subject line
     if transaction_type == "DEPOSIT":
         subject = f"Topup Successful - NPR {amount}"
     elif transaction_type == "WITHDRAWAL":
@@ -48,13 +47,35 @@ async def send_transaction_notification(
     else:
         subject = f"Transaction Completed - NPR{amount}"
     
-    # Generate the HTML email body
     html_body = get_transaction_email_template(
         transaction_type=transaction_type,
         amount=amount,
         tx_hash=tx_hash,
         user_name=user_name,
         to_username=to_username,
+        new_balance=new_balance
+    )
+    
+    # Send the email
+    await send_email(email=email, subject=subject, body=html_body)
+
+async def send_transfer_received_notification(
+    email: str,
+    user_name: str,
+    amount: float,
+    tx_hash: str,
+    from_username: str,
+    new_balance: float = None
+):
+    """Send a transfer received notification email to recipient"""
+    
+    subject = f"💰 Money Received - NPR {amount} from {from_username}"
+    
+    html_body = get_transfer_received_email_template(
+        amount=amount,
+        tx_hash=tx_hash,
+        user_name=user_name,
+        from_username=from_username,
         new_balance=new_balance
     )
     
@@ -68,9 +89,8 @@ async def send_otp_email(
     purpose: str = "verification",
     expiry_minutes: int = 10
 ):
-    """Send a modern OTP verification email"""
+    """Send a OTP verification email"""
     
-    # Generate the appropriate subject line based on purpose
     if purpose.lower() == "login":
         subject = f"🔐 Login Verification Code - {otp_code}"
     elif purpose.lower() == "registration":
@@ -80,7 +100,6 @@ async def send_otp_email(
     else:
         subject = f"🔢 Verification Code - {otp_code}"
     
-    # Generate the HTML email body
     html_body = get_otp_email_template(
         user_name=user_name,
         otp_code=otp_code,
@@ -96,7 +115,6 @@ async def send_welcome_email(email: str, user_name: str, generated_user_name: st
     
     subject = "🎉 Welcome to Surakshya Pay - Your Wallet is Ready!"
     
-    # Generate the HTML email body
     html_body = get_welcome_email_template(
         user_name=user_name,
         generated_user_name=generated_user_name
