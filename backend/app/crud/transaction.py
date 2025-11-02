@@ -31,7 +31,7 @@ def get_transactions(db: Session, user_id: int, skip: int = 0, limit: int = 100,
     
     if order_by == "oldest":
         query = query.order_by(Transaction.timestamp.asc())
-    else:  # default to latest first
+    else:
         query = query.order_by(Transaction.timestamp.desc())
     
     return query.offset(skip).limit(limit).all()
@@ -42,7 +42,6 @@ def create_transaction(db: Session, transaction: TransactionCreate, user_id: int
     db.commit()
     db.refresh(db_transaction)
     
-    # Update budget if this is an expense transaction
     if transaction.transaction_type in ['WITHDRAWAL', 'TRANSFER'] and transaction.amount > 0:
         update_budgets_from_transaction(db, user_id, transaction.category, transaction.amount)
     
@@ -141,7 +140,6 @@ def update_budgets_from_transaction(db: Session, user_id: int, category: str, am
     """Update budget spent amounts when a transaction occurs"""
     from app.models.budget import Budget, BudgetStatus
     
-    # Find active budgets for this category
     current_date = datetime.date.today()
     budgets = db.query(Budget).filter(
         Budget.user_id == user_id,

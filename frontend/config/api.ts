@@ -2,8 +2,8 @@ import { useAuthStore } from "@/store/use-auth-store";
 import axios, { AxiosRequestConfig } from "axios";
 
 const api = axios.create({
-  // baseURL: "http://192.168.1.106:8000/api/v1",
-  baseURL: "http://192.168.0.102:8000/api/v1",
+  baseURL: "http://192.168.0.103:8000/api/v1",
+  // baseURL: "http://192.168.1.84:8000/api/v1",
   headers: {
     "Content-Type": "application/json"
   },

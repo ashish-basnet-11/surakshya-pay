@@ -8,7 +8,6 @@ import {
   ScrollView,
   Platform,
   TextInput,
-  Alert,
   StatusBar,
   Animated,
   KeyboardAvoidingView,
@@ -36,6 +35,7 @@ const SendMoney = () => {
   const navigation = useNavigation();
 
   const [username, setUsername] = useState("");
+  const [purpose, setPurpose] = useState("");
   const [amount, setAmount] = useState("");
   const [isAmountVisible, setIsAmountVisible] = useState(true);
   const [fadeAnim] = useState(new Animated.Value(1));
@@ -111,7 +111,8 @@ const SendMoney = () => {
     try {
       const props : TransferInterface = {
         to_username: username,
-        amount: Number(amount)
+        amount: Number(amount),
+        category: purpose && purpose.trim() !== "" ? purpose.trim() : undefined
       }
 
       console.log(props);
@@ -184,6 +185,17 @@ const SendMoney = () => {
             autoCorrect={false}
             returnKeyType="done"
           />
+          {/* <TextInput
+            style={styles.purposeInput}
+            placeholder="Enter Purpose"
+            placeholderTextColor="#999"
+            value={purpose}
+            onChangeText={setPurpose}
+            editable={!isProcessing}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="done"
+          /> */}
         </View>
 
         <KeyboardAvoidingView
@@ -283,21 +295,21 @@ const SendMoney = () => {
                 ))}
               </View>
 
-              {/* <View style={styles.noteSection}>
+              <View style={styles.noteSection}>
                 <Text style={styles.noteLabel}>Add a note (optional)</Text>
                 <TextInput
                   style={styles.noteInput}
-                  placeholder="Enter a note..."
+                  placeholder="Enter a remarks..."
                   multiline
                   maxLength={100}
                   placeholderTextColor="#8E8E93"
-                  value={note}
-                  onChangeText={setNote}
+                  value={purpose}
+                  onChangeText={setPurpose}
                   editable={!isProcessing}
                   textAlignVertical="top"
                 />
-                <Text style={styles.characterCount}>{note.length}/100</Text>
-              </View> */}
+                <Text style={styles.characterCount}>{purpose.length}/100</Text>
+              </View>
 
               <TouchableOpacity
                 style={[
@@ -332,7 +344,7 @@ const SendMoney = () => {
                 )}
               </TouchableOpacity>
 
-              <View style={styles.securityNotice}>
+              {/* <View style={styles.securityNotice}>
                 <Ionicons
                   name="shield-checkmark-outline"
                   size={16}
@@ -341,7 +353,7 @@ const SendMoney = () => {
                 <Text style={styles.securityText}>
                   Your transaction is secured with bank-level encryption
                 </Text>
-              </View>
+              </View> */}
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -391,6 +403,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 12,
+    fontSize: 16,
+    color: "#333",
+  },
+  purposeInput: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 3,
     fontSize: 16,
     color: "#333",
   },

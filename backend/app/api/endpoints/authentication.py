@@ -63,7 +63,6 @@ async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(
     
     user = set_reset_password_otp(db, user)
     
-    # Send modern OTP email
     await send_otp_email(
         email=user.email,
         user_name=user.full_name or "User",

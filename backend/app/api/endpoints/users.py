@@ -76,6 +76,7 @@ def delete_user(
     user = crud.user.delete_user(db=db, user_id=user_id)
     return CommonResponse(success=True, message="User deleted successfully", data=user)
 
+
 # Admin routes for user management
 @router.get("/admin/all", response_model=CommonResponse[List[User]], dependencies=[Depends(get_current_active_superuser)])
 def get_all_users_admin(

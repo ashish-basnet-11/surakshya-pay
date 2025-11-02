@@ -6,14 +6,12 @@ from datetime import datetime
 def get_kyc_by_user_id(db: Session, user_id: int):
     return db.query(KYC).filter(KYC.user_id == user_id).first()
 
-# New function to get all KYC by status
-
 def get_kyc_by_status(db: Session, status: str, skip: int = 0, limit: int = 100):
     from app.models.kyc import KYCStatus
     try:
         status_enum = KYCStatus(status)
     except ValueError:
-        return []  # or raise an error if you want to handle invalid status
+        return []
     return db.query(KYC).filter(KYC.status == status_enum).offset(skip).limit(limit).all()
 
 def create_kyc(db: Session, kyc_in: KYCCreate, user_id: int, doc_front_url: str, doc_back_url: str, selfie_url: str):

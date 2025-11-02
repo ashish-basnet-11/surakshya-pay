@@ -121,8 +121,11 @@ const BankingWalletUI = () => {
   const router = useRouter();
   const scrollY = useRef(new Animated.Value(0)).current;
   const { data, isLoading, refetch: refetchUser } = useCurrentUserDetail({});
-  const { data: transactions, isLoading: isTransactionsLoading, refetch: refetchTransactions } =
-    useGetUserTransaction({});
+  const {
+    data: transactions,
+    isLoading: isTransactionsLoading,
+    refetch: refetchTransactions,
+  } = useGetUserTransaction({});
 
   useEffect(() => {
     if (data?.data) {
@@ -153,12 +156,9 @@ const BankingWalletUI = () => {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await Promise.all([
-        refetchUser(),
-        refetchTransactions()
-      ]);
+      await Promise.all([refetchUser(), refetchTransactions()]);
     } catch (error) {
-      console.error('Error refreshing data:', error);
+      console.error("Error refreshing data:", error);
     } finally {
       setRefreshing(false);
     }
@@ -244,10 +244,12 @@ const BankingWalletUI = () => {
                 <View style={styles.onlineIndicator} />
               </TouchableOpacity>
               <View style={styles.welcomeContainer}>
-                <Text style={styles.welcomeText}>Good afternoon</Text>
                 <Text style={styles.userName}>
                   {useAuthStore.getState().user?.full_name}
+                  
                 </Text>
+                <Text style={styles.welcomeText}>{useAuthStore.getState().user?.username}</Text>
+
                 {useAuthStore.getState().user?.kyc_status === "approved" ? (
                   <View style={styles.premiumBadge}>
                     <BadgeCheck size={12} color={Colors.success} />
@@ -696,7 +698,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: -0.3,
     marginTop: 2,
-    marginBottom: 4,
+    // marginBottom: 1,
   },
   premiumBadge: {
     flexDirection: "row",

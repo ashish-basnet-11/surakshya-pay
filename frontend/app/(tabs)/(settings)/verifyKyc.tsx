@@ -408,7 +408,7 @@ const VerifyKyc = () => {
                   value={personalInfo.dob}
                   onChangeText={(text) => handlePersonalInfoChange('dob', text)}
                   placeholder="YYYY-MM-DD"
-                  keyboardType="numeric"
+                  // keyboardType="numeric"
                 />
               </View>
 

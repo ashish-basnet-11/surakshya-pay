@@ -22,7 +22,6 @@ def get_budgets(
 ):
     query = db.query(Budget).filter(Budget.user_id == user_id)
     
-    # Apply filters
     if status:
         query = query.filter(Budget.status == status)
     if category:
@@ -30,7 +29,6 @@ def get_budgets(
     if budget_type:
         query = query.filter(Budget.budget_type == budget_type)
     
-    # Apply sorting
     if sort_by == "date":
         sort_column = Budget.created_at
     elif sort_by == "amount":
@@ -61,7 +59,6 @@ def update_budget(db: Session, db_budget: Budget, budget_in: BudgetUpdate):
     for key, value in budget_data.items():
         setattr(db_budget, key, value)
     
-    # Update status based on spent amount
     if db_budget.spent_amount >= db_budget.budget_amount:
         db_budget.status = BudgetStatus.COMPLETED
     elif db_budget.spent_amount >= db_budget.budget_amount * 0.9:
@@ -83,22 +80,15 @@ def update_budget_from_transaction(db: Session, user_id: int, category: str, amo
     """
     Update budget spent amount when a transaction occurs.
     This method finds budgets that match the transaction category and updates their spent amounts.
-    
-    Args:
-        db: Database session
-        user_id: User ID
-        category: Transaction category to match with budget categories
-        amount: Transaction amount (positive for income, negative for expense)
     """
-    # Find budgets that match the category and belong to the user
     matching_budgets = db.query(Budget).filter(
         Budget.user_id == user_id,
-        Budget.category.ilike(f"%{category}%")  # Case-insensitive partial match
+        Budget.category.ilike(f"%{category}%")
     ).all()
+    print(category)
+    print(matching_budgets)
     
-    # If no exact category match, try to find budgets with similar categories
     if not matching_budgets:
-        # Common category mappings
         category_mappings = {
             "food": ["restaurant", "groceries", "dining", "food"],
             "transport": ["transport", "uber", "taxi", "gas", "fuel"],
@@ -110,28 +100,22 @@ def update_budget_from_transaction(db: Session, user_id: int, category: str, amo
             "deposit": ["deposit", "topup", "recharge"],
         }
         
-        # Check if the category matches any of the mapped categories
         for mapped_category, keywords in category_mappings.items():
             if any(keyword in category.lower() for keyword in keywords):
                 matching_budgets = db.query(Budget).filter(
                     Budget.user_id == user_id,
                     Budget.category.ilike(f"%{mapped_category}%")
                 ).all()
+                print(matching_budgets)
                 if matching_budgets:
                     break
     
-    # Update each matching budget
     for budget in matching_budgets:
-        # Only update expense budgets for negative amounts (expenses)
-        # Only update savings/investment budgets for positive amounts (income)
         if amount < 0 and budget.budget_type in [BudgetType.EXPENSE, BudgetType.SAVINGS, BudgetType.INVESTMENT]:
-            # For expenses, add the absolute amount to spent_amount
             budget.spent_amount += abs(amount)
         elif amount > 0 and budget.budget_type in [BudgetType.SAVINGS, BudgetType.INVESTMENT]:
-            # For income, add to spent_amount (this represents progress toward savings goal)
             budget.spent_amount += amount
         
-        # Update status based on spent amount
         if budget.spent_amount >= budget.budget_amount:
             budget.status = BudgetStatus.COMPLETED
         elif budget.spent_amount >= budget.budget_amount * 0.9:
@@ -139,12 +123,10 @@ def update_budget_from_transaction(db: Session, user_id: int, category: str, amo
         else:
             budget.status = BudgetStatus.ACTIVE
         
-        # Update the updated_at timestamp
         budget.updated_at = datetime.datetime.utcnow()
         
         db.add(budget)
     
-    # Commit all changes
     if matching_budgets:
         db.commit()
     
@@ -156,7 +138,6 @@ def update_budget_spent_amount(db: Session, budget_id: int, user_id: int, amount
     if budget:
         budget.spent_amount += amount
         
-        # Update status based on spent amount
         if budget.spent_amount >= budget.budget_amount:
             budget.status = BudgetStatus.COMPLETED
         elif budget.spent_amount >= budget.budget_amount * 0.9:
@@ -209,7 +190,6 @@ def get_budget_statistics(db: Session, user_id: int):
     
     budget_usage_percentage = (total_spent_amount / total_budget_amount) * 100 if total_budget_amount > 0 else 0
     
-    # Calculate on-track percentage (budgets with less than 80% spent)
     on_track_budgets = len([b for b in budgets if (b.spent_amount / b.budget_amount) <= 0.8]) if budgets else 0
     on_track_percentage = (on_track_budgets / total_budgets) * 100 if total_budgets > 0 else 0
     
@@ -281,19 +261,16 @@ def get_trend_data(db: Session, user_id: int, days: int = 7):
     end_date = datetime.date.today()
     start_date = end_date - datetime.timedelta(days=days)
     
-    # Get daily budget and spending data
     trend_data = []
     current_date = start_date
     
     while current_date <= end_date:
-        # Get budget for this date
         daily_budget = db.query(func.sum(Budget.budget_amount)).filter(
             Budget.user_id == user_id,
             Budget.start_date <= current_date,
             or_(Budget.end_date >= current_date, Budget.end_date.is_(None))
         ).scalar() or 0.0
         
-        # Get spending for this date
         daily_spent = db.query(func.sum(Transaction.amount)).filter(
             Transaction.user_id == user_id,
             Transaction.transaction_type == 'expense',

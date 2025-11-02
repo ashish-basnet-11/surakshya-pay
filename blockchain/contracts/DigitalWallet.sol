@@ -52,51 +52,43 @@ contract DigitalWallet {
         require(amount > 0, "Deposit must be greater than 0");
         users[msg.sender].balance += amount;
         
-        // Create transaction record
         uint256 transactionId = _createTransaction(msg.sender, address(0), amount, TransactionType.DEPOSIT);
         
         emit Deposit(msg.sender, amount);
         emit TransactionCreated(transactionId, msg.sender, address(0), amount, TransactionType.DEPOSIT);
     }
 
-    // Withdraw Ether from the wallet
     function withdraw(uint256 amount) public onlyRegistered {
         require(users[msg.sender].balance >= amount, "Insufficient balance");
         users[msg.sender].balance -= amount;
         
-        // Create transaction record
         uint256 transactionId = _createTransaction(msg.sender, address(0), amount, TransactionType.WITHDRAWAL);
         
         emit Withdrawal(msg.sender, amount);
         emit TransactionCreated(transactionId, msg.sender, address(0), amount, TransactionType.WITHDRAWAL);
     }
 
-    // Transfer funds to another registered user
     function transfer(address to, uint256 amount) public onlyRegistered {
         require(users[to].registered, "Recipient not registered");
         require(users[msg.sender].balance >= amount, "Insufficient balance");
         users[msg.sender].balance -= amount;
         users[to].balance += amount;
         
-        // Create transaction record
         uint256 transactionId = _createTransaction(msg.sender, to, amount, TransactionType.TRANSFER);
         
         emit Transfer(msg.sender, to, amount);
         emit TransactionCreated(transactionId, msg.sender, to, amount, TransactionType.TRANSFER);
     }
 
-    // Get the balance of the caller
     function getMyBalance() public view onlyRegistered returns (uint256) {
         return users[msg.sender].balance;
     }
 
-    // Get the ZKP hash of a user (for verification, not for authentication)
     function getUserZkpHash(address user) public view returns (bytes32) {
         require(users[user].registered, "User not registered");
         return users[user].zkpHash;
     }
 
-    // Get transaction by ID
     function getTransaction(uint256 transactionId) public view returns (
         uint256 id,
         address from,
@@ -119,19 +111,16 @@ contract DigitalWallet {
         );
     }
 
-    // Get all transactions for a user
     function getUserTransactions(address user) public view returns (uint256[] memory) {
         require(users[user].registered, "User not registered");
         return userTransactionIds[user];
     }
 
-    // Get user's transaction count
     function getUserTransactionCount(address user) public view returns (uint256) {
         require(users[user].registered, "User not registered");
         return userTransactionIds[user].length;
     }
 
-    // Get paginated transactions for a user
     function getUserTransactionsPaginated(address user, uint256 offset, uint256 limit) public view returns (uint256[] memory) {
         require(users[user].registered, "User not registered");
         uint256[] memory allTransactions = userTransactionIds[user];
@@ -156,7 +145,6 @@ contract DigitalWallet {
         return result;
     }
 
-    // Get recent transactions for a user (last N transactions)
     function getRecentTransactions(address user, uint256 count) public view returns (uint256[] memory) {
         require(users[user].registered, "User not registered");
         uint256[] memory allTransactions = userTransactionIds[user];
@@ -174,7 +162,6 @@ contract DigitalWallet {
         return result;
     }
 
-    // Get transactions by type for a user
     function getUserTransactionsByType(address user, TransactionType transactionType) public view returns (uint256[] memory) {
         require(users[user].registered, "User not registered");
         uint256[] memory allTransactions = userTransactionIds[user];
@@ -196,7 +183,6 @@ contract DigitalWallet {
         return result;
     }
 
-    // Internal function to create a transaction record
     function _createTransaction(address from, address to, uint256 amount, TransactionType transactionType) internal returns (uint256) {
         transactionCounter++;
         uint256 transactionId = transactionCounter;
@@ -219,7 +205,6 @@ contract DigitalWallet {
         return transactionId;
     }
 
-    // Fallback function to prevent accidental Ether transfers
     receive() external payable {
         revert("Please use the deposit function");
     }

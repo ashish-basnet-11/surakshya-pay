@@ -5,16 +5,13 @@ from typing import List, Dict, Any, Optional
 from enum import Enum
 from app.core.config import settings
 
-# Initialize Web3
 w3 = Web3(Web3.HTTPProvider(settings.BLOCKCHAIN_RPC_URL))
 
-# Load contract ABI and address
 contract_address = settings.CONTRACT_ADDRESS
 with open('app/utils/digital_wallet.json', 'r') as f:
     contract_json = json.load(f)
     contract_abi = contract_json['abi']
 
-# Create contract instance
 digital_wallet = w3.eth.contract(address=contract_address, abi=contract_abi)
 
 class TransactionType(Enum):
@@ -46,15 +43,12 @@ def check_funder_balance(required_amount_ether: float) -> bool:
 def fund_new_wallet(wallet_address: str, amount_ether: float = 0.1):
     """Fund a new wallet with ETH for gas fees"""
     try:
-        # Check if funder has sufficient balance first
         if not check_funder_balance(amount_ether):
             return False
         
-        # Get the first account from Ganache (usually has funds)
         accounts = w3.eth.accounts
         funder_address = accounts[0]
         
-        # Send ETH to the new wallet
         nonce = w3.eth.get_transaction_count(funder_address)
         required_amount = w3.to_wei(amount_ether, 'ether')
         
@@ -67,13 +61,11 @@ def fund_new_wallet(wallet_address: str, amount_ether: float = 0.1):
             'gasPrice': w3.to_wei('20', 'gwei')
         }
         
-        # Sign and send transaction
         signed_txn = w3.eth.account.sign_transaction(txn, private_key=settings.FUNDER_PRIVATE_KEY)
         tx_hash = w3.eth.send_raw_transaction(signed_txn.raw_transaction)
         
         print(f"Funded wallet {wallet_address} with {amount_ether} ETH. Transaction: {tx_hash.hex()}")
         
-        # Wait for transaction to be mined
         w3.eth.wait_for_transaction_receipt(tx_hash)
         print(f"Funding transaction confirmed for wallet {wallet_address}")
         
@@ -84,16 +76,13 @@ def fund_new_wallet(wallet_address: str, amount_ether: float = 0.1):
         return False
 
 def register_user_onchain(user_address, zkp_hash, private_key):
-    # Convert UUID string to bytes32 format
-    # Remove hyphens and convert to bytes, then pad to 32 bytes
     zkp_hash_clean = zkp_hash.replace('-', '')
     zkp_hash_bytes = bytes.fromhex(zkp_hash_clean)
-    zkp_hash_bytes32 = zkp_hash_bytes.ljust(32, b'\x00')  # Pad to 32 bytes
+    zkp_hash_bytes32 = zkp_hash_bytes.ljust(32, b'\x00')
     
-    # Check if wallet has sufficient funds for gas
     wallet_balance = w3.eth.get_balance(user_address)
     estimated_gas = 2000000
-    gas_price = w3.to_wei('20', 'gwei')  # Reduced gas price
+    gas_price = w3.to_wei('20', 'gwei')
     required_funds = estimated_gas * gas_price
     
     if wallet_balance < required_funds:
@@ -120,10 +109,9 @@ def create_new_wallet():
         'private_key': account.key.hex()
     }
 
-UNIT_TO_WEI = int(1e14)  # 1 unit = 1e14 Wei = 0.0001 ETH
+UNIT_TO_WEI = int(1e14)
 
 def deposit_onchain(user_address, amount, private_key):
-    # Only need to fund for gas, not for the amount
     wallet_balance = w3.eth.get_balance(user_address)
     estimated_gas = 2000000
     gas_price = w3.to_wei('20', 'gwei')
@@ -134,7 +122,7 @@ def deposit_onchain(user_address, amount, private_key):
         print(f"Insufficient funds in wallet {user_address}. Balance: {w3.from_wei(wallet_balance, 'ether')} ETH")
         print(f"Required: {w3.from_wei(total_required, 'ether')} ETH (gas: {w3.from_wei(gas_cost, 'ether')} ETH)")
         print("Attempting to fund wallet...")
-        funding_amount = 0.1  # Just enough for gas
+        funding_amount = 0.1
         if not fund_new_wallet(user_address, funding_amount):
             raise Exception(f"Failed to fund wallet for deposit. Required: {w3.from_wei(total_required, 'ether')} ETH")
     
@@ -155,13 +143,13 @@ def transfer_onchain(from_address, to_address, amount, private_key):
     estimated_gas = 2000000
     gas_price = w3.to_wei('20', 'gwei')
     gas_cost = estimated_gas * gas_price
-    total_required = gas_cost  # For transfer, value is sent via contract, not as msg.value
+    total_required = gas_cost
     
     if wallet_balance < total_required:
         print(f"Insufficient funds in wallet {from_address}. Balance: {w3.from_wei(wallet_balance, 'ether')} ETH")
         print(f"Required: {w3.from_wei(total_required, 'ether')} ETH (gas: {w3.from_wei(gas_cost, 'ether')} ETH)")
         print("Attempting to fund wallet...")
-        funding_amount = 0.1  # Just enough for gas
+        funding_amount = 0.1
         if not fund_new_wallet(from_address, funding_amount):
             raise Exception(f"Failed to fund wallet for transfer. Required: {w3.from_wei(total_required, 'ether')} ETH")
     
@@ -187,7 +175,7 @@ def withdraw_onchain(user_address, amount, private_key):
         print(f"Insufficient funds in wallet {user_address}. Balance: {w3.from_wei(wallet_balance, 'ether')} ETH")
         print(f"Required: {w3.from_wei(total_required, 'ether')} ETH (gas: {w3.from_wei(gas_cost, 'ether')} ETH)")
         print("Attempting to fund wallet...")
-        funding_amount = 0.1  # Just enough for gas
+        funding_amount = 0.1 
         if not fund_new_wallet(user_address, funding_amount):
             raise Exception(f"Failed to fund wallet for withdraw. Required: {w3.from_wei(total_required, 'ether')} ETH")
     
@@ -219,7 +207,7 @@ def get_transaction_onchain(transaction_id: int) -> Optional[Dict[str, Any]]:
             'id': result[0],
             'from': result[1],
             'to': result[2],
-            'amount': result[3],  # Integer units
+            'amount': result[3],
             'timestamp': result[4],
             'transaction_type': TransactionType(result[5]).name,
             'is_completed': result[6]
@@ -285,7 +273,6 @@ def get_user_transactions_with_details_onchain(user_address: str, offset: int = 
 def is_user_registered_onchain(user_address: str) -> bool:
     """Check if a user is registered on the blockchain"""
     try:
-        # Try to get user's ZKP hash - if it fails, user is not registered
         digital_wallet.functions.getUserZKPHash(user_address).call()
         return True
     except Exception:

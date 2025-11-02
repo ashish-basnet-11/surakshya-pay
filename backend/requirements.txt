@@ -4,3 +4,11 @@ psycopg2-binary
 redis
 python-dotenv
 web3
+sqlalchemy 
+psycopg2-binary 
+alembic
+pydantic-settings
+passlib[bcrypt]
+python-jose[cryptography]
+fastapi-mail[all]
+aiofiles

@@ -6,8 +6,10 @@ import { useMutation } from "@tanstack/react-query";
 export async function transferMoney(
   props: TransferInterface
 ): Promise<ApiResponse<null>> {
+  const url = `/transactions/transfer?to_username=${props.to_username}&amount=${props.amount}&category=${props.category}`;
+  console.log(url);
   return apiPost<ApiResponse<null>>(
-    `/transactions/transfer?to_username=${props.to_username}&amount=${props.amount}`,
+    url,
     {}
   );
 }

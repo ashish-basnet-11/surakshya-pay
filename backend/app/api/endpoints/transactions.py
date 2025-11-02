@@ -67,7 +67,7 @@ def create_transaction_notification(
         db=db,
         notification=notification_data,
         user_id=user_id,
-        send_email_notification=False  # We'll send email separately with template
+        send_email_notification=False 
     )
 
 def create_transfer_received_notification(
@@ -91,7 +91,7 @@ def create_transfer_received_notification(
         db=db,
         notification=notification_data,
         user_id=user_id,
-        send_email_notification=False  # We'll send email separately with template
+        send_email_notification=False
     )
 
 async def send_transaction_email(
@@ -105,7 +105,6 @@ async def send_transaction_email(
 ):
     """Send transaction notification email"""
     try:
-        # Get user details
         user = db.query(User).filter(User.id == user_id).first()
         if user and user.email:
             await send_transaction_notification(
@@ -155,9 +154,6 @@ def get_transactions_for_user(
     order_by: str = Query("latest", description="Order by: 'latest' (default) or 'oldest'"),
     current_user: User = Depends(get_current_user)
 ):
-    # """Get transactions for a specific user (admin only)"""
-    # if not current_user.is_superuser:
-    #     raise HTTPException(status_code=403, detail="Access denied. Admin privileges required.")
     transactions = crud_transaction.get_transactions(db, user_id=user_id, skip=skip, limit=limit, order_by=order_by)
     return CommonResponse(success=True, message="User transactions fetched successfully", data=transactions)
 
@@ -178,17 +174,13 @@ async def topup(
     private_key = decrypt_private_key(current_user.private_key_encrypted, settings.SECRET_KEY)
     
     try:
-        # Execute blockchain transaction
         tx_hash = deposit_onchain(current_user.wallet_address, amount, private_key)
         
-        # Get updated blockchain balance
         blockchain_balance = get_user_balance_onchain(current_user.wallet_address)
         
-        # Update local database
         current_user.balance = str(blockchain_balance)
         db.add(current_user)
         
-        # Create local transaction record
         transaction_data = TransactionCreate(
             amount=amount,
             category="deposit",
@@ -203,16 +195,14 @@ async def topup(
         
         local_transaction = crud_transaction.create_transaction(db, transaction_data, current_user.id)
         
-        # Update budget if category matches (for savings/investment goals)
         if local_transaction.category:
             crud_budget.update_budget_from_transaction(
                 db=db,
                 user_id=current_user.id,
                 category=local_transaction.category,
-                amount=amount  # Positive for income/deposit
+                amount=amount
             )
         
-        # Create notification
         notification = create_transaction_notification(
             db=db,
             user_id=current_user.id,
@@ -223,7 +213,6 @@ async def topup(
         
         db.commit()
         
-        # Send email notification
         await send_transaction_email(
             db=db,
             user_id=current_user.id,
@@ -262,7 +251,6 @@ async def withdraw(
     if amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be greater than zero.")
     
-    # Check if user has sufficient balance
     current_balance = float(current_user.balance or 0)
     if current_balance < amount:
         raise HTTPException(status_code=400, detail="Insufficient balance.")
@@ -270,17 +258,13 @@ async def withdraw(
     private_key = decrypt_private_key(current_user.private_key_encrypted, settings.SECRET_KEY)
     
     try:
-        # Execute blockchain transaction
         tx_hash = withdraw_onchain(current_user.wallet_address, amount, private_key)
         
-        # Get updated blockchain balance
         blockchain_balance = get_user_balance_onchain(current_user.wallet_address)
         
-        # Update local database
         current_user.balance = str(blockchain_balance)
         db.add(current_user)
         
-        # Create local transaction record
         transaction_data = TransactionCreate(
             amount=amount,
             category="withdrawal",
@@ -295,16 +279,14 @@ async def withdraw(
         
         local_transaction = crud_transaction.create_transaction(db, transaction_data, current_user.id)
         
-        # Update budget if category matches
         if local_transaction.category:
             crud_budget.update_budget_from_transaction(
                 db=db,
                 user_id=current_user.id,
                 category=local_transaction.category,
-                amount=-amount  # Negative for expense
+                amount=-amount 
             )
         
-        # Create notification
         notification = create_transaction_notification(
             db=db,
             user_id=current_user.id,
@@ -315,7 +297,6 @@ async def withdraw(
         
         db.commit()
         
-        # Send email notification
         await send_transaction_email(
             db=db,
             user_id=current_user.id,
@@ -346,6 +327,7 @@ async def transfer(
     db: Session = Depends(get_db),
     to_username: str,
     amount: float = 0.0,
+    category: str = "",
     current_user: User = Depends(get_current_user)
 ):
     """Transfer funds - updates both blockchain and local database"""
@@ -358,49 +340,39 @@ async def transfer(
     if amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be greater than zero.")
     
-    # Check if user has sufficient balance
     current_balance = float(current_user.balance or 0)
     if current_balance < amount:
         raise HTTPException(status_code=400, detail="Insufficient balance.")
     
-    # Get recipient's wallet address from username
     to_wallet_address = get_wallet_address_by_username(db, to_username)
     if not to_wallet_address:
         raise HTTPException(status_code=404, detail="Recipient user not found or does not have a wallet.")
     
-    # Get recipient user object
     recipient_user = crud_user.get_user_by_wallet_address(db, to_wallet_address)
     if not recipient_user:
         raise HTTPException(status_code=404, detail="Recipient user not found.")
     
-    # Prevent self-transfer
     if to_wallet_address == current_user.wallet_address:
         raise HTTPException(status_code=400, detail="Cannot transfer to yourself.")
     
     private_key = decrypt_private_key(current_user.private_key_encrypted, settings.SECRET_KEY)
     
     try:
-        # Execute blockchain transaction
         tx_hash = transfer_onchain(current_user.wallet_address, to_wallet_address, amount, private_key)
         
-        # Get updated blockchain balance for sender
         sender_blockchain_balance = get_user_balance_onchain(current_user.wallet_address)
         
-        # Get updated blockchain balance for recipient
         recipient_blockchain_balance = get_user_balance_onchain(to_wallet_address)
         
-        # Update sender's balance in local database
         current_user.balance = str(sender_blockchain_balance)
         db.add(current_user)
         
-        # Update recipient's balance in local database
         recipient_user.balance = str(recipient_blockchain_balance)
         db.add(recipient_user)
         
-        # Create local transaction record for sender
         sender_transaction_data = TransactionCreate(
             amount=amount,
-            category="transfer",
+            category=category if category != "" else "transfer",
             description=f"Transfer of {amount} NPR to {to_username}",
             transaction_type="TRANSFER",
             blockchain_hash=tx_hash,
@@ -412,10 +384,9 @@ async def transfer(
         
         sender_transaction = crud_transaction.create_transaction(db, sender_transaction_data, current_user.id)
         
-        # Create local transaction record for recipient
         recipient_transaction_data = TransactionCreate(
             amount=amount,
-            category="transfer",
+            category=category if category != "" else "transfer",
             description=f"Received {amount} NPR from {current_user.username}",
             transaction_type="TRANSFER",
             blockchain_hash=tx_hash,
@@ -427,16 +398,14 @@ async def transfer(
         
         recipient_transaction = crud_transaction.create_transaction(db, recipient_transaction_data, recipient_user.id)
         
-        # Update budget for sender if category matches (outgoing transfer)
         if sender_transaction.category:
             crud_budget.update_budget_from_transaction(
                 db=db,
                 user_id=current_user.id,
                 category=sender_transaction.category,
-                amount=-amount  # Negative for expense
+                amount=-amount
             )
         
-        # Create notification for sender
         sender_notification = create_transaction_notification(
             db=db,
             user_id=current_user.id,
@@ -446,7 +415,6 @@ async def transfer(
             to_username=to_username
         )
         
-        # Create notification for recipient
         recipient_notification = create_transfer_received_notification(
             db=db,
             user_id=recipient_user.id,
@@ -457,7 +425,6 @@ async def transfer(
         
         db.commit()
         
-        # Send email notification to sender
         await send_transaction_email(
             db=db,
             user_id=current_user.id,
@@ -468,7 +435,6 @@ async def transfer(
             new_balance=sender_blockchain_balance
         )
         
-        # Send email notification to recipient
         await send_transfer_received_notification(
             email=recipient_user.email,
             user_name=recipient_user.full_name or "User",

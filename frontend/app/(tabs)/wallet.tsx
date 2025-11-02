@@ -36,7 +36,6 @@ export default function BudgetScreen() {
   const slideAnim = useRef(new Animated.Value(50)).current
   const balanceAnim = useRef(new Animated.Value(0)).current
 
-  // API Queries
   const { data: budgetSummary, isLoading: summaryLoading } = useQuery({
     queryKey: ["budget-summary"],
     queryFn: budgetApi.getBudgetSummary,

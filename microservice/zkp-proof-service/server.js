@@ -1,4 +1,3 @@
-// server.js
 import express from "express";
 import fs from "fs";
 import { exec } from "child_process";

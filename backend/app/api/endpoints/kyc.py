@@ -41,7 +41,7 @@ async def submit_kyc(
         doc_back_url = await save_upload_file(document_back) if document_back else None
 
         kyc = crud_kyc.create_kyc(db, kyc_in, current_user.id, doc_front_url, doc_back_url, selfie_url)
-        # Fetch and return updated user with KYC info
+
         updated_user = crud_user.get_user(db, user_id=current_user.id)
         return CommonResponse(success=True, message="KYC submitted successfully", data=updated_user)
     except json.JSONDecodeError as e:
@@ -61,7 +61,6 @@ def get_my_kyc(
         raise HTTPException(status_code=404, detail="KYC not found")
     return CommonResponse(success=True, message="KYC details fetched successfully", data=kyc)
 
-# Admin routes
 @router.get("/admin/all", response_model=CommonResponse[List[KYC]], dependencies=[Depends(get_current_active_superuser)])
 def get_all_kyc_submissions(
     db: Session = Depends(get_db),
@@ -83,7 +82,7 @@ def verify_kyc(
         raise HTTPException(status_code=404, detail="KYC submission not found for this user")
     
     updated_kyc = crud_kyc.admin_update_kyc(db, kyc, kyc_in, admin_user.id)
-    # Fetch and return updated user with KYC info
+
     updated_user = crud_user.get_user(db, user_id=user_id)
     return CommonResponse(success=True, message="KYC status updated successfully", data=updated_user) 
 

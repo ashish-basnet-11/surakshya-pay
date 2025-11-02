@@ -56,7 +56,6 @@ async def send_transaction_notification(
         new_balance=new_balance
     )
     
-    # Send the email
     await send_email(email=email, subject=subject, body=html_body)
 
 async def send_transfer_received_notification(
@@ -69,7 +68,7 @@ async def send_transfer_received_notification(
 ):
     """Send a transfer received notification email to recipient"""
     
-    subject = f"💰 Money Received - NPR {amount} from {from_username}"
+    subject = f"Money Received - NPR {amount} from {from_username}"
     
     html_body = get_transfer_received_email_template(
         amount=amount,
@@ -79,7 +78,6 @@ async def send_transfer_received_notification(
         new_balance=new_balance
     )
     
-    # Send the email
     await send_email(email=email, subject=subject, body=html_body)
 
 async def send_otp_email(
@@ -92,13 +90,13 @@ async def send_otp_email(
     """Send a OTP verification email"""
     
     if purpose.lower() == "login":
-        subject = f"🔐 Login Verification Code - {otp_code}"
+        subject = f"Login Verification Code - {otp_code}"
     elif purpose.lower() == "registration":
-        subject = f"📝 Account Verification Code - {otp_code}"
+        subject = f"Account Verification Code - {otp_code}"
     elif purpose.lower() == "password_reset":
-        subject = f"🔑 Password Reset Code - {otp_code}"
+        subject = f"Password Reset Code - {otp_code}"
     else:
-        subject = f"🔢 Verification Code - {otp_code}"
+        subject = f"Verification Code - {otp_code}"
     
     html_body = get_otp_email_template(
         user_name=user_name,
@@ -107,18 +105,16 @@ async def send_otp_email(
         expiry_minutes=expiry_minutes
     )
     
-    # Send the email
     await send_email(email=email, subject=subject, body=html_body)
 
 async def send_welcome_email(email: str, user_name: str, generated_user_name: str):
     """Send a welcome email to new users"""
     
-    subject = "🎉 Welcome to Surakshya Pay - Your Wallet is Ready!"
+    subject = "Welcome to Surakshya Pay - Your Wallet is Ready!"
     
     html_body = get_welcome_email_template(
         user_name=user_name,
         generated_user_name=generated_user_name
     )
     
-    # Send the email
     await send_email(email=email, subject=subject, body=html_body) 

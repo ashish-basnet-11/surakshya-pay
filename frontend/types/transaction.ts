@@ -1,5 +1,6 @@
 export interface TransferInterface {
   to_username: string,
+  category?: string,
   amount: number,
 }
 

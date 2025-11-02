@@ -38,7 +38,6 @@ const Register = () => {
   const { mutate: registerUser, isPending } = useRegisterUser();
 
   const onRegisterPress = async () => {
-    console.log("Hello");
     if (
       !firstName.trim() ||
       !lastName.trim() ||
@@ -90,6 +89,8 @@ const Register = () => {
       password: password,
       phone_number: phone.trim(),
     };
+
+    console.log(user);
 
     registerUser(user, {
       onSuccess: (data) => {

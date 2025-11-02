@@ -10,7 +10,6 @@ def get_transaction_email_template(
     HTML email template for transaction notifications
     """
     
-    # Define transaction-specific content
     if transaction_type == "DEPOSIT":
         icon = "💰"
         color = "#10B981"  # Green
@@ -314,7 +313,6 @@ def get_otp_email_template(
     HTML email template for OTP notifications
     """
     
-    # Define purpose-specific content
     if purpose.lower() == "login":
         icon = "🔐"
         color = "#8B5CF6"  # Purple
