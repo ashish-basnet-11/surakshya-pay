@@ -503,7 +503,7 @@ const BankingWalletUI = () => {
           </View>
 
           <View style={styles.transactionsContainer}>
-            {transactions.data?.slice(0, 5).map((transaction, index) => {
+            {transactions?.data?.slice(0, 5).map((transaction, index) => {
               const { icon, color, bgColor, amountPrefix, amountColor } =
                 getTransactionDisplayProps(transaction);
               return (
@@ -511,7 +511,7 @@ const BankingWalletUI = () => {
                   key={transaction.id}
                   style={[
                     styles.transactionItem,
-                    index === (transactions.data?.length ?? 1) - 1 &&
+                    index === (transactions?.data?.length ?? 1) - 1 &&
                       styles.lastTransactionItem,
                   ]}
                   activeOpacity={0.7}

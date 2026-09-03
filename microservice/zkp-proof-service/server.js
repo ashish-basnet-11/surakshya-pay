@@ -58,7 +58,7 @@ app.post("/generate-proof-and-verify", async (req, res) => {
         }
 
         exec(
-          `snarkjs groth16 prove ./circuits/auth_final.zkey ${witnessPath} ${proofPath} ${publicPath}`,
+          `npx snarkjs groth16 prove ./circuits/auth_final.zkey ${witnessPath} ${proofPath} ${publicPath}`,
           (proveErr) => {
             if (proveErr) {
               console.error("Proof generation failed:", proveErr);
@@ -66,7 +66,7 @@ app.post("/generate-proof-and-verify", async (req, res) => {
             }
 
             exec(
-              `snarkjs groth16 verify ./circuits/verification_key.json ${publicPath} ${proofPath}`,
+              `npx snarkjs groth16 verify ./circuits/verification_key.json ${publicPath} ${proofPath}`,
               (verifyErr, stdout, stderr) => {
                 if (verifyErr) {
                   console.error("Verification failed:", verifyErr);

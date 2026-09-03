@@ -165,13 +165,13 @@ const Notification = () => {
         </View>
 
         {/* Mark All Button */}
-        {0 > 0 && (
+        {(notificationList?.data?.filter(i => !i.is_read).length || 0) > 0 && (
           <View style={styles.markAllContainer}>
             <TouchableOpacity
               style={styles.markAllButton}
               // onPress={markAllAsRead}
             >
-              <Ionicons name="checkmark-done" size={16} color="#ffffff" />
+              <Ionicons name="checkmark-done" size={16} color={Colors.primary} />
               <Text style={styles.markAllText}>Mark all as read</Text>
             </TouchableOpacity>
           </View>
@@ -273,14 +273,14 @@ const styles = StyleSheet.create({
   markAllButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "#F0F4F8",
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
-    alignSelf: "flex-start",
+    alignSelf: "flex-end",
   },
   markAllText: {
-    color: "#ffffff",
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: "600",
     marginLeft: 6,

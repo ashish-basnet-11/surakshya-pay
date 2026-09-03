@@ -3,17 +3,17 @@ version: "3.8"
 services:
   redis:
     image: redis:7-alpine
-    container_name: redis
+    container_name: surakshya-redis
     ports:
-      - "6379:6379"
+      - "6380:6379"
 
   db:
     image: postgres:14
-    container_name: postgres
+    container_name: surakshya-db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
-      POSTGRES_DB: surakshya
+      POSTGRES_DB: surakshya_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:

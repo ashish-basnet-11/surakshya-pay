@@ -437,11 +437,8 @@ const Settings = () => {
             <View style={styles.quickTogglesSection}>
               <Text style={styles.sectionTitle}>Quick Settings</Text>
               <View style={styles.quickTogglesContainer}>
-                <FlatList
-                  data={quickToggles}
-                  numColumns={2}
-                  keyExtractor={(item) => item.id}
-                  renderItem={({ item: toggle, index }) => (
+                <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
+                  {quickToggles.map((toggle, index) => (
                     <View
                       key={toggle.id}
                       style={[
@@ -484,12 +481,8 @@ const Settings = () => {
                         />
                       </View>
                     </View>
-                  )}
-                  contentContainerStyle={styles.quickTogglesContainer}
-                  columnWrapperStyle={{
-                    justifyContent: "space-between",
-                  }}
-                />
+                  ))}
+                </View>
               </View>
             </View>
 

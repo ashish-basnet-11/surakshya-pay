@@ -135,7 +135,7 @@ export default function BudgetScreen() {
   const categoryProgress = analytics?.category_progress || []
   const trendData = analytics?.trend_data || []
 
-  const filteredBudgets = searchQuery.length > 0 
+  const filteredBudgets = searchQuery.length > 0
     ? (searchResults?.data || [])
     : budgets
 
@@ -185,35 +185,39 @@ export default function BudgetScreen() {
     return Math.min((spent / budget) * 100, 100)
   }
 
-  const renderLineChart = () => (
-    <View style={styles.chartContainer}>
-      <Text style={styles.chartTitle}>Budget vs Spending (Last 7 Days)</Text>
-      <View style={styles.lineChart}>
-        {trendData.slice(0, 7).map((data, index) => (
-          <View key={index} style={styles.lineChartBar}>
-            <View
-              style={[styles.lineChartBarFill, { height: `${(data.budget / 200) * 100}%`, backgroundColor: "#E3F2FD" }]}
-            />
-            <View
-              style={[
-                styles.lineChartBarFill,
-                { height: `${(data.spent / 200) * 100}%`, position: "absolute", bottom: 0 },
-              ]}
-            />
-            <Text style={styles.lineChartLabel}>
-              {new Date(data.date).toLocaleDateString('en-US', { weekday: 'short' })}
-            </Text>
-          </View>
-        ))}
+  const renderLineChart = () => {
+    const maxTrendValue = Math.max(...trendData.map((d: any) => Math.max(d.budget || 0, d.spent || 0)), 1);
+
+    return (
+      <View style={styles.chartContainer}>
+        <Text style={styles.chartTitle}>Budget vs Spending (Last 7 Days)</Text>
+        <View style={styles.lineChart}>
+          {trendData.slice(0, 7).map((data: any, index: number) => (
+            <View key={index} style={styles.lineChartBar}>
+              <View
+                style={[styles.lineChartBarFill, { height: `${(data.budget / maxTrendValue) * 100}%`, backgroundColor: "#E3F2FD" }]}
+              />
+              <View
+                style={[
+                  styles.lineChartBarFill,
+                  { height: `${(data.spent / maxTrendValue) * 100}%`, position: "absolute", bottom: 0 },
+                ]}
+              />
+              <Text style={styles.lineChartLabel}>
+                {new Date(data.date).toLocaleDateString('en-US', { weekday: 'short' })}
+              </Text>
+            </View>
+          ))}
+        </View>
       </View>
-    </View>
-  )
+    );
+  }; 1
 
   const renderCategoryChart = () => (
     <View style={styles.chartContainer}>
       <Text style={styles.chartTitle}>Budget Progress by Category</Text>
       <View style={styles.categoryChart}>
-        {categoryProgress.map((category) => (
+        {categoryProgress.map((category: any) => (
           <View key={category.category} style={styles.categoryItem}>
             <View style={styles.categoryInfo}>
               <View style={[styles.categoryColor, { backgroundColor: category.color }]} />
@@ -268,8 +272,8 @@ export default function BudgetScreen() {
         </View>
       </Animated.View>
 
-      <ScrollView 
-        style={styles.content} 
+      <ScrollView
+        style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -543,7 +547,7 @@ export default function BudgetScreen() {
             </View>
           </View>
           <Text style={styles.summaryInsight}>
-            💡 You&apos;re staying within budget for {Math.round(summary?.statistics?.on_track_percentage || 0)}% of categories. 
+            💡 You&apos;re staying within budget for {Math.round(summary?.statistics?.on_track_percentage || 0)}% of categories.
             {summary?.warning_count > 0 ? ` ${summary.warning_count} budget(s) need attention!` : " Keep up the good work!"}
           </Text>
         </Animated.View>
@@ -562,7 +566,7 @@ export default function BudgetScreen() {
             <Text style={styles.sectionTitle}>Budget Categories ({filteredBudgets.length})</Text>
           </View>
           <View style={styles.transactionsList}>
-            {filteredBudgets.slice(0, 6).map((budget) => {
+            {filteredBudgets.slice(0, 6).map((budget: any) => {
               const progress = getBudgetProgress(budget.spent_amount, budget.budget_amount)
               return (
                 <TouchableOpacity
@@ -868,7 +872,7 @@ const styles = StyleSheet.create({
   },
   lineChart: {
     flexDirection: "row",
-    alignItems: "end",
+    alignItems: "flex-end",
     justifyContent: "space-between",
     height: 120,
   },

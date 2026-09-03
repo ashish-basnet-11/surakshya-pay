@@ -1,9 +1,21 @@
 import { useAuthStore } from "@/store/use-auth-store";
 import axios, { AxiosRequestConfig } from "axios";
+import Constants from "expo-constants";
+
+// Automatically detect the dev machine's IP from Expo's dev server.
+// No more manual IP changes when switching networks!
+const getBaseUrl = (): string => {
+  const debuggerHost = Constants.expoConfig?.hostUri;
+  if (debuggerHost) {
+    const host = debuggerHost.split(":")[0]; // extract IP, drop the port
+    return `http://${host}:8000/api/v1`;
+  }
+  // Fallback for production or when hostUri isn't available
+  return "http://localhost:8000/api/v1";
+};
 
 const api = axios.create({
-  baseURL: "http://192.168.0.103:8000/api/v1",
-  // baseURL: "http://192.168.1.84:8000/api/v1",
+  baseURL: getBaseUrl(),
   headers: {
     "Content-Type": "application/json"
   },
