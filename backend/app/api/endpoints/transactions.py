@@ -1,465 +1,243 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+import datetime
+import logging
 from typing import List, Optional
 
-from app.crud import transaction as crud_transaction
-from app.crud import notification as crud_notification
-from app.crud import user as crud_user
-from app.crud import budget as crud_budget
-from app.schemas.transaction import (
-    Transaction, 
-    TransactionCreate, 
-    TransactionUpdate
-)
-from app.schemas.notification import NotificationCreate
-from app.schemas.response import CommonResponse
-from app.utils.dependencies import get_db, get_current_user
-from app.models.user import User
-from app.utils.blockchain import (
-    deposit_onchain,
-    transfer_onchain,
-    withdraw_onchain,
-    get_user_balance_onchain
-)
-from app.core.security import settings
-from app.core.security import decrypt_private_key
-from app.services.notification_service import send_transaction_notification, send_transfer_received_notification
-import datetime
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
+from app.core.config import settings
+from app.core.security import decrypt_private_key
+from app.crud import budget as crud_budget
+from app.crud import transaction as crud_transaction
+from app.crud import user as crud_user
+from app.models.notification import Notification
+from app.models.transaction import Transaction as TransactionModel
+from app.models.user import User
+from app.schemas.response import CommonResponse
+from app.schemas.transaction import Transaction
+from app.services.email_queue import send_later
+from app.services.notification_service import send_transaction_notification, send_transfer_received_notification
+from app.utils.blockchain import ChainError, deposit_onchain, get_user_balance_onchain, transfer_onchain, withdraw_onchain
+from app.utils.dependencies import get_current_user, get_db
+
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
-def get_wallet_address_by_username(db: Session, username: str) -> Optional[str]:
-    """Get wallet address from username"""
-    user = crud_user.get_user_by_username(db, username=username)
-    if user and user.wallet_address:
-        return user.wallet_address
-    return None
+# Top-ups mint new money on the ledger, so cap them server-side (the app shows the same limit).
+TOPUP_MAX = 5000
 
-def create_transaction_notification(
-    db: Session,
-    user_id: int,
-    transaction_type: str,
-    amount: float,
-    tx_hash: str,
-    to_username: str = None
-):
-    """Create notification for completed transaction"""
-    if transaction_type == "DEPOSIT":
-        title = "Topup Successful"
-        message = f"Your wallet has been topped up with {amount} NPR. Transaction hash: {tx_hash}"
-    elif transaction_type == "WITHDRAWAL":
-        title = "Withdrawal Successful"
-        message = f"Successfully withdrawn {amount} NPR from your wallet. Transaction hash: {tx_hash}"
-    elif transaction_type == "TRANSFER":
-        title = "Transfer Successful"
-        message = f"Successfully transferred {amount} NPR to {to_username}. Transaction hash: {tx_hash}"
-    else:
-        title = "Transaction Completed"
-        message = f"Transaction of {amount} NPR completed. Transaction hash: {tx_hash}"
-    
-    notification_data = NotificationCreate(
-        title=title,
-        message=message,
-        notification_type="transaction"
-    )
-    
-    return crud_notification.create_notification(
-        db=db,
-        notification=notification_data,
-        user_id=user_id,
-        send_email_notification=False 
-    )
 
-def create_transfer_received_notification(
-    db: Session,
-    user_id: int,
-    amount: float,
-    tx_hash: str,
-    from_username: str
-):
-    """Create notification for transfer received"""
-    title = "Money Received"
-    message = f"You have received {amount} NPR from {from_username}. Transaction hash: {tx_hash}"
-    
-    notification_data = NotificationCreate(
-        title=title,
-        message=message,
-        notification_type="transaction"
-    )
-    
-    return crud_notification.create_notification(
-        db=db,
-        notification=notification_data,
-        user_id=user_id,
-        send_email_notification=False
-    )
-
-async def send_transaction_email(
-    db: Session,
-    user_id: int,
-    transaction_type: str,
-    amount: float,
-    tx_hash: str,
-    to_username: str = None,
-    new_balance: float = None
-):
-    """Send transaction notification email"""
-    try:
-        user = db.query(User).filter(User.id == user_id).first()
-        if user and user.email:
-            await send_transaction_notification(
-                email=user.email,
-                user_name=user.full_name or "User",
-                transaction_type=transaction_type,
-                amount=amount,
-                tx_hash=tx_hash,
-                to_username=to_username,
-                new_balance=new_balance
-            )
-    except Exception as e:
-        print(f"Failed to send transaction email: {e}")
+# ---------------------------------------------------------------- reads
 
 @router.get("/", response_model=CommonResponse[List[Transaction]])
 def get_all_transactions(
     db: Session = Depends(get_db),
-    skip: int = 0,
-    limit: int = 100,
-    order_by: str = Query("latest", description="Order by: 'latest' (default) or 'oldest'"),
-    current_user: User = Depends(get_current_user)
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    order_by: str = Query("latest", pattern="^(latest|oldest)$"),
+    current_user: User = Depends(get_current_user),
 ):
-    """Get all transactions for the current user"""
+    """The current user's transactions."""
     transactions = crud_transaction.get_transactions(db, user_id=current_user.id, skip=skip, limit=limit, order_by=order_by)
     return CommonResponse(success=True, message="Transactions fetched successfully", data=transactions)
 
-@router.get("/{transaction_id}", response_model=CommonResponse[Transaction])
-def get_transaction_by_id(
-    *,
-    db: Session = Depends(get_db),
-    transaction_id: int,
-    current_user: User = Depends(get_current_user)
-):
-    """Get a specific transaction by ID"""
+
+@router.get("/{transaction_id:int}", response_model=CommonResponse[Transaction])
+def get_transaction_by_id(transaction_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     transaction = crud_transaction.get_transaction(db, transaction_id=transaction_id, user_id=current_user.id)
     if not transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
     return CommonResponse(success=True, message="Transaction fetched successfully", data=transaction)
 
-@router.get("/user/{user_id}", response_model=CommonResponse[List[Transaction]])
+
+@router.get("/user/{user_id:int}", response_model=CommonResponse[List[Transaction]])
 def get_transactions_for_user(
-    *,
-    db: Session = Depends(get_db),
     user_id: int,
-    skip: int = 0,
-    limit: int = 100,
-    order_by: str = Query("latest", description="Order by: 'latest' (default) or 'oldest'"),
-    current_user: User = Depends(get_current_user)
+    db: Session = Depends(get_db),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    order_by: str = Query("latest", pattern="^(latest|oldest)$"),
+    current_user: User = Depends(get_current_user),
 ):
+    """A specific user's transactions: only your own, unless you're an admin."""
+    if user_id != current_user.id and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="You can only view your own transactions.")
     transactions = crud_transaction.get_transactions(db, user_id=user_id, skip=skip, limit=limit, order_by=order_by)
     return CommonResponse(success=True, message="User transactions fetched successfully", data=transactions)
 
+
+# ---------------------------------------------------------------- money movement
+
+def _whole_amount(amount: float) -> int:
+    """The ledger contract stores whole rupees; reject anything it can't represent exactly."""
+    if amount <= 0 or amount != int(amount):
+        raise HTTPException(status_code=400, detail="Enter a whole amount in NPR greater than zero.")
+    return int(amount)
+
+
+def _private_key(user: User) -> str:
+    if not user.wallet_address or not user.private_key_encrypted:
+        raise HTTPException(status_code=400, detail="Your wallet isn't set up. Please contact support.")
+    return decrypt_private_key(user.private_key_encrypted, settings.SECRET_KEY)
+
+
+async def _run_on_chain(fn, *args) -> str:
+    # web3 is blocking; keep it off the event loop so other requests aren't stalled.
+    try:
+        return await run_in_threadpool(fn, *args)
+    except ChainError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        logger.exception("Blockchain call %s failed", fn.__name__)
+        raise HTTPException(
+            status_code=502,
+            detail="The payment network didn't respond. Check your balance before trying again.",
+        )
+
+
+async def _sync_balance(user: User, expected_delta: int) -> int:
+    try:
+        balance = await run_in_threadpool(get_user_balance_onchain, user.wallet_address)
+    except Exception:
+        logger.warning("Balance read failed for user %s; using local estimate", user.id)
+        balance = int(float(user.balance or 0)) + expected_delta
+    user.balance = str(balance)
+    return balance
+
+
+def _commit_or_report(db: Session, tx_hash: str):
+    """The money already moved on-chain; if recording it fails, say so instead of claiming failure."""
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.critical("On-chain tx %s succeeded but could not be recorded", tx_hash, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Your payment went through but we couldn't record it. Contact support with reference {tx_hash}.",
+        )
+
+
+def _record(db: Session, *, user_id: int, kind: str, amount: int, tx_hash: str, from_address: str, to_address: str,
+            category: str, description: str, title: str, message: str) -> TransactionModel:
+    row = TransactionModel(
+        user_id=user_id,
+        amount=amount,
+        transaction_type=kind,
+        category=category,
+        description=description,
+        blockchain_hash=tx_hash,
+        from_address=from_address,
+        to_address=to_address,
+        blockchain_timestamp=int(datetime.datetime.now().timestamp()),
+        is_completed=True,
+    )
+    db.add(row)
+    db.add(Notification(user_id=user_id, title=title, message=f"{message} Transaction hash: {tx_hash}", notification_type="transaction"))
+    return row
+
+
 @router.post("/topup")
 async def topup(
-    *,
+    background_tasks: BackgroundTasks,
+    amount: float = Query(...),
     db: Session = Depends(get_db),
-    amount: float = 0.0,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    """Topup wallet - updates both blockchain and local database"""
-    if not current_user.wallet_address or not current_user.private_key_encrypted:
-        raise HTTPException(status_code=400, detail="User does not have a wallet set up.")
-    
-    if amount <= 0:
-        raise HTTPException(status_code=400, detail="Amount must be greater than zero.")
+    value = _whole_amount(amount)
+    if value > TOPUP_MAX:
+        raise HTTPException(status_code=400, detail=f"You can add up to NPR {TOPUP_MAX:,} at a time.")
+    key = _private_key(current_user)
 
-    private_key = decrypt_private_key(current_user.private_key_encrypted, settings.SECRET_KEY)
-    
-    try:
-        tx_hash = deposit_onchain(current_user.wallet_address, amount, private_key)
-        
-        blockchain_balance = get_user_balance_onchain(current_user.wallet_address)
-        
-        current_user.balance = str(blockchain_balance)
-        db.add(current_user)
-        
-        transaction_data = TransactionCreate(
-            amount=amount,
-            category="deposit",
-            description=f"Topup of {amount} NPR",
-            transaction_type="DEPOSIT",
-            blockchain_hash=tx_hash,
-            from_address=current_user.wallet_address,
-            to_address=current_user.wallet_address,
-            blockchain_timestamp=int(datetime.datetime.now().timestamp()),
-            is_completed=True
-        )
-        
-        local_transaction = crud_transaction.create_transaction(db, transaction_data, current_user.id)
-        
-        if local_transaction.category:
-            crud_budget.update_budget_from_transaction(
-                db=db,
-                user_id=current_user.id,
-                category=local_transaction.category,
-                amount=amount
-            )
-        
-        notification = create_transaction_notification(
-            db=db,
-            user_id=current_user.id,
-            transaction_type="DEPOSIT",
-            amount=amount,
-            tx_hash=tx_hash
-        )
-        
-        db.commit()
-        
-        await send_transaction_email(
-            db=db,
-            user_id=current_user.id,
-            transaction_type="DEPOSIT",
-            amount=amount,
-            tx_hash=tx_hash,
-            new_balance=blockchain_balance
-        )
-        
-        return CommonResponse(
-            success=True, 
-            message="Topup successful", 
-            data={
-                "tx_hash": tx_hash,
-                "amount": amount,
-                "new_balance": blockchain_balance,
-                "local_transaction_id": local_transaction.id,
-                "notification_id": notification.id
-            }
-        )
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Topup failed: {str(e)}")
+    tx_hash = await _run_on_chain(deposit_onchain, current_user.wallet_address, value, key)
+    balance = await _sync_balance(current_user, value)
+    row = _record(
+        db, user_id=current_user.id, kind="DEPOSIT", amount=value, tx_hash=tx_hash,
+        from_address=current_user.wallet_address, to_address=current_user.wallet_address,
+        category="deposit", description=f"Topup of {value} NPR",
+        title="Topup Successful", message=f"Your wallet has been topped up with NPR {value}.",
+    )
+    _commit_or_report(db, tx_hash)
+
+    send_later(background_tasks, send_transaction_notification, email=current_user.email, user_name=current_user.full_name or "User",
+               transaction_type="DEPOSIT", amount=value, tx_hash=tx_hash, new_balance=balance)
+    return CommonResponse(success=True, message="Topup successful",
+                          data={"tx_hash": tx_hash, "amount": value, "new_balance": balance, "transaction_id": row.id})
+
 
 @router.post("/withdraw")
 async def withdraw(
-    *,
+    background_tasks: BackgroundTasks,
+    amount: float = Query(...),
     db: Session = Depends(get_db),
-    amount: float = 0.0,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    """Withdraw from wallet - updates both blockchain and local database"""
-    if not current_user.wallet_address or not current_user.private_key_encrypted:
-        raise HTTPException(status_code=400, detail="User does not have a wallet set up.")
-    
-    if amount <= 0:
-        raise HTTPException(status_code=400, detail="Amount must be greater than zero.")
-    
-    current_balance = float(current_user.balance or 0)
-    if current_balance < amount:
-        raise HTTPException(status_code=400, detail="Insufficient balance.")
+    value = _whole_amount(amount)
+    key = _private_key(current_user)
 
-    private_key = decrypt_private_key(current_user.private_key_encrypted, settings.SECRET_KEY)
-    
-    try:
-        tx_hash = withdraw_onchain(current_user.wallet_address, amount, private_key)
-        
-        blockchain_balance = get_user_balance_onchain(current_user.wallet_address)
-        
-        current_user.balance = str(blockchain_balance)
-        db.add(current_user)
-        
-        transaction_data = TransactionCreate(
-            amount=amount,
-            category="withdrawal",
-            description=f"Withdrawal of {amount} NPR",
-            transaction_type="WITHDRAWAL",
-            blockchain_hash=tx_hash,
-            from_address=current_user.wallet_address,
-            to_address=current_user.wallet_address,
-            blockchain_timestamp=int(datetime.datetime.now().timestamp()),
-            is_completed=True
-        )
-        
-        local_transaction = crud_transaction.create_transaction(db, transaction_data, current_user.id)
-        
-        if local_transaction.category:
-            crud_budget.update_budget_from_transaction(
-                db=db,
-                user_id=current_user.id,
-                category=local_transaction.category,
-                amount=-amount 
-            )
-        
-        notification = create_transaction_notification(
-            db=db,
-            user_id=current_user.id,
-            transaction_type="WITHDRAWAL",
-            amount=amount,
-            tx_hash=tx_hash
-        )
-        
-        db.commit()
-        
-        await send_transaction_email(
-            db=db,
-            user_id=current_user.id,
-            transaction_type="WITHDRAWAL",
-            amount=amount,
-            tx_hash=tx_hash,
-            new_balance=blockchain_balance
-        )
-        
-        return CommonResponse(
-            success=True, 
-            message="Withdrawal successful", 
-            data={
-                "tx_hash": tx_hash,
-                "amount": amount,
-                "new_balance": blockchain_balance,
-                "local_transaction_id": local_transaction.id,
-                "notification_id": notification.id
-            }
-        )
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Withdrawal failed: {str(e)}")
+    tx_hash = await _run_on_chain(withdraw_onchain, current_user.wallet_address, value, key)
+    balance = await _sync_balance(current_user, -value)
+    row = _record(
+        db, user_id=current_user.id, kind="WITHDRAWAL", amount=value, tx_hash=tx_hash,
+        from_address=current_user.wallet_address, to_address=current_user.wallet_address,
+        category="withdrawal", description=f"Withdrawal of {value} NPR",
+        title="Withdrawal Successful", message=f"NPR {value} was withdrawn from your wallet.",
+    )
+    _commit_or_report(db, tx_hash)
+
+    send_later(background_tasks, send_transaction_notification, email=current_user.email, user_name=current_user.full_name or "User",
+               transaction_type="WITHDRAWAL", amount=value, tx_hash=tx_hash, new_balance=balance)
+    return CommonResponse(success=True, message="Withdrawal successful",
+                          data={"tx_hash": tx_hash, "amount": value, "new_balance": balance, "transaction_id": row.id})
+
 
 @router.post("/transfer")
 async def transfer(
-    *,
+    background_tasks: BackgroundTasks,
+    to_username: str = Query(..., min_length=1),
+    amount: float = Query(...),
+    category: Optional[str] = Query(None, max_length=100),
     db: Session = Depends(get_db),
-    to_username: str,
-    amount: float = 0.0,
-    category: str = "",
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    """Transfer funds - updates both blockchain and local database"""
-    if not current_user.wallet_address or not current_user.private_key_encrypted:
-        raise HTTPException(status_code=400, detail="User does not have a wallet set up.")
-    
-    if not to_username:
-        raise HTTPException(status_code=400, detail="Recipient username is required.")
-    
-    if amount <= 0:
-        raise HTTPException(status_code=400, detail="Amount must be greater than zero.")
-    
-    current_balance = float(current_user.balance or 0)
-    if current_balance < amount:
-        raise HTTPException(status_code=400, detail="Insufficient balance.")
-    
-    to_wallet_address = get_wallet_address_by_username(db, to_username)
-    if not to_wallet_address:
-        raise HTTPException(status_code=404, detail="Recipient user not found or does not have a wallet.")
-    
-    recipient_user = crud_user.get_user_by_wallet_address(db, to_wallet_address)
-    if not recipient_user:
-        raise HTTPException(status_code=404, detail="Recipient user not found.")
-    
-    if to_wallet_address == current_user.wallet_address:
-        raise HTTPException(status_code=400, detail="Cannot transfer to yourself.")
-    
-    private_key = decrypt_private_key(current_user.private_key_encrypted, settings.SECRET_KEY)
-    
-    try:
-        tx_hash = transfer_onchain(current_user.wallet_address, to_wallet_address, amount, private_key)
-        
-        sender_blockchain_balance = get_user_balance_onchain(current_user.wallet_address)
-        
-        recipient_blockchain_balance = get_user_balance_onchain(to_wallet_address)
-        
-        current_user.balance = str(sender_blockchain_balance)
-        db.add(current_user)
-        
-        recipient_user.balance = str(recipient_blockchain_balance)
-        db.add(recipient_user)
-        
-        sender_transaction_data = TransactionCreate(
-            amount=amount,
-            category=category if category != "" else "transfer",
-            description=f"Transfer of {amount} NPR to {to_username}",
-            transaction_type="TRANSFER",
-            blockchain_hash=tx_hash,
-            from_address=current_user.wallet_address,
-            to_address=to_wallet_address,
-            blockchain_timestamp=int(datetime.datetime.now().timestamp()),
-            is_completed=True
-        )
-        
-        sender_transaction = crud_transaction.create_transaction(db, sender_transaction_data, current_user.id)
-        
-        recipient_transaction_data = TransactionCreate(
-            amount=amount,
-            category=category if category != "" else "transfer",
-            description=f"Received {amount} NPR from {current_user.username}",
-            transaction_type="TRANSFER",
-            blockchain_hash=tx_hash,
-            from_address=current_user.wallet_address,
-            to_address=to_wallet_address,
-            blockchain_timestamp=int(datetime.datetime.now().timestamp()),
-            is_completed=True
-        )
-        
-        recipient_transaction = crud_transaction.create_transaction(db, recipient_transaction_data, recipient_user.id)
-        
-        if sender_transaction.category:
-            crud_budget.update_budget_from_transaction(
-                db=db,
-                user_id=current_user.id,
-                category=sender_transaction.category,
-                amount=-amount
-            )
-        
-        sender_notification = create_transaction_notification(
-            db=db,
-            user_id=current_user.id,
-            transaction_type="TRANSFER",
-            amount=amount,
-            tx_hash=tx_hash,
-            to_username=to_username
-        )
-        
-        recipient_notification = create_transfer_received_notification(
-            db=db,
-            user_id=recipient_user.id,
-            amount=amount,
-            tx_hash=tx_hash,
-            from_username=current_user.username
-        )
-        
-        db.commit()
-        
-        await send_transaction_email(
-            db=db,
-            user_id=current_user.id,
-            transaction_type="TRANSFER",
-            amount=amount,
-            tx_hash=tx_hash,
-            to_username=to_username,
-            new_balance=sender_blockchain_balance
-        )
-        
-        await send_transfer_received_notification(
-            email=recipient_user.email,
-            user_name=recipient_user.full_name or "User",
-            amount=amount,
-            tx_hash=tx_hash,
-            from_username=current_user.username,
-            new_balance=recipient_blockchain_balance
-        )
-        
-        return CommonResponse(
-            success=True, 
-            message="Transfer successful", 
-            data={
-                "tx_hash": tx_hash,
-                "amount": amount,
-                "to_username": to_username,
-                "to_address": to_wallet_address,
-                "sender_new_balance": sender_blockchain_balance,
-                "recipient_new_balance": recipient_blockchain_balance,
-                "sender_transaction_id": sender_transaction.id,
-                "recipient_transaction_id": recipient_transaction.id,
-                "sender_notification_id": sender_notification.id,
-                "recipient_notification_id": recipient_notification.id
-            }
-        )
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Transfer failed: {str(e)}") 
+    value = _whole_amount(amount)
+    category = (category or "").strip() or None
+    recipient = crud_user.get_user_by_username(db, username=to_username.strip().lstrip("@"))
+    if not recipient or not recipient.wallet_address:
+        raise HTTPException(status_code=404, detail="No account found with that username.")
+    if recipient.id == current_user.id:
+        raise HTTPException(status_code=400, detail="You can't send money to yourself.")
+    if not recipient.is_active:
+        raise HTTPException(status_code=400, detail="That account can't receive payments right now.")
+    key = _private_key(current_user)
+
+    tx_hash = await _run_on_chain(transfer_onchain, current_user.wallet_address, recipient.wallet_address, value, key)
+    sender_balance = await _sync_balance(current_user, -value)
+    recipient_balance = await _sync_balance(recipient, value)
+
+    # Both parties get their own row. The category is the sender's private budgeting tag,
+    # so the recipient's copy is always plain "transfer".
+    sender_row = _record(
+        db, user_id=current_user.id, kind="TRANSFER", amount=value, tx_hash=tx_hash,
+        from_address=current_user.wallet_address, to_address=recipient.wallet_address,
+        category=category or "transfer", description=f"Transfer of {value} NPR to {recipient.username}",
+        title="Transfer Successful", message=f"You sent NPR {value} to {recipient.username}.",
+    )
+    _record(
+        db, user_id=recipient.id, kind="TRANSFER", amount=value, tx_hash=tx_hash,
+        from_address=current_user.wallet_address, to_address=recipient.wallet_address,
+        category="transfer", description=f"Received {value} NPR from {current_user.username}",
+        title="Money Received", message=f"You received NPR {value} from {current_user.username}.",
+    )
+    if category:
+        crud_budget.update_budget_from_transaction(db, user_id=current_user.id, category=category, amount=value)
+    _commit_or_report(db, tx_hash)
+
+    send_later(background_tasks, send_transaction_notification, email=current_user.email, user_name=current_user.full_name or "User",
+               transaction_type="TRANSFER", amount=value, tx_hash=tx_hash, to_username=recipient.username, new_balance=sender_balance)
+    send_later(background_tasks, send_transfer_received_notification, email=recipient.email, user_name=recipient.full_name or "User",
+               amount=value, tx_hash=tx_hash, from_username=current_user.username, new_balance=recipient_balance)
+    return CommonResponse(success=True, message="Transfer successful",
+                          data={"tx_hash": tx_hash, "amount": value, "to_username": recipient.username,
+                                "new_balance": sender_balance, "transaction_id": sender_row.id})

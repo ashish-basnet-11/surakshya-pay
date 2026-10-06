@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import and_, case, func, or_
 from typing import Dict
 
 from app.models.transaction import Transaction
@@ -16,77 +16,67 @@ from app.utils.dependencies import get_current_active_superuser
 router = APIRouter()
 
 @router.get("/", response_model=CommonResponse[Statistics])
-def get_statistics(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    total_income = db.query(func.sum(Transaction.amount)).filter(
-        Transaction.user_id == current_user.id,
-        Transaction.transaction_type == 'DEPOSIT'
-    ).scalar() or 0.0
-
-    total_withdrawals = db.query(func.sum(Transaction.amount)).filter(
-        Transaction.user_id == current_user.id,
-        Transaction.transaction_type == 'WITHDRAWAL'
-    ).scalar() or 0.0
-    
-    outgoing_transfers = db.query(func.sum(Transaction.amount)).filter(
-        Transaction.user_id == current_user.id,
-        Transaction.transaction_type == 'TRANSFER',
-        Transaction.amount < 0
-    ).scalar() or 0.0
-    
-    outgoing_transfers_desc = db.query(func.sum(Transaction.amount)).filter(
-        Transaction.user_id == current_user.id,
-        Transaction.transaction_type == 'TRANSFER',
-        Transaction.description.ilike('%to%')
-    ).scalar() or 0.0
-    
-    total_expense = abs(total_withdrawals) + abs(outgoing_transfers) + abs(outgoing_transfers_desc)
-
-    balance = float(current_user.balance) if current_user.balance else 0.0
-
-    spending_by_category_query = db.query(
-        Transaction.category,
-        func.sum(func.abs(Transaction.amount))
-    ).filter(
-        Transaction.user_id == current_user.id,
-        Transaction.transaction_type.in_(['WITHDRAWAL', 'TRANSFER'])
-    ).group_by(Transaction.category).all()
-
-    spending_by_category: Dict[str, float] = {row[0]: row[1] for row in spending_by_category_query}
-
-    transaction_count = db.query(Transaction).filter(Transaction.user_id == current_user.id).count()
-    average_transaction_amount = db.query(func.avg(func.abs(Transaction.amount))).filter(Transaction.user_id == current_user.id).scalar() or 0.0
-    min_transaction_amount = db.query(func.min(func.abs(Transaction.amount))).filter(Transaction.user_id == current_user.id).scalar() or 0.0
-    max_transaction_amount = db.query(func.max(func.abs(Transaction.amount))).filter(Transaction.user_id == current_user.id).scalar() or 0.0
-    
-    recent_transactions_query = db.query(Transaction).filter(Transaction.user_id == current_user.id).order_by(Transaction.timestamp.desc()).limit(8).all()
-    recent_transactions = [
-        {
-            "id": t.id,
-            "amount": t.amount,
-            "category": t.category,
-            "description": t.description,
-            "timestamp": t.timestamp.isoformat() if t.timestamp else None,
-            "transaction_type": t.transaction_type
-        }
-        for t in recent_transactions_query
-    ]
-    
-    stats = Statistics(
-        total_income=total_income,
-        total_expense=total_expense,
-        balance=balance,
-        spending_by_category=spending_by_category,
-        transaction_count=transaction_count,
-        average_transaction_amount=average_transaction_amount,
-        min_transaction_amount=min_transaction_amount,
-        max_transaction_amount=max_transaction_amount,
-        recent_transactions=recent_transactions
+def get_statistics(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Money in = top-ups + transfers received; money out = withdrawals + transfers sent.
+    Both parties store a copy of each transfer, so direction comes from the sender address.
+    """
+    wallet = current_user.wallet_address
+    outgoing = or_(
+        Transaction.transaction_type == "WITHDRAWAL",
+        and_(Transaction.transaction_type == "TRANSFER", Transaction.from_address == wallet),
     )
+    incoming = or_(
+        Transaction.transaction_type == "DEPOSIT",
+        and_(Transaction.transaction_type == "TRANSFER", Transaction.from_address != wallet),
+    )
+    amount = func.abs(Transaction.amount)
+    mine = Transaction.user_id == current_user.id
 
+    totals = db.query(
+        func.coalesce(func.sum(case((incoming, amount), else_=0)), 0),
+        func.coalesce(func.sum(case((outgoing, amount), else_=0)), 0),
+        func.count(Transaction.id),
+        func.coalesce(func.avg(amount), 0),
+        func.coalesce(func.min(amount), 0),
+        func.coalesce(func.max(amount), 0),
+    ).filter(mine).one()
+
+    # Spending breakdown: outgoing money only, grouped by the user's own tag.
+    # Case-insensitive grouping ("Food" and "food" are one category); show the first spelling.
+    key = case(
+        (Transaction.transaction_type == "WITHDRAWAL", "withdrawals"),
+        (or_(Transaction.category.is_(None), func.lower(Transaction.category) == "transfer"), "transfers"),
+        else_=func.lower(Transaction.category),
+    )
+    label = case((key.in_(["withdrawals", "transfers"]), key), else_=func.min(Transaction.category))
+    by_category = db.query(label, func.sum(amount)).filter(mine, outgoing).group_by(key).all()
+
+    recent = db.query(Transaction).filter(mine).order_by(Transaction.timestamp.desc(), Transaction.id.desc()).limit(8).all()
+    stats = Statistics(
+        total_income=float(totals[0]),
+        total_expense=float(totals[1]),
+        balance=float(current_user.balance or 0),
+        spending_by_category={name: float(total) for name, total in by_category},
+        transaction_count=totals[2],
+        average_transaction_amount=float(totals[3]),
+        min_transaction_amount=float(totals[4]),
+        max_transaction_amount=float(totals[5]),
+        recent_transactions=[
+            {
+                "id": t.id,
+                "amount": t.amount,
+                "category": t.category,
+                "description": t.description,
+                "timestamp": t.timestamp.isoformat() if t.timestamp else None,
+                "transaction_type": t.transaction_type,
+                "from_address": t.from_address,
+            }
+            for t in recent
+        ],
+    )
     return CommonResponse(success=True, message="Statistics fetched successfully", data=stats)
+
 
 @router.get("/admin/dashboard", response_model=CommonResponse[AdminDashboardStatistics], dependencies=[Depends(get_current_active_superuser)])
 def get_admin_dashboard_statistics(db: Session = Depends(get_db)):

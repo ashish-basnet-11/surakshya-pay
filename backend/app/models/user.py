@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from app.database.session import Base
+import datetime
 import random
 import string
 
@@ -25,6 +26,7 @@ class User(Base):
     zkp_commitment = Column(String, nullable=True)
     zkp_nullifier = Column(String, nullable=True)
     zkp_salt = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, index=True)
     transactions = relationship("Transaction", back_populates="owner")
     notifications = relationship("Notification", back_populates="owner")
     kyc = relationship("KYC", uselist=False, back_populates="user", foreign_keys="KYC.user_id")

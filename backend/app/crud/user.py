@@ -1,15 +1,23 @@
+import asyncio
+import logging
+import secrets
+import uuid
+from datetime import datetime, timedelta
+
+from fastapi import HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
+
+from app.core.config import settings
+from app.core.security import encrypt_private_key
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
-from app.core.security import get_password_hash, encrypt_private_key
-from app.core.config import settings
-import random
-import string
-from datetime import datetime, timedelta
-from app.utils.blockchain import register_user_onchain, create_new_wallet
-import uuid
-from app.utils.zkp_helper import get_zkp_fields
 from app.services.notification_service import send_welcome_email
+from app.utils.blockchain import create_new_wallet, register_user_onchain
+from app.utils.zkp_helper import get_zkp_fields
+
+logger = logging.getLogger(__name__)
 
 def get_user(db: Session, user_id: int):
     user = db.query(User).filter(User.id == user_id).first()
@@ -18,7 +26,7 @@ def get_user(db: Session, user_id: int):
     return user
 
 def get_user_by_email(db: Session, email: str):
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(func.lower(User.email) == email.strip().lower()).first()
     if user:
         _add_kyc_info(user)
     return user
@@ -54,62 +62,59 @@ def _add_kyc_info(user: User):
         user.kyc_reviewed_at = None
 
 async def create_user(db: Session, user: UserCreate):
+    email = user.email.strip().lower()
+    phone = getattr(user, "phone_number", None) or None
+    if phone and db.query(User).filter(User.phone_number == phone).first():
+        raise HTTPException(status_code=400, detail="This phone number is already registered.")
+
     user_guid = str(uuid.uuid4())
     wallet = create_new_wallet()
-    wallet_address = wallet['address']
-    private_key = wallet['private_key']
-    encrypted_private_key = encrypt_private_key(private_key, settings.SECRET_KEY)
-
     zkp_fields = await get_zkp_fields(user.password)
-    print(zkp_fields)
 
-    def generate_unique_username():
-        while True:
-            username = User.generate_username()
-            if not db.query(User).filter(User.username == username).first():
-                return username
-            
-    username = user.username if user.username else generate_unique_username()
+    # Register the wallet on-chain *before* saving the account: an account whose wallet
+    # isn't registered can never deposit or transfer, so fail the signup instead.
+    try:
+        await run_in_threadpool(register_user_onchain, wallet["address"], user_guid, wallet["private_key"])
+    except Exception:
+        logger.exception("On-chain registration failed for %s", email)
+        raise HTTPException(status_code=503, detail="We couldn't set up your wallet right now. Please try again shortly.")
+
+    username = user.username or _generate_unique_username(db)
     db_user = User(
-        email=user.email,
-        phone_number=getattr(user, 'phone_number', None),
+        email=email,
+        phone_number=phone,
         full_name=user.full_name,
-        fingerprint_signature=getattr(user, 'fingerprint_signature', None),
-        wallet_address=wallet_address,
-        public_key=getattr(user, 'public_key', None),
-        private_key_encrypted=encrypted_private_key,
+        wallet_address=wallet["address"],
+        private_key_encrypted=encrypt_private_key(wallet["private_key"], settings.SECRET_KEY),
         guid=user_guid,
         zkp_commitment=zkp_fields["zkp_commitment"],
         zkp_nullifier=zkp_fields["nullifier"],
         zkp_salt=zkp_fields["salt"],
         username=username,
     )
-
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
 
-    try:
-        zk_hash = user_guid
-        tx_hash = register_user_onchain(wallet_address, zk_hash, private_key)
-        print(tx_hash)
-    except Exception as e:
-        print(f"Onchain registration failed: {e}")
-    
-    # Send welcome email
-    try:
-        await send_welcome_email(
-            email=db_user.email,
-            user_name=db_user.full_name or "User",
-            generated_user_name=db_user.username
-        )
-        print(f"Welcome email sent to {db_user.email}")
-    except Exception as e:
-        print(f"Failed to send welcome email: {e}")
-    
-    # Add KYC info before returning
+    # Don't make signup wait on SMTP.
+    asyncio.create_task(_send_welcome(db_user.email, db_user.full_name or "User", db_user.username))
+
     _add_kyc_info(db_user)
     return db_user
+
+
+def _generate_unique_username(db: Session) -> str:
+    while True:
+        username = User.generate_username()
+        if not db.query(User).filter(User.username == username).first():
+            return username
+
+
+async def _send_welcome(email: str, name: str, username: str):
+    try:
+        await send_welcome_email(email=email, user_name=name, generated_user_name=username)
+    except Exception:
+        logger.exception("Failed to send welcome email to %s", email)
 
 def update_user(db: Session, db_user: User, user_in: UserUpdate):
     if user_in.full_name is not None:
@@ -161,7 +166,7 @@ def delete_user(db: Session, user_id: int):
     return db_user
 
 def set_reset_password_otp(db: Session, db_user: User):
-    otp = ''.join(random.choices(string.digits, k=6))
+    otp = f"{secrets.randbelow(10**6):06d}"
     otp_expires_at = datetime.utcnow() + timedelta(minutes=10)
     db_user.reset_password_otp = otp
     db_user.reset_password_otp_expires_at = otp_expires_at
@@ -172,9 +177,9 @@ def set_reset_password_otp(db: Session, db_user: User):
 
 async def reset_password(db: Session, db_user: User, new_password: str):
     zkp_fields = await get_zkp_fields(new_password)
-    db_user.zkp_commitment=zkp_fields["zkp_commitment"],
-    db_user.zkp_nullifier=zkp_fields["nullifier"],
-    db_user.zkp_salt=zkp_fields["salt"],
+    db_user.zkp_commitment = zkp_fields["zkp_commitment"]
+    db_user.zkp_nullifier = zkp_fields["nullifier"]
+    db_user.zkp_salt = zkp_fields["salt"]
     db_user.reset_password_otp = None
     db_user.reset_password_otp_expires_at = None
     db.add(db_user)
@@ -195,13 +200,8 @@ def count_active_users(db: Session) -> int:
     return db.query(User).filter(User.is_active == True).count()
 
 def count_new_users_this_week(db: Session) -> int:
-    from app.models.user import User
-    # Since User model doesn't have created_at field, we'll count users with KYC submitted this week
-    # This gives us an approximation of recent activity
-    from app.models.kyc import KYC
-    from datetime import datetime, timedelta
     week_ago = datetime.utcnow() - timedelta(days=7)
-    return db.query(KYC).filter(KYC.submitted_at >= week_ago).count()
+    return db.query(User).filter(User.created_at >= week_ago).count()
 
 def count_kyc_verified_users(db: Session) -> int:
     from app.models.user import User

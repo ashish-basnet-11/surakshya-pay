@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 
 from app import crud
-from app.schemas.user import User, UserCreate, UserUpdate
+from app.schemas.user import User, UserCreate, UserUpdate, ProfileUpdate
 from app.schemas.response import CommonResponse
 from app.utils.dependencies import get_db, get_current_user, get_current_active_superuser
 
@@ -13,7 +13,16 @@ router = APIRouter()
 def read_users_me(current_user: User = Depends(get_current_user)):
     return CommonResponse(success=True, message="User fetched successfully", data=current_user)
 
-@router.get("/", response_model=CommonResponse[List[User]])
+@router.put("/me", response_model=CommonResponse[User])
+def update_users_me(
+    profile_in: ProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    user = crud.user.update_user(db=db, db_user=current_user, user_in=UserUpdate(**profile_in.model_dump(exclude_unset=True)))
+    return CommonResponse(success=True, message="Profile updated successfully", data=user)
+
+@router.get("/", response_model=CommonResponse[List[User]], dependencies=[Depends(get_current_active_superuser)])
 def read_users(
     db: Session = Depends(get_db),
     skip: int = 0,
@@ -38,7 +47,7 @@ async def create_user(
     user = await crud.user.create_user(db=db, user=user_in)
     return CommonResponse(success=True, message="User created successfully", data=user)
 
-@router.get("/{user_id}", response_model=CommonResponse[User])
+@router.get("/{user_id}", response_model=CommonResponse[User], dependencies=[Depends(get_current_active_superuser)])
 def read_user_by_id(
     user_id: int,
     db: Session = Depends(get_db),
@@ -48,7 +57,7 @@ def read_user_by_id(
         raise HTTPException(status_code=404, detail="User not found")
     return CommonResponse(success=True, message="User fetched successfully", data=db_user)
 
-@router.put("/{user_id}", response_model=CommonResponse[User])
+@router.put("/{user_id}", response_model=CommonResponse[User], dependencies=[Depends(get_current_active_superuser)])
 def update_user(
     *,
     db: Session = Depends(get_db),
@@ -64,7 +73,7 @@ def update_user(
     user = crud.user.update_user(db=db, db_user=db_user, user_in=user_in)
     return CommonResponse(success=True, message="User updated successfully", data=user)
 
-@router.delete("/{user_id}", response_model=CommonResponse[User])
+@router.delete("/{user_id}", response_model=CommonResponse[User], dependencies=[Depends(get_current_active_superuser)])
 def delete_user(
     *,
     db: Session = Depends(get_db),

@@ -12,6 +12,6 @@ class Notification(Base):
     notification_type = Column(String, index=True)  # 'transaction', 'budget', 'security', etc.
     is_read = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
 
     owner = relationship("User", back_populates="notifications") 

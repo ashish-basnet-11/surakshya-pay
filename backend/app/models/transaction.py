@@ -17,7 +17,7 @@ class Transaction(Base):
     blockchain_timestamp = Column(BigInteger)  # Timestamp from blockchain
     transaction_type = Column(String, index=True)  # DEPOSIT, WITHDRAWAL, TRANSFER
     is_completed = Column(Boolean, default=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
     blockchain_hash = Column(String)  # Transaction hash from blockchain
 
     owner = relationship("User", back_populates="transactions") 

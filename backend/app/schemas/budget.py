@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing import Optional, List
 import datetime
 from enum import Enum
@@ -26,7 +26,11 @@ class BudgetBase(BaseModel):
     end_date: Optional[datetime.date] = None
 
 class BudgetCreate(BudgetBase):
-    pass
+    @model_validator(mode="after")
+    def end_after_start(self):
+        if self.end_date and self.end_date < self.start_date:
+            raise ValueError("End date must be on or after the start date.")
+        return self
 
 class BudgetUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)

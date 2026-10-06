@@ -1,575 +1,99 @@
-"use client";
+import { Link, useLocalSearchParams } from "expo-router";
+import { useRef, useState } from "react";
+import { TextInput, View } from "react-native";
+import { useLogin } from "@/apis/auth";
+import { AuthShell } from "@/components/auth/AuthShell";
+import { Banner, Button, Text, TextField } from "@/components/ui";
+import { getErrorMessage } from "@/lib/api";
+import { isEmail } from "@/lib/validation";
+import { useTheme } from "@/theme";
 
-import { useState } from "react";
-import {
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  Dimensions,
-  TouchableWithoutFeedback,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  StatusBar,
-  Alert,
-  ScrollView,
-} from "react-native";
-import { useRouter } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
-import Colors from "@/constants/Colors";
-import * as LocalAuthentication from "expo-local-authentication";
-import { useUserLogin } from "@/apis/authentication/login-user";
-import { UserLogin } from "@/types/user";
-import { useAuthStore } from "@/store/use-auth-store";
-import { showMessage } from "react-native-flash-message";
-
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
-
-const Login = () => {
-  const router = useRouter();
-  const [rememberMe, setRememberMe] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [username, setUsername] = useState("");
+export default function Login() {
+  const t = useTheme();
+  const params = useLocalSearchParams<{ email?: string }>();
+  const [email, setEmail] = useState(params.email ?? "");
   const [password, setPassword] = useState("");
-  const { mutate: loginUser, isPending: isLoading } = useUserLogin();
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const passwordRef = useRef<TextInput>(null);
+  const login = useLogin();
 
-  const toggleRememberMe = () => setRememberMe((prev) => !prev);
-  const onForgotPasswordPress = () => router.push("/(auth)/verify");
-  const onRegisterPress = () => router.push("/register");
-
-  const onLoginPress = async () => {
-    if (!username.trim() || !password.trim()) {
-      Alert.alert("Error", "Please enter both username and password");
-      return;
-    }
-    const user: UserLogin = {
-      username: username.trim(),
-      password: password,
+  const submit = () => {
+    const next = {
+      email: !email.trim() ? "Enter your email address." : !isEmail(email) ? "Enter a valid email address." : undefined,
+      password: !password ? "Enter your password." : undefined,
     };
-
-    const formData = new FormData();
-    formData.append("username", user.username);
-    formData.append("password", user.password);
-
-    loginUser(formData, {
-      onSuccess: (authResult) => {
-        if (authResult.success) {
-          useAuthStore
-            .getState()
-            .login(
-              authResult.data?.access_token || "",
-              authResult.data?.refresh_token,
-              authResult.data?.user
-            );
-          showMessage({
-            message: "Logged in successfully!",
-            type: "success",
-          });
-          if (authResult?.data?.user?.is_superuser) {
-            router.replace("/(admin)/dashboard");
-          } else {
-            router.replace("/(tabs)");
-          }
-        } else {
-          Alert.alert(
-            "Login Failed",
-            authResult.message || "An error occurred during login"
-          );
-        }
-      },
-      onError: (error: any) => {
-        Alert.alert(
-          "Login Failed",
-          error.message || "An error occurred during login"
-        );
-      },
-    });
-  };
-
-  const handleFingerprintLogin = async () => {
-    const hasHardware = await LocalAuthentication.hasHardwareAsync();
-    const supported =
-      await LocalAuthentication.supportedAuthenticationTypesAsync();
-    const enrolled = await LocalAuthentication.isEnrolledAsync();
-    if (!hasHardware || supported.length === 0 || !enrolled) {
-      Alert.alert("Unavailable", "Biometric authentication is not set up");
-      return;
-    }
-    const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: "Authenticate with fingerprint to login",
-      fallbackLabel: "Enter password",
-      disableDeviceFallback: true,
-    });
-    if (result.success) {
-      router.replace("/(tabs)");
-    } else {
-      Alert.alert("Authentication Failed", "Fingerprint did not match");
-    }
+    setErrors(next);
+    if (next.email || next.password) return;
+    login.mutate({ email: email.trim().toLowerCase(), password });
   };
 
   return (
-    <>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
-      <SafeAreaView style={styles.safeArea}>
-        <LinearGradient
-          colors={[Colors.primary, Colors.primaryLight]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{ flex: 1 }}
-        >
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={styles.container}
-          >
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-              <View style={styles.content}>
-                {/* Header section WITHOUT gradient background now */}
-                <View style={styles.headerSection}>
-                  <View style={styles.logoContainer}>
-                    <View style={styles.logoWrapper}>
-                      <LinearGradient
-                        colors={[Colors.secondary, Colors.secondaryLight]}
-                        style={styles.logoGradient}
-                      >
-                        <Ionicons
-                          name="shield-checkmark"
-                          size={32}
-                          color={Colors.textInverse}
-                        />
-                      </LinearGradient>
-                    </View>
-                    <Text style={styles.brandName}>SurakshyaPay</Text>
-                    <Text style={styles.brandTagline}>
-                      Secure Digital Payments
-                    </Text>
-                  </View>
-                  <View style={styles.welcomeContainer}>
-                  
-                    <Text style={styles.welcomeSubtitle}>
-                      Sign in to access your secure digital wallet
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.formSection}>
-                  <ScrollView
-                    style={styles.scrollView}
-                    contentContainerStyle={styles.scrollViewContent}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                    bounces={false}
-                  >
-                    <View style={styles.formContainer}>
-                      <Text style={styles.formTitle}>Sign In</Text>
-
-                      <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>Email or Username</Text>
-                        <View style={styles.inputContainer}>
-                          <View style={styles.inputIcon}>
-                            <Ionicons
-                              name="person-outline"
-                              size={20}
-                              color={Colors.textSecondary}
-                            />
-                          </View>
-                          <TextInput
-                            placeholder="Enter your email or username"
-                            placeholderTextColor={Colors.textTertiary}
-                            style={styles.input}
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                            value={username}
-                            onChangeText={setUsername}
-                            editable={!isLoading}
-                          />
-                        </View>
-                      </View>
-
-                      <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>Password</Text>
-                        <View style={styles.inputContainer}>
-                          <View style={styles.inputIcon}>
-                            <Ionicons
-                              name="lock-closed-outline"
-                              size={20}
-                              color={Colors.textSecondary}
-                            />
-                          </View>
-                          <TextInput
-                            placeholder="Enter your password"
-                            placeholderTextColor={Colors.textTertiary}
-                            secureTextEntry={!showPassword}
-                            style={styles.input}
-                            value={password}
-                            onChangeText={setPassword}
-                            editable={!isLoading}
-                          />
-                          <TouchableOpacity
-                            onPress={() => setShowPassword((prev) => !prev)}
-                            style={styles.passwordToggle}
-                            disabled={isLoading}
-                          >
-                            <Ionicons
-                              name={
-                                showPassword ? "eye-outline" : "eye-off-outline"
-                              }
-                              size={20}
-                              color={Colors.textSecondary}
-                            />
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-
-                      <View style={styles.optionsRow}>
-                        <TouchableOpacity
-                          style={styles.rememberMeContainer}
-                          onPress={toggleRememberMe}
-                          disabled={isLoading}
-                          activeOpacity={0.7}
-                        >
-                          <View
-                            style={[
-                              styles.checkbox,
-                              rememberMe && styles.checkboxActive,
-                            ]}
-                          >
-                            {rememberMe && (
-                              <Ionicons
-                                name="checkmark"
-                                size={14}
-                                color={Colors.textInverse}
-                              />
-                            )}
-                          </View>
-                          <Text style={styles.rememberMeText}>Remember me</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          onPress={onForgotPasswordPress}
-                          disabled={isLoading}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={styles.forgotPasswordText}>
-                            Forgot Password?
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                      <View style={styles.loginRow}>
-                        <TouchableOpacity
-                          style={[
-                            styles.loginButtonFlex,
-                            isLoading && styles.loginButtonDisabled,
-                          ]}
-                          onPress={onLoginPress}
-                          disabled={
-                            isLoading || !username.trim() || !password.trim()
-                          }
-                          activeOpacity={0.8}
-                        >
-                          <LinearGradient
-                            colors={
-                              isLoading || !username.trim() || !password.trim()
-                                ? [Colors.neutral400, Colors.neutral500]
-                                : [Colors.secondary, Colors.secondaryLight]
-                            }
-                            style={[styles.loginButtonGradient, { flex: 1 }]}
-                          >
-                            {isLoading ? (
-                              <View style={styles.loadingContainer}>
-                                <View style={styles.loadingSpinner} />
-                                <Text style={styles.loginButtonText}>
-                                  Signing In...
-                                </Text>
-                              </View>
-                            ) : (
-                              <Text style={styles.loginButtonText}>Sign In</Text>
-                            )}
-                          </LinearGradient>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={styles.fingerprintButton}
-                          onPress={handleFingerprintLogin}
-                          activeOpacity={0.7}
-                        >
-                          <Ionicons
-                            name="finger-print"
-                            size={28}
-                            color={Colors.secondary}
-                          />
-                        </TouchableOpacity>
-                      </View>
-
-                      <View style={styles.signUpContainer}>
-                        <Text style={styles.signUpText}>
-                          Don&apos;t have an account?{" "}
-                        </Text>
-                        <TouchableOpacity
-                          onPress={onRegisterPress}
-                          disabled={isLoading}
-                        >
-                          <Text style={styles.signUpLink}>Sign Up</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </ScrollView>
-                </View>
-              </View>
-            </TouchableWithoutFeedback>
-          </KeyboardAvoidingView>
-        </LinearGradient>
-      </SafeAreaView>
-    </>
+    <AuthShell
+      title="Welcome back"
+      description="Sign in to your SurakshyaPay wallet."
+      footer={
+        <Text variant="small" tone="muted">
+          New to SurakshyaPay?{" "}
+          <Link href="/register" replace style={{ color: t.colors.primary, fontWeight: "600" }}>
+            Create an account
+          </Link>
+        </Text>
+      }
+    >
+      <View style={{ gap: t.space.lg }}>
+        {params.email && !login.error && (
+          <Banner tone="success" title="Account created" message="Sign in with your new password to continue." />
+        )}
+        {login.error && <Banner tone="danger" title="Couldn't sign you in" message={getErrorMessage(login.error)} />}
+        <TextField
+          label="Email"
+          icon="mail-outline"
+          placeholder="you@example.com"
+          value={email}
+          onChangeText={(v) => {
+            setEmail(v);
+            if (errors.email) setErrors((e) => ({ ...e, email: undefined }));
+          }}
+          error={errors.email}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="email"
+          textContentType="emailAddress"
+          returnKeyType="next"
+          onSubmitEditing={() => passwordRef.current?.focus()}
+          editable={!login.isPending}
+        />
+        <View style={{ gap: t.space.sm }}>
+          <TextField
+            ref={passwordRef}
+            label="Password"
+            icon="lock-closed-outline"
+            placeholder="Your password"
+            value={password}
+            onChangeText={(v) => {
+              setPassword(v);
+              if (errors.password) setErrors((e) => ({ ...e, password: undefined }));
+            }}
+            error={errors.password}
+            secureTextEntry
+            autoComplete="current-password"
+            textContentType="password"
+            returnKeyType="go"
+            onSubmitEditing={submit}
+            editable={!login.isPending}
+          />
+          <Link href={{ pathname: "/forgot-password", params: email ? { email } : {} }} style={{ alignSelf: "flex-end", color: t.colors.primary, fontWeight: "600", fontSize: 13 }}>
+            Forgot password?
+          </Link>
+        </View>
+        <Button title={login.isPending ? "Verifying…" : "Sign in"} size="lg" fullWidth loading={login.isPending} onPress={submit} />
+        {login.isPending && (
+          <Text variant="small" tone="subtle" align="center">
+            Generating your zero-knowledge proof. This can take a few seconds.
+          </Text>
+        )}
+      </View>
+    </AuthShell>
   );
-};
-
-export default Login;
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "transparent", // Make safeArea transparent so gradient shows behind
-  },
-  container: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-  },
-  headerSection: {
-    paddingTop: Platform.OS === "ios" ? 20 : 40,
-    paddingBottom: 40,
-    paddingHorizontal: 24,
-    alignItems: "center",
-    minHeight: SCREEN_HEIGHT * 0.4,
-    
-   
-  },
-  logoContainer: {
-    alignItems: "center",
-    marginBottom: 32,
-    marginTop:25
-  },
-  logoWrapper: {
-    marginBottom: 16,
-  },
-  logoGradient: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: Colors.shadowDark,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  brandName: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: Colors.textInverse,
-    letterSpacing: -0.5,
-    marginBottom: 4,
-  },
-  brandTagline: {
-    fontSize: 14,
-    color: Colors.neutral300,
-    fontWeight: "500",
-    letterSpacing: 0.5,
-  },
-  welcomeContainer: {
-    alignItems: "center",
-  },
-  welcomeTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: Colors.textInverse,
-    marginBottom: 8,
-    letterSpacing: -0.3,
-  },
-  welcomeSubtitle: {
-    fontSize: 16,
-    color: Colors.neutral300,
-    textAlign: "center",
-    lineHeight: 22,
-    fontWeight: "500",
-  },
-  formSection: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    shadowColor: Colors.shadowDark,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollViewContent: {
-    flexGrow: 1,
-    paddingTop: 32,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-  },
-  formContainer: {
-    flex: 1,
-  },
-  formTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: Colors.textPrimary,
-    marginBottom: 32,
-    textAlign: "center",
-    letterSpacing: -0.3,
-  },
-  inputGroup: {
-    marginBottom: 24,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.textPrimary,
-    marginBottom: 8,
-    letterSpacing: 0.2,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.backgroundTertiary,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    paddingHorizontal: 16,
-    height: 56,
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: Colors.textPrimary,
-    fontWeight: "500",
-  },
-  passwordToggle: {
-    padding: 4,
-    marginLeft: 8,
-  },
-  optionsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 32,
-  },
-  rememberMeContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    marginRight: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkboxActive: {
-    backgroundColor: Colors.secondary,
-    borderColor: Colors.secondary,
-  },
-  rememberMeText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    fontWeight: "500",
-  },
-  forgotPasswordText: {
-    fontSize: 14,
-    color: Colors.secondary,
-    fontWeight: "600",
-  },
-  loginButtonDisabled: {
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  loginButtonGradient: {
-    borderRadius: 16,
-    paddingVertical: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  loginButtonText: {
-    color: Colors.textInverse,
-    fontSize: 18,
-    fontWeight: "700",
-    letterSpacing: -0.2,
-  },
-  loadingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  loadingSpinner: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.textInverse,
-    borderTopColor: "transparent",
-    marginRight: 12,
-  },
-  loginRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 32,
-    gap: 12,
-  },
-  loginButtonFlex: {
-    flex: 1,
-    borderRadius: 16,
-    shadowColor: Colors.secondary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  fingerprintButton: {
-    width: 52,
-    height: 60,
-    borderRadius: 16,
-    backgroundColor: Colors.backgroundTertiary,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: Colors.border,
-    shadowColor: Colors.shadowDark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  signUpContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 8,
-  },
-  signUpText: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    fontWeight: "500",
-  },
-  signUpLink: {
-    fontSize: 16,
-    color: Colors.secondary,
-    fontWeight: "700",
-  },
-});
+}

@@ -46,7 +46,13 @@
       "@react-native-community/datetimepicker",
       "expo-image",
       "expo-status-bar",
-      "expo-web-browser"
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos to upload identity documents.",
+          "cameraPermission": "Allow $(PRODUCT_NAME) to use your camera to take a verification selfie."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

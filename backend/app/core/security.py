@@ -1,4 +1,3 @@
-from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
@@ -9,44 +8,33 @@ from cryptography.hazmat.backends import default_backend
 import base64
 import os
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+def _create_token(subject: str, token_type: str, lifetime: timedelta) -> str:
+    payload = {"sub": subject, "type": token_type, "exp": datetime.now(timezone.utc) + lifetime}
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
-
-def get_password_hash(password):
-    return pwd_context.hash(password)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    return encoded_jwt
+    return _create_token(data["sub"], "access", expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
+
 
 def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    return encoded_jwt
+    return _create_token(data["sub"], "refresh", expires_delta or timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS))
 
-def verify_token(token: str, credentials_exception):
+
+def verify_token(token: str, credentials_exception, expected_type: str = "access"):
+    """
+    Return the token's subject (email). Refresh tokens are only accepted where
+    expected_type="refresh", so a long-lived refresh token can't be used as an access token.
+    Tokens issued before the "type" claim existed are treated as access tokens.
+    """
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        print(payload)
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-        return username
     except JWTError:
         raise credentials_exception
+    subject = payload.get("sub")
+    if subject is None or payload.get("type", "access") != expected_type:
+        raise credentials_exception
+    return subject
 
 def encrypt_private_key(private_key: str, secret: str) -> str:
     backend = default_backend()

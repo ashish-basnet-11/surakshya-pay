@@ -10,6 +10,7 @@ from app.schemas.budget import (
 from app.schemas.response import CommonResponse
 from app.utils.dependencies import get_db, get_current_user
 from app.models.user import User
+from app.models.budget import Budget as BudgetModel
 
 router = APIRouter()
 
@@ -21,23 +22,17 @@ def create_budget(
     current_user: User = Depends(get_current_user)
 ):
     """Create a new budget"""
-    try:
-        print(f"Creating budget with data: {budget_in.dict()}")
-        budget = crud_budget.create_budget(db=db, budget=budget_in, user_id=current_user.id)
-        budget_with_progress = crud_budget.get_budget_with_progress(db, budget)
-        return CommonResponse(success=True, message="Budget created successfully", data=budget_with_progress)
-    except Exception as e:
-        print(f"Error creating budget: {str(e)}")
-        raise HTTPException(status_code=422, detail=f"Failed to create budget: {str(e)}")
+    budget = crud_budget.create_budget(db=db, budget=budget_in, user_id=current_user.id)
+    return CommonResponse(success=True, message="Budget created successfully", data=crud_budget.get_budget_with_progress(db, budget))
 
 @router.get("/", response_model=CommonResponse[List[Budget]])
 def read_budgets(
     db: Session = Depends(get_db),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    status: Optional[str] = Query(None),
+    status: Optional[str] = Query(None, pattern="^(active|warning|completed)$"),
     category: Optional[str] = Query(None),
-    budget_type: Optional[str] = Query(None),
+    budget_type: Optional[str] = Query(None, pattern="^(expense|savings|investment)$"),
     sort_by: str = Query("created_at", pattern="^(date|amount|name|category|created_at)$"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$"),
     current_user: User = Depends(get_current_user)
@@ -70,7 +65,7 @@ def search_budgets(
     budgets_with_progress = [crud_budget.get_budget_with_progress(db, b) for b in budgets]
     return CommonResponse(success=True, message="Search completed successfully", data=budgets_with_progress)
 
-@router.get("/{budget_id}", response_model=CommonResponse[Budget])
+@router.get("/{budget_id:int}", response_model=CommonResponse[Budget])
 def read_budget(
     *,
     db: Session = Depends(get_db),
@@ -84,7 +79,7 @@ def read_budget(
     budget_with_progress = crud_budget.get_budget_with_progress(db, budget)
     return CommonResponse(success=True, message="Budget fetched successfully", data=budget_with_progress)
 
-@router.put("/{budget_id}", response_model=CommonResponse[Budget])
+@router.put("/{budget_id:int}", response_model=CommonResponse[Budget])
 def update_budget(
     *,
     db: Session = Depends(get_db),
@@ -100,7 +95,7 @@ def update_budget(
     budget_with_progress = crud_budget.get_budget_with_progress(db, budget)
     return CommonResponse(success=True, message="Budget updated successfully", data=budget_with_progress)
 
-@router.delete("/{budget_id}", response_model=CommonResponse)
+@router.delete("/{budget_id:int}", response_model=CommonResponse)
 def delete_budget(
     *,
     db: Session = Depends(get_db),
@@ -161,7 +156,7 @@ def get_trend_data(
     trend_data = crud_budget.get_trend_data(db, user_id=current_user.id, days=days)
     return CommonResponse(success=True, message="Trend data fetched successfully", data=trend_data)
 
-@router.post("/{budget_id}/update-spent", response_model=CommonResponse[Budget])
+@router.post("/{budget_id:int}/update-spent", response_model=CommonResponse[Budget])
 def update_budget_spent(
     *,
     db: Session = Depends(get_db),
@@ -196,6 +191,6 @@ def get_available_categories(
     current_user: User = Depends(get_current_user)
 ):
     """Get available budget categories for the user"""
-    categories = db.query(Budget.category).filter(Budget.user_id == current_user.id).distinct().all()
+    categories = db.query(BudgetModel.category).filter(BudgetModel.user_id == current_user.id).distinct().all()
     category_list = [cat[0] for cat in categories]
     return CommonResponse(success=True, message="Categories fetched successfully", data=category_list) 

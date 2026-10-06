@@ -1,22 +1,24 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import model_validator
-from typing import Optional
-import secrets
+from typing import List, Optional
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str
     POSTGRES_HOST: str
     POSTGRES_PORT: int
-    
+
     REDIS_HOST: str
     REDIS_PORT: int
 
     DATABASE_URL: Optional[str] = None
 
-    SECRET_KEY: str = "3fbf7a147e14474002f5ee1ac267bec9d08df5086be47c210081faa3c3d1da03c5a4e7aedfae7cd7b4f05391f52b4857"
+    # Secrets must come from the environment (.env); never hardcode them here.
+    SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     ALGORITHM: str = "HS256"
@@ -31,17 +33,25 @@ class Settings(BaseSettings):
 
     # Blockchain settings
     BLOCKCHAIN_RPC_URL: str = "http://127.0.0.1:7545"
-    CONTRACT_ADDRESS: str = "0x07ff955262D068bE73c97D655A98cA55d68AA3d5"
-    FUNDER_PRIVATE_KEY: str = "0x7b26e4cfbc945af9034294e81769857afc698af763b0a61094f18046fd4ad602" 
+    CONTRACT_ADDRESS: str
+    FUNDER_PRIVATE_KEY: str
 
-    @model_validator(mode='after')
-    def build_database_url(self) -> 'Settings':
+    # Zero-knowledge proof microservice
+    ZKP_SERVICE_URL: str = "http://localhost:5001"
+
+    # Browser origins allowed to call the API (Expo web dev server by default).
+    CORS_ORIGINS: List[str] = ["http://localhost:8081", "http://127.0.0.1:8081"]
+    # Also allow any private-LAN origin on the Expo port, so phones/other machines work in dev.
+    CORS_ORIGIN_REGEX: Optional[str] = r"http://(192\.168|10|172\.(1[6-9]|2\d|3[01]))(\.\d{1,3}){2,3}:8081"
+
+    # KYC uploads
+    MAX_UPLOAD_MB: int = 10
+
+    @model_validator(mode="after")
+    def build_database_url(self) -> "Settings":
         if not self.DATABASE_URL:
             self.DATABASE_URL = f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         return self
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
 
-settings = Settings() 
+settings = Settings()

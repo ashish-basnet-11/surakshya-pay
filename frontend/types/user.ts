@@ -1,42 +1,34 @@
-export interface UserBase {
+export interface User {
+  id: number;
   email: string;
-  full_name?: string;
-  phone_number?: string;
+  username: string;
+  full_name?: string | null;
+  phone_number?: string | null;
   is_active?: boolean;
   is_superuser?: boolean;
-  wallet_address?: string;
-  username?: string;
-  public_key?: string;
-  private_key_encrypted?: string;
-  balance?: string;
-  network?: string;
-  wallet_type?: string;
-  fingerprint_signature?: string;
-  zkp_commitment?: string;
-  zkp_nullifier?: string;
-  zkp_salt?: string;
-  guid?: string;
-  kyc_status?: string;
-  kyc_submitted_at?: string;
-  kyc_reviewed_at?: string;
+  wallet_address?: string | null;
+  balance?: string | null;
+  kyc_status?: string | null;
+  kyc_submitted_at?: string | null;
+  kyc_reviewed_at?: string | null;
+  created_at?: string | null;
 }
 
-export interface UserCreate extends UserBase {
+export interface RegisterInput {
+  full_name: string;
+  email: string;
+  phone_number: string;
   password: string;
 }
 
-export interface UserUpdate extends UserBase {
-  password?: string;
+export interface ProfileInput {
+  full_name?: string;
+  phone_number?: string;
 }
 
-export interface UserInDBBase extends UserBase {
-  id: number;
-}
-
-export interface User extends UserInDBBase {}
-export interface UserInDB extends UserInDBBase {} 
-
-export interface UserLogin{
-  username: string;
-  password: string;
+export interface Session {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  user?: User;
 }
