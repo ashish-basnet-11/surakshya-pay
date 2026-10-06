@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useGetUserTransaction } from '@/apis/transaction/get-user-transaction';
 import Loader from '@/components/Loader';

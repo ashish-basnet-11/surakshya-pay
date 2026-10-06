@@ -6,7 +6,7 @@ import { House, ChartPie, WalletMinimal, Settings2, ScanLine } from "lucide-reac
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { LinearGradient } from "expo-linear-gradient"
 import Colors from "@/constants/Colors"
-import type { BottomTabBarProps } from "@react-navigation/bottom-tabs"
+type BottomTabBarProps = Parameters<NonNullable<React.ComponentProps<typeof Tabs>["tabBar"]>>[0]
 
 export default function TabLayout() {
   const segments = useSegments()

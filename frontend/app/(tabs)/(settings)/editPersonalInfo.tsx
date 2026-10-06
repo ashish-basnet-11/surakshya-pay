@@ -15,7 +15,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import Colors from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router";
 
 const EditPersonalInfo = () => {
   const router = useRouter();

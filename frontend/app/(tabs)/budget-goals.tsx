@@ -18,7 +18,7 @@ import {
 import { Ionicons } from "@expo/vector-icons"
 import { useRouter } from "expo-router"
 import Colors from "@/constants/Colors"
-import { useFocusEffect } from "@react-navigation/native"
+import { useFocusEffect } from "expo-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { budgetApi, BudgetCreate, Budget } from "@/apis/budget/budget-api"
 import { Picker } from "@react-native-picker/picker"

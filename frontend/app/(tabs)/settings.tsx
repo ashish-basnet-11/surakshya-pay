@@ -20,7 +20,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import Colors from "@/constants/Colors";
 import { useCallback, useState } from "react";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router";
 import { showMessage } from "react-native-flash-message";
 import { useAuthStore } from "@/store/use-auth-store";
 

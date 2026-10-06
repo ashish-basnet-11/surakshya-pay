@@ -13,7 +13,7 @@ import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import Colors from '@/constants/Colors';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from "expo-linear-gradient";
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 
 const SecuritySettings = () => {
   const router = useRouter();

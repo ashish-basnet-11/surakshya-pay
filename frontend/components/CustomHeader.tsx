@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { ArrowLeft, MoreVertical } from 'lucide-react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation } from 'expo-router';
 
 export default function CustomHeader({ title = "Send Money" }) {
   const navigation = useNavigation();

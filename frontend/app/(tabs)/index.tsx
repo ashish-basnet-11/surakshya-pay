@@ -18,7 +18,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import Colors from "@/constants/Colors";
 import { useRouter } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router";
 import { useAuthStore } from "@/store/use-auth-store";
 import {
   BadgeAlert,

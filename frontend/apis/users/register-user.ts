@@ -8,7 +8,7 @@ async function registerUser(
   user: UserCreate
 ): Promise<ApiResponse<LoginResponse>> {
   const response = await apiPost<ApiResponse<LoginResponse>>(
-    "/users",
+    "/users/",
     user
   );
   return response;

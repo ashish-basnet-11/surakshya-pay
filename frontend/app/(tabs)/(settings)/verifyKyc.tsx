@@ -17,7 +17,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import Colors from "@/constants/Colors";
 import { Picker } from "@react-native-picker/picker";
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation } from 'expo-router';
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { submitKYC, checkKYCStatus, KYCCreate } from "@/apis/kyc/kyc-api";
 
