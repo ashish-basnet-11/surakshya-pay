@@ -44,6 +44,13 @@ class Settings(BaseSettings):
     # Also allow any private-LAN origin on the Expo port, so phones/other machines work in dev.
     CORS_ORIGIN_REGEX: Optional[str] = r"http://(192\.168|10|172\.(1[6-9]|2\d|3[01]))(\.\d{1,3}){2,3}:8081"
 
+    # Khalti ePay v2 (sandbox). Get a test secret key from https://test-admin.khalti.com
+    KHALTI_SECRET_KEY: str = ""
+    KHALTI_BASE_URL: str = "https://dev.khalti.com/api/v2"
+    # Where Khalti sends the browser after checkout; must be an http(s) URL.
+    KHALTI_RETURN_URL: str = "http://localhost:8000/api/v1/payments/khalti/return"
+    KHALTI_WEBSITE_URL: str = "http://localhost:8000"
+
     # KYC uploads
     MAX_UPLOAD_MB: int = 10
 

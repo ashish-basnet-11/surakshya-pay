@@ -3,13 +3,12 @@ import { View } from "react-native";
 import { useTransaction } from "@/apis/transactions";
 import { getDirection } from "@/lib/direction";
 import { useMe } from "@/apis/user";
-import { describeTransaction } from "@/components/transactions/TransactionRow";
-import { AppBar, Badge, Card, CopyButton, DetailList, ErrorState, Icon, Screen, Skeleton, Text } from "@/components/ui";
+import { describeTransaction, TransactionIcon } from "@/components/transactions/TransactionRow";
+import { AppBar, Badge, Card, CopyButton, DetailList, ErrorState, Screen, Skeleton, Text } from "@/components/ui";
 import { formatDateTime, formatMoney, shortAddress, titleCase } from "@/lib/format";
-import { makeStyles, useBreakpoint, useTheme } from "@/theme";
+import { makeStyles, useBreakpoint } from "@/theme";
 
 export default function TransactionDetail() {
-  const t = useTheme();
   const s = useStyles();
   const { atLeastTablet } = useBreakpoint();
   const id = Number(useLocalSearchParams<{ id: string }>().id);
@@ -37,7 +36,7 @@ export default function TransactionDetail() {
 
   const direction = getDirection(tx, me.data?.wallet_address);
   const incoming = direction === "in";
-  const { title, icon } = describeTransaction(tx, direction);
+  const { title } = describeTransaction(tx, direction);
   const address = (value: string | null) =>
     value ? (
       <View style={s.copyRow}>
@@ -53,9 +52,7 @@ export default function TransactionDetail() {
   return (
     <Screen appBar={appBar}>
       <Card style={s.hero}>
-        <View style={[s.icon, { backgroundColor: incoming ? t.colors.successSoft : t.colors.surfaceMuted }]}>
-          <Icon name={icon} size={26} tone={incoming ? "success" : "default"} />
-        </View>
+        <TransactionIcon tx={tx} direction={direction} size={56} />
         <Text variant="body" tone="muted">
           {title}
         </Text>
@@ -95,7 +92,6 @@ export default function TransactionDetail() {
 
 const useStyles = makeStyles((t) => ({
   hero: { alignItems: "center", gap: t.space.sm, paddingVertical: t.space.xxl },
-  icon: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", marginBottom: t.space.xs },
   details: { paddingVertical: t.space.xs },
   cardTitle: { paddingTop: t.space.md, paddingBottom: t.space.xs },
   copyRow: { flexDirection: "row", alignItems: "center", gap: t.space.xs, justifyContent: "flex-end", flexShrink: 1, maxWidth: "100%" },
