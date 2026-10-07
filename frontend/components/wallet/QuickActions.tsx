@@ -7,7 +7,7 @@ const actions: { label: string; icon: IconName; href: Href }[] = [
   { label: "Send", icon: "paper-plane-outline", href: "/send" },
   { label: "Add money", icon: "add-circle-outline", href: "/topup" },
   { label: "Withdraw", icon: "arrow-up-circle-outline", href: "/withdraw" },
-  { label: "Scan & receive", icon: "qr-code-outline", href: "/scan" },
+  { label: "Receive", icon: "qr-code-outline", href: { pathname: "/scan", params: { tab: "code" } } },
 ];
 
 export function QuickActions() {

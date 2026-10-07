@@ -18,7 +18,7 @@ function greeting() {
 export default function Home() {
   const s = useStyles();
   const router = useRouter();
-  const { isDesktop, atLeastTablet } = useBreakpoint();
+  const { atLeastTablet } = useBreakpoint();
   const me = useMe();
   const transactions = useTransactions({ limit: 20 });
   const unread = useUnreadCount();
@@ -65,7 +65,6 @@ export default function Home() {
             {firstName ?? "Welcome"}
           </Text>
         </View>
-        {!isDesktop && <IconButton icon="qr-code-outline" label="Scan or show QR code" variant="outline" onPress={() => router.push("/scan")} />}
         <IconButton icon="notifications-outline" label="Notifications" variant="outline" badge={unread.data} onPress={() => router.push("/notifications")} />
       </View>
 
