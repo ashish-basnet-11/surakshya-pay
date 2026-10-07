@@ -31,6 +31,8 @@ _FRIENDLY_REVERTS = {
     "Not registered": "Your wallet isn't registered on the ledger. Please contact support.",
     "Already registered": "This wallet is already registered.",
     "Deposit must be greater than 0": "Amount must be greater than zero.",
+    "Amount must be greater than 0": "Amount must be greater than zero.",
+    "Insufficient goal balance": "This goal doesn't have that much saved.",
 }
 
 
@@ -117,6 +119,19 @@ def withdraw_onchain(user_address: str, amount: int, private_key: str) -> str:
 
 def transfer_onchain(from_address: str, to_address: str, amount: int, private_key: str) -> str:
     return _transact(digital_wallet.functions.transfer(to_address, amount), from_address, private_key)
+
+
+def save_to_goal_onchain(user_address: str, goal_id: int, amount: int, private_key: str) -> str:
+    """Move whole NPR from the spendable balance into a savings goal (locked until released)."""
+    return _transact(digital_wallet.functions.saveToGoal(goal_id, amount), user_address, private_key)
+
+
+def release_from_goal_onchain(user_address: str, goal_id: int, amount: int, private_key: str) -> str:
+    return _transact(digital_wallet.functions.releaseFromGoal(goal_id, amount), user_address, private_key)
+
+
+def get_goal_balance_onchain(user_address: str, goal_id: int) -> int:
+    return digital_wallet.functions.getGoalBalance(goal_id).call({"from": user_address})
 
 
 def get_user_balance_onchain(user_address: str) -> int:

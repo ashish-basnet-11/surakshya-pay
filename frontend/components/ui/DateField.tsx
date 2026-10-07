@@ -94,6 +94,9 @@ export function DateField({ label, value, onChange, error, hint, min, max, place
             value={value ? fromISODate(value) : new Date()}
             mode="date"
             display={Platform.OS === "ios" ? "inline" : "default"}
+            // Follow the app's theme, not the phone's: otherwise a dark-mode phone draws white text on our light card.
+            themeVariant={t.scheme}
+            accentColor={t.colors.primary}
             minimumDate={min ? fromISODate(min) : undefined}
             maximumDate={max ? fromISODate(max) : undefined}
             onChange={(event, date) => {

@@ -22,7 +22,9 @@ contract DigitalWallet {
     enum TransactionType {
         DEPOSIT,
         WITHDRAWAL,
-        TRANSFER
+        TRANSFER,
+        SAVE,       // spendable balance -> savings goal
+        RELEASE     // savings goal -> spendable balance
     }
 
     mapping(address => User) public users;
@@ -31,10 +33,16 @@ contract DigitalWallet {
 
     uint256 private transactionCounter = 0;
 
+    // Savings goals: money locked per goal (goalId = the app's budget id), not spendable until released.
+    mapping(address => mapping(uint256 => uint256)) public goalBalances;
+    mapping(address => uint256) public totalSaved;
+
     event UserRegistered(address indexed user, bytes32 zkpHash);
     event Deposit(address indexed user, uint256 amount);
     event Withdrawal(address indexed user, uint256 amount);
     event Transfer(address indexed from, address indexed to, uint256 amount);
+    event SavedToGoal(address indexed user, uint256 indexed goalId, uint256 amount);
+    event ReleasedFromGoal(address indexed user, uint256 indexed goalId, uint256 amount);
     event TransactionCreated(uint256 indexed transactionId, address indexed from, address indexed to, uint256 amount, TransactionType transactionType);
 
     modifier onlyRegistered() {
@@ -78,6 +86,40 @@ contract DigitalWallet {
         
         emit Transfer(msg.sender, to, amount);
         emit TransactionCreated(transactionId, msg.sender, to, amount, TransactionType.TRANSFER);
+    }
+
+    function saveToGoal(uint256 goalId, uint256 amount) public onlyRegistered {
+        require(amount > 0, "Amount must be greater than 0");
+        require(users[msg.sender].balance >= amount, "Insufficient balance");
+        users[msg.sender].balance -= amount;
+        goalBalances[msg.sender][goalId] += amount;
+        totalSaved[msg.sender] += amount;
+
+        uint256 transactionId = _createTransaction(msg.sender, address(0), amount, TransactionType.SAVE);
+
+        emit SavedToGoal(msg.sender, goalId, amount);
+        emit TransactionCreated(transactionId, msg.sender, address(0), amount, TransactionType.SAVE);
+    }
+
+    function releaseFromGoal(uint256 goalId, uint256 amount) public onlyRegistered {
+        require(amount > 0, "Amount must be greater than 0");
+        require(goalBalances[msg.sender][goalId] >= amount, "Insufficient goal balance");
+        goalBalances[msg.sender][goalId] -= amount;
+        totalSaved[msg.sender] -= amount;
+        users[msg.sender].balance += amount;
+
+        uint256 transactionId = _createTransaction(msg.sender, address(0), amount, TransactionType.RELEASE);
+
+        emit ReleasedFromGoal(msg.sender, goalId, amount);
+        emit TransactionCreated(transactionId, msg.sender, address(0), amount, TransactionType.RELEASE);
+    }
+
+    function getGoalBalance(uint256 goalId) public view onlyRegistered returns (uint256) {
+        return goalBalances[msg.sender][goalId];
+    }
+
+    function getMySavings() public view onlyRegistered returns (uint256) {
+        return totalSaved[msg.sender];
     }
 
     function getMyBalance() public view onlyRegistered returns (uint256) {

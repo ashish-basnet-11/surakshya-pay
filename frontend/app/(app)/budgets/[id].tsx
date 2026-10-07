@@ -1,13 +1,16 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
-import { useBudget, useDeleteBudget, useUpdateBudget } from "@/apis/budgets";
+import { useBudget, useDeleteBudget, useGoalMoney, useUpdateBudget } from "@/apis/budgets";
+import { useMe } from "@/apis/user";
 import { budgetHealth } from "@/components/budgets/BudgetCard";
 import { BudgetForm } from "@/components/budgets/BudgetForm";
 import { typeLabels } from "@/components/budgets/presets";
+import { AmountInput } from "@/components/wallet/AmountInput";
 import {
   AppBar,
   Badge,
+  Banner,
   Button,
   Card,
   DetailList,
@@ -17,13 +20,17 @@ import {
   ProgressBar,
   safeIconName,
   Screen,
+  SegmentedControl,
   Skeleton,
   StatGrid,
   StatTile,
   Text,
   toast,
 } from "@/components/ui";
+import { getErrorMessage } from "@/lib/api";
 import { formatDate, formatMoney } from "@/lib/format";
+import { parseAmount } from "@/lib/validation";
+import { Budget } from "@/types/budget";
 import { makeStyles, useTheme } from "@/theme";
 import { goBack } from "@/lib/navigation";
 
@@ -43,7 +50,10 @@ export default function BudgetDetail() {
     if (!b) return;
     const ok = await dialog.confirm({
       title: `Delete "${b.name}"?`,
-      message: "This removes the budget and its progress. Your transactions are not affected.",
+      message:
+        b.budget_type !== "expense" && b.spent_amount > 0
+          ? `The ${formatMoney(b.spent_amount)} saved in this goal goes back to your wallet first.`
+          : "This removes the budget and its progress. Your transactions are not affected.",
       confirmLabel: "Delete",
       destructive: true,
       icon: "trash-outline",
@@ -171,12 +181,88 @@ export default function BudgetDetail() {
         />
       </Card>
 
-      {isExpense && (
-        <Text variant="small" tone="subtle">
-          {`Payments you tag with the category "${b?.category}" when sending money count toward this budget automatically.`}
-        </Text>
-      )}
+      {b && !isExpense && <GoalMoneyCard budget={b} />}
+
+      <Text variant="small" tone="subtle">
+        {isExpense
+          ? `Payments you tag with the category "${b?.category}" when sending money count toward this budget automatically.`
+          : "Money saved here is locked in your on-chain wallet: you can't spend it until you move it back."}
+      </Text>
     </Screen>
+  );
+}
+
+/** Save into a goal or move money back. Both are on-chain transactions on the user's wallet. */
+function GoalMoneyCard({ budget }: { budget: Budget }) {
+  const s = useStyles();
+  const me = useMe();
+  const move = useGoalMoney(budget.id);
+  const [action, setAction] = useState<"save" | "release">("save");
+  const [amount, setAmount] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const spendable = Number(me.data?.balance ?? 0);
+  const limit = action === "save" ? spendable : budget.spent_amount;
+
+  const submit = () => {
+    const value = parseAmount(amount, 0);
+    const problem = !(value > 0)
+      ? "Enter a whole amount in NPR."
+      : value > limit
+        ? action === "save"
+          ? `You only have ${formatMoney(spendable)} available.`
+          : `This goal only has ${formatMoney(budget.spent_amount)} saved.`
+        : null;
+    setError(problem);
+    if (problem) return;
+    move.mutate(
+      { action, amount: value },
+      {
+        onSuccess: () => {
+          setAmount("");
+          toast.success(action === "save" ? "Saved to goal" : "Moved back to wallet", `${formatMoney(value)} ${action === "save" ? `locked in "${budget.name}"` : "is spendable again"}.`);
+        },
+      }
+    );
+  };
+
+  return (
+    <Card style={s.details}>
+      <Text variant="h3">Move money</Text>
+      <SegmentedControl
+        accessibilityLabel="Direction"
+        value={action}
+        onChange={(a) => {
+          setAction(a);
+          setError(null);
+          move.reset();
+        }}
+        options={[
+          { value: "save", label: "Save to goal", icon: "lock-closed-outline" },
+          { value: "release", label: "Move back", icon: "lock-open-outline" },
+        ]}
+      />
+      {move.error && <Banner tone="danger" title="Couldn't move money" message={getErrorMessage(move.error)} />}
+      <AmountInput
+        value={amount}
+        onChange={(v) => {
+          setAmount(v);
+          setError(null);
+        }}
+        error={error}
+        available={action === "save" ? spendable : undefined}
+        quickAmounts={[100, 500, 1000]}
+        hint={action === "release" ? `Saved in this goal: ${formatMoney(budget.spent_amount)}` : undefined}
+        editable={!move.isPending}
+      />
+      <Button
+        title={action === "save" ? "Save to goal" : "Move back to wallet"}
+        icon={action === "save" ? "lock-closed" : "lock-open"}
+        fullWidth
+        loading={move.isPending}
+        disabled={action === "release" && budget.spent_amount <= 0}
+        onPress={submit}
+      />
+    </Card>
   );
 }
 

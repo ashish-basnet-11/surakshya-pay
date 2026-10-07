@@ -1,5 +1,5 @@
-import { ReactNode, useState } from "react";
-import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleProp, View, ViewStyle } from "react-native";
+import { ReactNode, useEffect, useRef, useState } from "react";
+import { Keyboard, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleProp, TextInput, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { makeStyles, useTheme } from "@/theme";
 
@@ -50,9 +50,33 @@ export function Screen({
     }
   };
   const bottomPad = (footer || !insetBottom ? 0 : insets.bottom) + t.space.xxxl;
+  const keyboardOpen = useKeyboardOpen();
+  const scrollRef = useRef<ScrollView>(null);
+  const innerRef = useRef<View>(null);
+  const viewport = useRef({ y: 0, height: 0 });
+
+  // The keyboard shrinks the visible area; bring the field being typed in back into view.
+  useEffect(() => {
+    let id: ReturnType<typeof setTimeout>;
+    const sub = Keyboard.addListener("keyboardDidShow", () => {
+      clearTimeout(id);
+      id = setTimeout(() => {
+        const field = TextInput.State.currentlyFocusedInput();
+        if (!field || !innerRef.current) return;
+        field.measureLayout(innerRef.current, (_x, y, _w, h) => {
+          const { y: top, height } = viewport.current;
+          if (y < top || y + h > top + height) scrollRef.current?.scrollTo({ y: Math.max(0, y - t.space.lg), animated: true });
+        });
+      }, 50); // after the layout has settled around the keyboard
+    });
+    return () => {
+      clearTimeout(id);
+      sub.remove();
+    };
+  }, [t.space.lg]);
 
   const inner = (
-    <View style={[s.inner, { maxWidth: widths[width] }, !appBar && { paddingTop: insets.top + t.space.lg }, contentStyle]}>
+    <View ref={innerRef} style={[s.inner, { maxWidth: widths[width] }, !appBar && { paddingTop: insets.top + t.space.lg }, contentStyle]}>
       {children}
     </View>
   );
@@ -63,6 +87,10 @@ export function Screen({
       <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         {scroll ? (
           <ScrollView
+            ref={scrollRef}
+            onScroll={(e) => (viewport.current.y = e.nativeEvent.contentOffset.y)}
+            onLayout={(e) => (viewport.current.height = e.nativeEvent.layout.height)}
+            scrollEventThrottle={32}
             style={s.flex}
             contentContainerStyle={[s.scrollContent, { paddingBottom: bottomPad }]}
             keyboardShouldPersistTaps="handled"
@@ -76,7 +104,8 @@ export function Screen({
         ) : (
           <View style={[s.flex, { paddingBottom: footer || !insetBottom ? 0 : insets.bottom }]}>{inner}</View>
         )}
-        {footer && (
+        {/* While typing, the pinned actions would cover the field; they come back when the keyboard closes. */}
+        {footer && !keyboardOpen && (
           <View style={[s.footer, { paddingBottom: insets.bottom + t.space.md }]}>
             <View style={[s.footerInner, { maxWidth: widths[width] }]}>{footer}</View>
           </View>
@@ -84,6 +113,21 @@ export function Screen({
       </KeyboardAvoidingView>
     </View>
   );
+}
+
+function useKeyboardOpen() {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    // iOS has "will" events so the footer hides before the keyboard animates in; Android only has "did".
+    const show = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow", () => setOpen(true));
+    const hide = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide", () => setOpen(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  return open;
 }
 
 const useStyles = makeStyles((t) => ({

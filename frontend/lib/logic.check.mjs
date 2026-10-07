@@ -36,6 +36,8 @@ assert.ok(isStrongPassword("ashish123") && !isStrongPassword("short1") && !isStr
 const me = "0xAbC";
 assert.equal(getDirection({ transaction_type: "DEPOSIT", description: "" }, me), "in");
 assert.equal(getDirection({ transaction_type: "WITHDRAWAL", description: "" }, me), "out");
+assert.equal(getDirection({ transaction_type: "SAVE", description: "Saved 5 NPR to Trip" }, me), "out");
+assert.equal(getDirection({ transaction_type: "RELEASE", description: "Moved 5 NPR back from Trip" }, me), "in");
 assert.equal(getDirection({ transaction_type: "TRANSFER", description: "Transfer of 5 NPR to bob", from_address: "0xabc" }, me), "out");
 assert.equal(getDirection({ transaction_type: "TRANSFER", description: "Received 5 NPR from bob", from_address: "0xdef" }, me), "in");
 assert.equal(getDirection({ transaction_type: "TRANSFER", description: "Received 5 NPR from bob" }, null), "in");

@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { keys, queryClient } from "@/lib/query-client";
+import { invalidateMoney, keys, queryClient } from "@/lib/query-client";
 import { Budget, BudgetInput, BudgetStatus, BudgetSummary } from "@/types/budget";
 
 export function useBudgets(filter: { status?: BudgetStatus } = {}) {
@@ -61,5 +61,16 @@ export function useDeleteBudget() {
       queryClient.removeQueries({ queryKey: keys.budget(id) });
       return refresh();
     },
+  });
+}
+
+/** Lock money into a savings goal ("save") or move it back to the spendable balance ("release"), on-chain. */
+export function useGoalMoney(id: number) {
+  return useMutation({
+    mutationFn: async ({ action, amount }: { action: "save" | "release"; amount: number }) =>
+      (await api.post<Budget>(`/budgets/${id}/${action}`, null, { params: { amount } })).data,
+    onSuccess: (budget) => queryClient.setQueryData(keys.budget(id), budget),
+    // Refresh on failure too: the server may have moved money before erroring.
+    onSettled: invalidateMoney,
   });
 }

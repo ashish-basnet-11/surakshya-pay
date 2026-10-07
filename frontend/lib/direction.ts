@@ -8,8 +8,8 @@ export type Direction = "in" | "out";
  */
 export function getDirection(tx: Pick<Transaction, "transaction_type" | "description"> & Partial<Pick<Transaction, "from_address">>, wallet?: string | null): Direction {
   const type = tx.transaction_type?.toUpperCase();
-  if (type === "DEPOSIT") return "in";
-  if (type === "WITHDRAWAL" || type === "WITHDRAW") return "out";
+  if (type === "DEPOSIT" || type === "RELEASE") return "in";
+  if (type === "WITHDRAWAL" || type === "WITHDRAW" || type === "SAVE") return "out";
   if (tx.from_address && wallet) return tx.from_address.toLowerCase() === wallet.toLowerCase() ? "out" : "in";
   return tx.description?.toLowerCase().startsWith("received") ? "in" : "out";
 }

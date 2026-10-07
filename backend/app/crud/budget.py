@@ -10,6 +10,8 @@ from app.models.user import User
 from app.schemas.budget import BudgetCreate, BudgetUpdate
 
 WARNING_RATIO = 0.9
+# Goals hold money locked on-chain (spent_amount mirrors the goal's on-chain balance); expenses track spending.
+GOAL_TYPES = (BudgetType.SAVINGS, BudgetType.INVESTMENT)
 
 
 def compute_status(budget: Budget, today: datetime.date | None = None) -> BudgetStatus:
@@ -21,7 +23,7 @@ def compute_status(budget: Budget, today: datetime.date | None = None) -> Budget
     """
     today = today or datetime.date.today()
     spent, limit = budget.spent_amount or 0.0, budget.budget_amount or 0.0
-    if budget.budget_type in (BudgetType.SAVINGS, BudgetType.INVESTMENT):
+    if budget.budget_type in GOAL_TYPES:
         return BudgetStatus.COMPLETED if limit and spent >= limit else BudgetStatus.ACTIVE
     if budget.end_date and budget.end_date < today:
         return BudgetStatus.COMPLETED
@@ -80,6 +82,8 @@ def create_budget(db: Session, budget: BudgetCreate, user_id: int):
 def update_budget(db: Session, db_budget: Budget, budget_in: BudgetUpdate):
     data = budget_in.model_dump(exclude_unset=True)
     data.pop("status", None)  # derived, not user-settable
+    if data.get("budget_type") not in (None, db_budget.budget_type) and (db_budget.spent_amount or 0) > 0:
+        raise HTTPException(status_code=400, detail="You can't change the type of a budget that already has money in it.")
     for key, value in data.items():
         setattr(db_budget, key, value)
     if db_budget.end_date and db_budget.end_date < db_budget.start_date:
@@ -101,13 +105,15 @@ def delete_budget(db: Session, budget_id: int, user_id: int):
 
 def update_budget_from_transaction(db: Session, user_id: int, category: str, amount: float):
     """
-    Apply an outgoing, user-tagged payment to the budgets with exactly that category
-    (case-insensitive) that are running today. Does not commit; the caller's transaction does.
+    Apply an outgoing, user-tagged payment to the spending budgets with exactly that category
+    (case-insensitive) that are running today. Savings goals only grow by saving into them.
+    Does not commit; the caller's transaction does.
     """
     if not category or amount <= 0:
         return []
     budgets = db.query(Budget).filter(
         Budget.user_id == user_id,
+        Budget.budget_type == BudgetType.EXPENSE,
         func.lower(Budget.category) == category.strip().lower(),
         _active_on(datetime.date.today()),
     ).all()

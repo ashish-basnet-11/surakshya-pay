@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { View } from "react-native";
 import { useUnreadCount } from "@/apis/notifications";
 import { useTransactions } from "@/apis/transactions";
+import { useBudgets } from "@/apis/budgets";
 import { useMe } from "@/apis/user";
 import { TransactionList } from "@/components/transactions/TransactionList";
 import { Avatar, Button, EmptyState, IconButton, QueryView, Screen, Section, SkeletonRows, Text } from "@/components/ui";
@@ -20,6 +21,8 @@ export default function Home() {
   const router = useRouter();
   const { atLeastTablet } = useBreakpoint();
   const me = useMe();
+  const budgets = useBudgets();
+  const saved = budgets.data?.reduce((sum, b) => (b.budget_type === "expense" ? sum : sum + b.spent_amount), 0);
   const transactions = useTransactions({ limit: 20 });
   const unread = useUnreadCount();
 
@@ -72,7 +75,7 @@ export default function Home() {
 
       <View style={[s.columns, atLeastTablet && s.columnsWide]}>
         <View style={[s.main, atLeastTablet && s.mainWide]}>
-          <BalanceCard balance={user?.balance} wallet={user?.wallet_address} loading={!user && me.isLoading} />
+          <BalanceCard balance={user?.balance} saved={saved} wallet={user?.wallet_address} loading={!user && me.isLoading} />
           <QuickActions />
         </View>
         <View style={[s.side, atLeastTablet && s.sideWide]}>{activity}</View>

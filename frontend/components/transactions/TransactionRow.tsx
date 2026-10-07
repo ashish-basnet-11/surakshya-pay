@@ -17,6 +17,9 @@ export function describeTransaction(tx: Tx, direction: "in" | "out"): { title: s
   if (type === "DEPOSIT" && tx.description?.startsWith("Khalti")) return { title: "Khalti top-up", icon: "add", khalti: true };
   if (type === "DEPOSIT") return { title: "Added money", icon: "add" };
   if (type === "WITHDRAWAL" || type === "WITHDRAW") return { title: "Withdrawal", icon: "arrow-up" };
+  // Backend descriptions: "Saved 50 NPR to Trip" / "Moved 50 NPR back from Trip".
+  if (type === "SAVE") return { title: `Saved to ${tx.description?.match(/ to (.+)$/)?.[1] ?? "goal"}`, icon: "lock-closed" };
+  if (type === "RELEASE") return { title: `From ${tx.description?.match(/ back from (.+)$/)?.[1] ?? "savings"}`, icon: "lock-open" };
   const peer = tx.description?.match(direction === "in" ? /from (\S+)$/i : /to (\S+)$/i)?.[1];
   if (direction === "in") return { title: peer ? `From ${peer}` : "Money received", icon: "arrow-down" };
   return { title: peer ? `To ${peer}` : "Money sent", icon: "arrow-up" };
@@ -49,7 +52,7 @@ export function TransactionRow({ tx, wallet, showDate }: { tx: Tx; wallet?: stri
   const direction = getDirection(tx, wallet);
   const { title } = describeTransaction(tx, direction);
   const incoming = direction === "in";
-  const category = tx.category && !["transfer", "deposit", "withdrawal", "withdraw"].includes(tx.category.toLowerCase()) ? titleCase(tx.category) : null;
+  const category = tx.category && !["transfer", "deposit", "withdrawal", "withdraw", "savings"].includes(tx.category.toLowerCase()) ? titleCase(tx.category) : null;
   const when = showDate ? showDate(tx.timestamp) : formatTime(tx.timestamp);
   const amount = formatMoney(incoming ? Math.abs(tx.amount) : -Math.abs(tx.amount), { sign: true });
 

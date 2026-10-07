@@ -5,7 +5,7 @@ import { formatMoney, shortAddress } from "@/lib/format";
 import { usePreferences } from "@/store/use-preferences-store";
 import { makeStyles, useTheme } from "@/theme";
 
-export function BalanceCard({ balance, wallet, loading }: { balance?: string | null; wallet?: string | null; loading?: boolean }) {
+export function BalanceCard({ balance, saved, wallet, loading }: { balance?: string | null; saved?: number; wallet?: string | null; loading?: boolean }) {
   const t = useTheme();
   const s = useStyles();
   const hideByDefault = usePreferences((p) => p.hideBalance);
@@ -32,6 +32,11 @@ export function BalanceCard({ balance, wallet, loading }: { balance?: string | n
       ) : (
         <Text variant="display" color={t.colors.heroText} tabular accessibilityLabel={hidden ? "Balance hidden" : undefined} numberOfLines={1} adjustsFontSizeToFit>
           {hidden ? "NPR ••••••" : formatMoney(balance)}
+        </Text>
+      )}
+      {!loading && !!saved && (
+        <Text variant="small" color={t.colors.heroMuted}>
+          {hidden ? "Savings hidden" : `+ ${formatMoney(saved)} locked in savings goals`}
         </Text>
       )}
       <View style={s.bottom}>
