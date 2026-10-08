@@ -1,4 +1,5 @@
 import FlashMessage, { showMessage } from "react-native-flash-message";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/theme";
 import { getErrorMessage } from "@/lib/api";
 
@@ -13,10 +14,11 @@ export const toast = {
 
 export function ToastHost() {
   const t = useTheme();
+  const insets = useSafeAreaInsets();
   return (
     <FlashMessage
       position="top"
-      statusBarHeight={8}
+      statusBarHeight={insets.top + 8}
       style={{ borderRadius: t.radius.md, maxWidth: 520, alignSelf: "center", width: "92%" }}
     />
   );
