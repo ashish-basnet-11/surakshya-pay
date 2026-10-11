@@ -78,7 +78,7 @@ export function ChipRow({ children, wrap }: { children: React.ReactNode; wrap?: 
   const s = useStyles();
   if (wrap) return <View style={s.chipWrap}>{children}</View>;
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipScroll}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipScrollView} contentContainerStyle={s.chipScroll}>
       {children}
     </ScrollView>
   );
@@ -149,5 +149,7 @@ const useStyles = makeStyles((t) => ({
   chipHover: { backgroundColor: t.colors.surfaceHover },
   dot: { width: 8, height: 8, borderRadius: 4 },
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: t.space.sm },
-  chipScroll: { gap: t.space.sm, paddingRight: t.space.lg },
+  // Without these, a horizontal ScrollView in a short column grows vertically and stretches the chips.
+  chipScrollView: { flexGrow: 0 },
+  chipScroll: { gap: t.space.sm, paddingRight: t.space.lg, alignItems: "center" },
 }));
